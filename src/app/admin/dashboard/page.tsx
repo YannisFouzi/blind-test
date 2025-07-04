@@ -189,7 +189,17 @@ export default function AdminDashboard() {
     if (result.success) {
       handleCloseModal();
     }
-    return result;
+
+    // Retourner l'ID pour permettre l'import automatique
+    return {
+      success: result.success,
+      error: result.error,
+      id: ("id" in result
+        ? result.id
+        : editingItem
+        ? editingItem.id
+        : undefined) as string | undefined,
+    };
   };
 
   const handleSongSubmit = async (data: Omit<Song, "id" | "createdAt">) => {

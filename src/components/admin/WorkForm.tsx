@@ -9,7 +9,7 @@ interface WorkFormProps {
   universes: Universe[];
   onSubmit: (
     data: Omit<Work, "id" | "createdAt">
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; error?: string; id?: string }>;
   onCancel: () => void;
   loading?: boolean;
   onImportSongs?: (
@@ -59,6 +59,27 @@ export const WorkForm = ({
 
     const { playlistUrl, ...submitData } = formData;
     await onSubmit(submitData);
+  };
+
+  const handleCreateAndImport = async () => {
+    if (!validateForm()) return;
+    if (!formData.playlistId || !onImportSongs) return;
+
+    setImporting(true);
+    try {
+      // 1. Créer l'œuvre
+      const { playlistUrl, ...submitData } = formData;
+      const result = await onSubmit(submitData);
+
+      // 2. Si création réussie, importer les chansons
+      if (result.success && result.id) {
+        await onImportSongs(result.id, formData.playlistId);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la création et import:", error);
+    } finally {
+      setImporting(false);
+    }
   };
 
   const handleChange = (field: string, value: string) => {
@@ -244,9 +265,29 @@ export const WorkForm = ({
         <Button type="button" variant="secondary" onClick={onCancel}>
           Annuler
         </Button>
-        <Button type="submit" variant="primary">
-          {work ? "Mettre à jour" : "Créer"}
-        </Button>
+
+        {/* Mode création avec playlist validée : proposer l'import automatique */}
+        {!work && formData.playlistId && onImportSongs ? (
+          <>
+            <Button type="submit" variant="secondary">
+              Créer seulement
+            </Button>
+            <Button
+              type="button"
+              variant="success"
+              onClick={handleCreateAndImport}
+              disabled={importing}
+            >
+              {importing
+                ? "Création et import..."
+                : "🎵 Créer et importer les chansons"}
+            </Button>
+          </>
+        ) : (
+          <Button type="submit" variant="primary">
+            {work ? "Mettre à jour" : "Créer"}
+          </Button>
+        )}
       </div>
     </form>
   );
