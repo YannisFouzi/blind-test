@@ -1,0 +1,79 @@
+import YouTube from "react-youtube";
+import { Song } from "../../../types";
+
+interface GamePlayerProps {
+  currentSong: Song;
+  showAnswer: boolean;
+  correctWorkTitle?: string;
+  usingDemoData: boolean;
+  youtubeError: string | null;
+  onError: (error: any) => void;
+  onReady: (event: any) => void;
+  onStateChange: (event: any) => void;
+}
+
+export const GamePlayer = ({
+  currentSong,
+  showAnswer,
+  correctWorkTitle,
+  usingDemoData,
+  youtubeError,
+  onError,
+  onReady,
+  onStateChange,
+}: GamePlayerProps) => {
+  return (
+    <div className="bg-slate-800/50 rounded-2xl p-8 text-center border border-gray-700/50">
+      <h2 className="text-3xl font-bold text-white mb-2">
+        {showAnswer ? currentSong.title : "Titre mystère"}
+      </h2>
+      <p className="text-gray-400 text-lg">
+        {showAnswer && correctWorkTitle
+          ? `${correctWorkTitle} • ${currentSong.artist}`
+          : "Devinez le titre de cette musique"}
+      </p>
+
+      {/* Message d'erreur YouTube */}
+      {youtubeError && (
+        <div className="mt-6 p-4 bg-yellow-900/30 border border-yellow-600 rounded-lg">
+          <div className="flex items-center gap-2 text-yellow-400">
+            <span>⚠️</span>
+            <span className="text-sm">{youtubeError}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Message données de démonstration */}
+      {usingDemoData && (
+        <div className="mt-6 p-4 bg-blue-900/30 border border-blue-600 rounded-lg">
+          <div className="flex items-center gap-2 text-blue-400">
+            <span>ℹ️</span>
+            <div className="text-sm">
+              <p className="font-medium">Mode démonstration</p>
+              <p className="text-blue-300 mt-1">
+                Vous utilisez des chansons de démonstration car aucune chanson
+                n'a été ajoutée pour vos œuvres. Rendez-vous dans
+                l'administration pour ajouter de vraies chansons.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lecteur YouTube (caché) */}
+      <div className="mt-6">
+        <YouTube
+          videoId={currentSong.youtubeId}
+          opts={{
+            height: "0",
+            width: "0",
+            playerVars: { autoplay: 0, controls: 0 },
+          }}
+          onReady={onReady}
+          onStateChange={onStateChange}
+          onError={onError}
+        />
+      </div>
+    </div>
+  );
+};
