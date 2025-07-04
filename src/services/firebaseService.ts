@@ -274,6 +274,65 @@ export class FirebaseService {
     return this.deleteDocument("songs", id);
   }
 
+  static async deleteWork(id: string): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      // 1. Supprimer toutes les chansons de cette œuvre
+      const songsResult = await this.getDocuments<Song>("songs", [
+        where("workId", "==", id),
+      ]);
+
+      if (songsResult.success && songsResult.data) {
+        for (const song of songsResult.data) {
+          await this.deleteDocument("songs", song.id);
+        }
+      }
+
+      // 2. Supprimer l'œuvre elle-même
+      return this.deleteDocument("works", id);
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Erreur lors de la suppression de l'œuvre",
+      };
+    }
+  }
+
+  static async deleteUniverse(id: string): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      // 1. Récupérer toutes les œuvres de cet univers
+      const worksResult = await this.getDocuments<Work>("works", [
+        where("universeId", "==", id),
+      ]);
+
+      if (worksResult.success && worksResult.data) {
+        // 2. Supprimer chaque œuvre (qui supprimera ses chansons)
+        for (const work of worksResult.data) {
+          await this.deleteWork(work.id);
+        }
+      }
+
+      // 3. Supprimer l'univers lui-même
+      return this.deleteDocument("universes", id);
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Erreur lors de la suppression de l'univers",
+      };
+    }
+  }
+
   /**
    * Importe plusieurs chansons depuis une playlist YouTube
    */

@@ -10,6 +10,7 @@ import { SongForm } from "../../../components/admin/SongForm";
 import { UniverseForm } from "../../../components/admin/UniverseForm";
 import { WorkForm } from "../../../components/admin/WorkForm";
 import { Button } from "../../../components/ui/Button";
+import { ConfirmModal } from "../../../components/ui/ConfirmModal";
 import { LoadingSpinner } from "../../../components/ui/LoadingSpinner";
 import { useAdmin } from "../../../hooks/useAdmin";
 import { useAuth } from "../../../hooks/useAuth";
@@ -32,9 +33,11 @@ export default function AdminDashboard() {
     loadUniverses,
     addUniverse,
     updateUniverse,
+    deleteUniverse,
     loadWorks,
     addWork,
     updateWork,
+    deleteWork,
     loadSongs,
     addSong,
     updateSong,
@@ -49,6 +52,21 @@ export default function AdminDashboard() {
   );
   const [selectedUniverse, setSelectedUniverse] = useState<string | null>(null);
   const [selectedWork, setSelectedWork] = useState<string | null>(null);
+
+  // État pour les modales de confirmation
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: "universe" | "work" | "song" | null;
+    item: Universe | Work | Song | null;
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    type: null,
+    item: null,
+    title: "",
+    message: "",
+  });
 
   // Redirection si non admin
   if (!isAdmin && user) {
@@ -83,6 +101,71 @@ export default function AdminDashboard() {
   const handleCloseModal = () => {
     setActiveModal(null);
     setEditingItem(null);
+  };
+
+  // Gestionnaires de confirmation de suppression
+  const handleConfirmDelete = (
+    type: "universe" | "work" | "song",
+    item: Universe | Work | Song
+  ) => {
+    let title = "";
+    let message = "";
+
+    switch (type) {
+      case "universe":
+        const universe = item as Universe;
+        title = "Supprimer l'univers";
+        message = `Êtes-vous sûr de vouloir supprimer l'univers "${universe.name}" ? Cette action supprimera également toutes les œuvres et chansons associées. Cette action est irréversible.`;
+        break;
+      case "work":
+        const work = item as Work;
+        title = "Supprimer l'œuvre";
+        message = `Êtes-vous sûr de vouloir supprimer l'œuvre "${work.title}" ? Cette action supprimera également toutes les chansons associées. Cette action est irréversible.`;
+        break;
+      case "song":
+        const song = item as Song;
+        title = "Supprimer la chanson";
+        message = `Êtes-vous sûr de vouloir supprimer la chanson "${song.title}" ? Cette action est irréversible.`;
+        break;
+    }
+
+    setConfirmModal({
+      isOpen: true,
+      type,
+      item,
+      title,
+      message,
+    });
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmModal({
+      isOpen: false,
+      type: null,
+      item: null,
+      title: "",
+      message: "",
+    });
+  };
+
+  const handleExecuteDelete = async () => {
+    if (!confirmModal.item || !confirmModal.type) return;
+
+    try {
+      switch (confirmModal.type) {
+        case "universe":
+          await deleteUniverse(confirmModal.item.id);
+          break;
+        case "work":
+          await deleteWork(confirmModal.item.id);
+          break;
+        case "song":
+          await deleteSong(confirmModal.item.id);
+          break;
+      }
+    } finally {
+      handleCancelDelete();
+    }
   };
 
   const handleUniverseSubmit = async (
@@ -213,6 +296,7 @@ export default function AdminDashboard() {
             loading={loading}
             emptyMessage="Aucun univers créé"
             onEdit={(universe) => handleOpenModal("universe", universe)}
+            onDelete={(universe) => handleConfirmDelete("universe", universe)}
             actions={(universe) => (
               <Button
                 variant="secondary"
@@ -260,6 +344,7 @@ export default function AdminDashboard() {
               loading={loading}
               emptyMessage="Aucune œuvre créée"
               onEdit={(work) => handleOpenModal("work", work)}
+              onDelete={(work) => handleConfirmDelete("work", work)}
               actions={(work) => (
                 <Button
                   variant="secondary"
@@ -307,13 +392,13 @@ export default function AdminDashboard() {
               loading={loading}
               emptyMessage="Aucune chanson créée"
               onEdit={(song) => handleOpenModal("song", song)}
-              onDelete={(song) => deleteSong(song.id)}
+              onDelete={(song) => handleConfirmDelete("song", song)}
             />
           </section>
         )}
       </div>
 
-      {/* Modales */}
+      {/* Modales de formulaires */}
       {activeModal === "universe" && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -366,6 +451,18 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Modale de confirmation de suppression */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText="Supprimer"
+        onConfirm={handleExecuteDelete}
+        onCancel={handleCancelDelete}
+        loading={loading}
+        variant="danger"
+      />
     </AdminLayout>
   );
 }

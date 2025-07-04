@@ -108,6 +108,22 @@ export const useAdmin = (user: User | null) => {
     return result;
   };
 
+  const deleteUniverse = async (id: string) => {
+    setLoading(true);
+    clearMessages();
+
+    const result = await FirebaseService.deleteUniverse(id);
+    if (result.success) {
+      setSuccess("Univers supprimé avec succès !");
+      loadUniverses(); // Rechargement des données
+    } else {
+      setError(result.error || "Erreur lors de la suppression de l'univers");
+    }
+
+    setLoading(false);
+    return result;
+  };
+
   // Gestion des œuvres
   const loadWorks = async (universeId: string) => {
     setLoading(true);
@@ -165,6 +181,26 @@ export const useAdmin = (user: User | null) => {
       }
     } else {
       setError(result.error || "Erreur lors de la mise à jour de l'œuvre");
+    }
+
+    setLoading(false);
+    return result;
+  };
+
+  const deleteWork = async (id: string) => {
+    setLoading(true);
+    clearMessages();
+
+    const result = await FirebaseService.deleteWork(id);
+    if (result.success) {
+      setSuccess("Œuvre supprimée avec succès !");
+      // Rechargement des œuvres pour l'univers concerné
+      const currentWork = state.works.find((w) => w.id === id);
+      if (currentWork) {
+        loadWorks(currentWork.universeId);
+      }
+    } else {
+      setError(result.error || "Erreur lors de la suppression de l'œuvre");
     }
 
     setLoading(false);
@@ -347,11 +383,13 @@ export const useAdmin = (user: User | null) => {
     loadUniverses,
     addUniverse,
     updateUniverse,
+    deleteUniverse,
 
     // Actions œuvres
     loadWorks,
     addWork,
     updateWork,
+    deleteWork,
 
     // Actions chansons
     loadSongs,
