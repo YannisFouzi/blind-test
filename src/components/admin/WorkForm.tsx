@@ -7,6 +7,7 @@ import { LoadingSpinner } from "../ui/LoadingSpinner";
 interface WorkFormProps {
   work?: Work;
   universes: Universe[];
+  defaultUniverseId?: string; // Pré-sélection automatique de l'univers
   onSubmit: (
     data: Omit<Work, "id" | "createdAt">
   ) => Promise<{ success: boolean; error?: string; id?: string }>;
@@ -21,6 +22,7 @@ interface WorkFormProps {
 export const WorkForm = ({
   work,
   universes,
+  defaultUniverseId,
   onSubmit,
   onCancel,
   loading = false,
@@ -28,7 +30,7 @@ export const WorkForm = ({
 }: WorkFormProps) => {
   const [formData, setFormData] = useState({
     title: work?.title || "",
-    universeId: work?.universeId || "",
+    universeId: work?.universeId || defaultUniverseId || "",
     playlistId: work?.playlistId || "",
     playlistUrl: "",
   });
@@ -204,6 +206,13 @@ export const WorkForm = ({
         {errors.universeId && (
           <p className="text-red-400 text-sm mt-1">{errors.universeId}</p>
         )}
+        {!work &&
+          defaultUniverseId &&
+          formData.universeId === defaultUniverseId && (
+            <p className="text-blue-400 text-sm mt-1">
+              ℹ️ Univers pré-sélectionné automatiquement
+            </p>
+          )}
       </div>
 
       <div>

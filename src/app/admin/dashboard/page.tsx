@@ -434,6 +434,9 @@ export default function AdminDashboard() {
             <WorkForm
               work={editingItem as Work}
               universes={universes}
+              defaultUniverseId={
+                !editingItem ? selectedUniverse || undefined : undefined
+              }
               onSubmit={handleWorkSubmit}
               onCancel={handleCloseModal}
               loading={loading}
