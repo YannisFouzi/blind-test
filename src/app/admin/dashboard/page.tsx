@@ -14,6 +14,7 @@ import { ConfirmModal } from "../../../components/ui/ConfirmModal";
 import { LoadingSpinner } from "../../../components/ui/LoadingSpinner";
 import { useAdmin } from "../../../hooks/useAdmin";
 import { useAuth } from "../../../hooks/useAuth";
+import { getIconById, getUniverseTheme } from "../../../utils";
 
 type ModalType = "universe" | "work" | "song" | null;
 
@@ -171,14 +172,12 @@ export default function AdminDashboard() {
   const handleUniverseSubmit = async (
     data: Omit<Universe, "id" | "createdAt">
   ) => {
-    const result = editingItem
-      ? await updateUniverse(editingItem.id, data)
-      : await addUniverse(data);
-
-    if (result.success) {
-      handleCloseModal();
+    if (editingItem) {
+      await updateUniverse(editingItem.id, data);
+    } else {
+      await addUniverse(data);
     }
-    return result;
+    handleCloseModal();
   };
 
   const handleWorkSubmit = async (data: Omit<Work, "id" | "createdAt">) => {
@@ -190,7 +189,6 @@ export default function AdminDashboard() {
       handleCloseModal();
     }
 
-    // Retourner l'ID pour permettre l'import automatique
     return {
       success: result.success,
       error: result.error,
@@ -218,22 +216,81 @@ export default function AdminDashboard() {
     {
       key: "icon" as keyof Universe,
       label: "Icône",
-      render: (value: string) => <span className="text-2xl">{value}</span>,
+      render: (value: string, universe: Universe) => {
+        // Nouveau système : ID d'icône
+        if (!value.startsWith("#") && !value.includes("-")) {
+          const iconData = getIconById(value);
+          if (iconData) {
+            const IconComponent = iconData.component;
+            return (
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{
+                  backgroundColor: universe.color.startsWith("#")
+                    ? universe.color
+                    : "#3B82F6",
+                }}
+              >
+                <IconComponent className="text-sm text-white" />
+              </div>
+            );
+          }
+        }
+        // Fallback : emoji ou texte
+        return <span className="text-2xl">{value}</span>;
+      },
     },
     { key: "name" as keyof Universe, label: "Nom" },
     { key: "description" as keyof Universe, label: "Description" },
     {
       key: "color" as keyof Universe,
-      label: "Couleur",
-      render: (value: string) => (
-        <div className="flex items-center space-x-2">
-          <div
-            className="w-4 h-4 rounded"
-            style={{ backgroundColor: value }}
-          ></div>
-          <span>{value}</span>
-        </div>
-      ),
+      label: "Thème",
+      render: (value: string, universe: Universe) => {
+        if (value.startsWith("#")) {
+          // Nouveau système : couleur hex
+          const iconData = getIconById(universe.icon) || getIconById("wand");
+          const IconComponent = iconData?.component;
+
+          return (
+            <div className="flex items-center space-x-3">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: value }}
+              >
+                {IconComponent && (
+                  <IconComponent className="text-sm text-[#1c1c35]" />
+                )}
+              </div>
+              <div>
+                <div className="text-white font-medium">
+                  Couleur personnalisée
+                </div>
+                <div className="text-gray-400 text-xs">{value}</div>
+              </div>
+            </div>
+          );
+        } else {
+          // Ancien système : thèmes prédéfinis
+          const theme = getUniverseTheme(value);
+          const IconComponent = theme.icon;
+          return (
+            <div className="flex items-center space-x-3">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: theme.primaryColor }}
+              >
+                <IconComponent className="text-sm text-[#1c1c35]" />
+              </div>
+              <div>
+                <div className="text-white font-medium">{theme.name}</div>
+                <div className="text-gray-400 text-xs">
+                  {theme.primaryColor}
+                </div>
+              </div>
+            </div>
+          );
+        }
+      },
     },
     {
       key: "active" as keyof Universe,
