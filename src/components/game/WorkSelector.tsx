@@ -263,7 +263,7 @@ export const WorkSelector = ({
         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
           <button
             onClick={onValidateAnswer}
-            className="magic-button px-8 py-4 text-lg font-bold shadow-2xl animate-pulse"
+            className="magic-button px-8 py-4 text-lg font-bold shadow-2xl"
           >
             <span className="relative z-10 flex items-center gap-2">
               ✨ Valider ma réponse ✨
@@ -276,7 +276,7 @@ export const WorkSelector = ({
         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
           <button
             onClick={onNextSong}
-            className="magic-button px-8 py-4 text-lg font-bold shadow-2xl animate-pulse"
+            className="magic-button px-8 py-4 text-lg font-bold shadow-2xl"
             style={{
               background: "linear-gradient(135deg, #3B82F6, #8B5CF6)",
             }}
