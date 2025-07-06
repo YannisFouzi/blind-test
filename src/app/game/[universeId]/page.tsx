@@ -2,7 +2,15 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FaHome } from "react-icons/fa";
+import {
+  FaHome,
+  FaPause,
+  FaPlay,
+  FaStepBackward,
+  FaStepForward,
+  FaVolumeMute,
+  FaVolumeUp,
+} from "react-icons/fa";
 import { GameControls } from "../../../components/game/GameControls";
 import { WorkSelector } from "../../../components/game/WorkSelector";
 import { ErrorMessage } from "../../../components/ui/ErrorMessage";
@@ -174,8 +182,8 @@ export default function GamePage() {
         </button>
       </div>
 
-      {/* Conteneur principal */}
-      <div className="container mx-auto px-4 py-8 relative z-10">
+      {/* Conteneur principal avec padding bottom pour la barre de lecteur */}
+      <div className="container mx-auto px-4 py-8 pb-24 relative z-10">
         {/* Grille principale responsive */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-7xl mx-auto">
           {/* Lecteur audio - Position centrale avec effet lumineux */}
@@ -242,6 +250,133 @@ export default function GamePage() {
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl" />
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-yellow-500/10 rounded-full blur-3xl" />
+      </div>
+
+      {/* Barre de lecteur fixe en bas - Style Spotify */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-purple-500/30">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Section gauche - Contrôles et scores */}
+            <div className="flex flex-col items-center gap-3">
+              {/* Contrôles principaux - Version compacte */}
+              <div className="flex items-center gap-4">
+                {/* Bouton précédent */}
+                <button
+                  onClick={handlePrevSongWithReset}
+                  disabled={!canGoPrev}
+                  className={`p-2 rounded-full transition-all duration-300 ${
+                    canGoPrev
+                      ? "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg hover:shadow-purple-500/50 hover:scale-110"
+                      : "bg-gray-700 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  <FaStepBackward size={16} />
+                </button>
+
+                {/* Bouton play/pause principal - Version compacte */}
+                <button
+                  onClick={handlePlayPause}
+                  className="relative p-3 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 rounded-full text-white shadow-xl hover:shadow-yellow-500/50 transition-all duration-300 transform hover:scale-105"
+                >
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 blur-md opacity-50" />
+                  <div className="relative z-10">
+                    {isPlaying ? <FaPause size={20} /> : <FaPlay size={20} />}
+                  </div>
+                </button>
+
+                {/* Bouton suivant */}
+                <button
+                  onClick={handleNextSongWithReset}
+                  disabled={!canGoNext}
+                  className={`p-2 rounded-full transition-all duration-300 ${
+                    canGoNext
+                      ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg hover:shadow-blue-500/50 hover:scale-110"
+                      : "bg-gray-700 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  <FaStepForward size={16} />
+                </button>
+              </div>
+
+              {/* Scores compacts */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <span className="text-green-400 text-sm">✓</span>
+                  <span className="text-white text-sm font-semibold">
+                    {gameSession.score.correct}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-red-400 text-sm">✗</span>
+                  <span className="text-white text-sm font-semibold">
+                    {gameSession.score.incorrect}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Barre de progression centrale avec indicateur de morceau */}
+            <div className="flex-1 max-w-md mx-4">
+              <div className="flex items-center justify-between text-white text-xs mb-1">
+                <span>{formatTime(currentTime)}</span>
+                <span>{formatTime(duration)}</span>
+              </div>
+              <div
+                className="magic-progress-bar h-2 cursor-pointer hover:h-3 transition-all duration-300"
+                onClick={handleProgressClick}
+              >
+                <div
+                  className="magic-progress-fill h-full"
+                  style={{
+                    width: `${duration ? (currentTime / duration) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+              {/* Indicateur de morceau */}
+              <div className="text-center mt-2">
+                <span className="text-yellow-400 text-sm font-semibold">
+                  Morceau {gameSession.currentSongIndex + 1} /{" "}
+                  {gameSession.songs.length}
+                </span>
+              </div>
+            </div>
+
+            {/* Contrôle du volume - Masqué sur mobile */}
+            <div className="hidden md:flex items-center gap-3">
+              <button
+                onClick={toggleMute}
+                className="p-2 rounded-full bg-slate-800/50 text-white hover:bg-slate-700/50 transition-all duration-300 hover:scale-110"
+              >
+                {isMuted ? (
+                  <FaVolumeMute size={16} />
+                ) : (
+                  <FaVolumeUp size={16} />
+                )}
+              </button>
+
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-20 magic-progress-bar h-2 cursor-pointer hover:h-3 transition-all duration-300"
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const percentage = (clickX / rect.width) * 100;
+                    const newVolume = Math.max(0, Math.min(100, percentage));
+                    handleVolumeChange(newVolume);
+                  }}
+                >
+                  <div
+                    className="magic-progress-fill h-full"
+                    style={{ width: `${volume}%` }}
+                  />
+                </div>
+                <span className="text-white text-xs w-8 text-center">
+                  {Math.round(volume)}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

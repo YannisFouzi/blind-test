@@ -233,7 +233,7 @@ export const WorkSelector = ({
                 className="magic-button px-8 py-4 text-lg font-bold shadow-2xl transform hover:scale-105 transition-all duration-300"
               >
                 <span className="relative z-10 flex items-center gap-2">
-                  ✨ Valider ma réponse ✨
+                  Valider ma réponse
                 </span>
               </button>
             </div>
@@ -250,7 +250,7 @@ export const WorkSelector = ({
                 }}
               >
                 <span className="relative z-10 flex items-center gap-2">
-                  🎵 Morceau suivant 🎵
+                  Morceau suivant
                 </span>
               </button>
             </div>
@@ -258,22 +258,22 @@ export const WorkSelector = ({
         </div>
       </div>
 
-      {/* Boutons fixes avec design amélioré */}
+      {/* Boutons fixes avec design amélioré - Au-dessus de la barre de lecteur */}
       {canValidate && !isCurrentSongAnswered && !isValidateButtonVisible && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
+        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
           <button
             onClick={onValidateAnswer}
             className="magic-button px-8 py-4 text-lg font-bold shadow-2xl"
           >
             <span className="relative z-10 flex items-center gap-2">
-              ✨ Valider ma réponse ✨
+              Valider ma réponse
             </span>
           </button>
         </div>
       )}
 
       {showAnswer && canGoNext && !isNextButtonVisible && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
+        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
           <button
             onClick={onNextSong}
             className="magic-button px-8 py-4 text-lg font-bold shadow-2xl"
@@ -282,7 +282,7 @@ export const WorkSelector = ({
             }}
           >
             <span className="relative z-10 flex items-center gap-2">
-              🎵 Morceau suivant 🎵
+              Morceau suivant
             </span>
           </button>
         </div>
