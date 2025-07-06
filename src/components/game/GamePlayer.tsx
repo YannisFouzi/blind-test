@@ -24,14 +24,11 @@ export const GamePlayer = ({
 }: GamePlayerProps) => {
   return (
     <div className="bg-slate-800/50 rounded-2xl p-8 text-center border border-gray-700/50">
-      <h2 className="text-3xl font-bold text-white mb-2">
-        {showAnswer ? currentSong.title : "Titre mystère"}
-      </h2>
-      <p className="text-gray-400 text-lg">
-        {showAnswer && correctWorkTitle
-          ? `${correctWorkTitle} • ${currentSong.artist}`
-          : "Devinez le titre de cette musique"}
-      </p>
+      {!showAnswer && (
+        <p className="text-gray-400 text-lg mb-6">
+          Devinez le titre de cette musique
+        </p>
+      )}
 
       {/* Message d'erreur YouTube */}
       {youtubeError && (

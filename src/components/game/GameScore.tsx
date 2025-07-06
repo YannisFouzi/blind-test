@@ -6,7 +6,7 @@ interface GameScoreProps {
 
 export const GameScore = ({ gameSession }: GameScoreProps) => {
   return (
-    <div className="bg-slate-800/50 rounded-2xl p-6 text-center border border-gray-700/50">
+    <div className="text-center">
       <h3 className="text-2xl font-bold text-yellow-400 mb-4">
         Morceau {gameSession.currentSongIndex + 1} / {gameSession.songs.length}
       </h3>

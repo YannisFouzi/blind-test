@@ -3,8 +3,6 @@
 import { useParams, useRouter } from "next/navigation";
 import { FaHome } from "react-icons/fa";
 import { GameControls } from "../../../components/game/GameControls";
-import { GamePlayer } from "../../../components/game/GamePlayer";
-import { GameScore } from "../../../components/game/GameScore";
 import { WorkSelector } from "../../../components/game/WorkSelector";
 import { LoadingSpinner } from "../../../components/ui/LoadingSpinner";
 import { useGame } from "../../../hooks/useGame";
@@ -86,18 +84,6 @@ export default function GamePage() {
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Lecteur audio */}
         <div className="space-y-6">
-          {/* Composant lecteur */}
-          <GamePlayer
-            currentSong={currentSong}
-            showAnswer={showAnswer}
-            correctWorkTitle={correctWork?.title}
-            usingDemoData={usingDemoData}
-            youtubeError={youtubeError}
-            onError={handleYoutubeError}
-            onReady={handleYoutubeReady}
-            onStateChange={handleYoutubeStateChange}
-          />
-
           {/* Composant contrôles */}
           <div className="bg-slate-800/50 rounded-2xl p-8 text-center border border-gray-700/50">
             <GameControls
@@ -108,18 +94,24 @@ export default function GamePage() {
               isMuted={isMuted}
               canGoPrev={canGoPrev}
               canGoNext={canGoNext}
+              currentSongTitle={currentSong.title}
+              currentSongVideoId={currentSong.youtubeId}
+              showAnswer={showAnswer}
+              usingDemoData={usingDemoData}
+              youtubeError={youtubeError}
+              gameSession={gameSession}
               onPlayPause={handlePlayPause}
               onPrevSong={handlePrevSongWithReset}
               onNextSong={handleNextSongWithReset}
               onVolumeChange={handleVolumeChange}
               onToggleMute={toggleMute}
               onProgressClick={handleProgressClick}
+              onError={handleYoutubeError}
+              onReady={handleYoutubeReady}
+              onStateChange={handleYoutubeStateChange}
               formatTime={formatTime}
             />
           </div>
-
-          {/* Composant score */}
-          <GameScore gameSession={gameSession} />
         </div>
 
         {/* Sélection des films */}
