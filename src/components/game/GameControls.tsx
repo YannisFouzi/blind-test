@@ -133,7 +133,16 @@ export const GameControls = ({
           opts={{
             height: "0",
             width: "0",
-            playerVars: { autoplay: 0, controls: 0 },
+            playerVars: {
+              autoplay: 0,
+              controls: 0,
+              playsinline: 1,
+              enablejsapi: 1,
+              origin:
+                typeof window !== "undefined"
+                  ? window.location.origin
+                  : undefined,
+            },
           }}
           onReady={onReady}
           onStateChange={onStateChange}

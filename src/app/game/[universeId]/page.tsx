@@ -61,24 +61,11 @@ export default function GamePage() {
   } = useYouTube();
 
   const [isLoaded, setIsLoaded] = useState(false);
-  const [clickSound, setClickSound] = useState<HTMLAudioElement | null>(null);
-  const [successSound, setSuccessSound] = useState<HTMLAudioElement | null>(
-    null
-  );
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Charger les sons (sons subtils)
-    const loadSounds = () => {
-      const click = new Audio();
-      click.volume = 0.3;
-      setClickSound(click);
-
-      const success = new Audio();
-      success.volume = 0.5;
-      setSuccessSound(success);
-    };
-
-    loadSounds();
+    // Détection mobile côté client uniquement
+    setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
 
     // Animation d'entrée
     const timer = setTimeout(() => {
@@ -88,37 +75,19 @@ export default function GamePage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const playClickSound = () => {
-    if (clickSound) {
-      clickSound.currentTime = 0;
-      clickSound.play().catch(() => {});
-    }
-  };
-
-  const playSuccessSound = () => {
-    if (successSound) {
-      successSound.currentTime = 0;
-      successSound.play().catch(() => {});
-    }
-  };
-
   const handleNextSongWithReset = () => {
-    playClickSound();
     handleNextSong();
   };
 
   const handlePrevSongWithReset = () => {
-    playClickSound();
     handlePrevSong();
   };
 
   const handleWorkSelectionWithSound = (workId: string) => {
-    playClickSound();
     handleWorkSelection(workId);
   };
 
   const handleValidateAnswerWithSound = () => {
-    playSuccessSound();
     handleValidateAnswer();
   };
 
@@ -172,7 +141,6 @@ export default function GamePage() {
       >
         <button
           onClick={() => {
-            playClickSound();
             router.push("/");
           }}
           className="magic-button px-6 py-3 flex items-center gap-2 text-white font-semibold"
