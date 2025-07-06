@@ -141,8 +141,8 @@ export default function HomePage() {
             CHOISISSEZ VOTRE UNIVERS
           </h1>
           <p className="text-xl md:text-2xl text-white/70 max-w-3xl mx-auto leading-relaxed">
-            Plongez dans l'univers de votre choix et testez vos connaissances
-            musicales
+            Plongez dans l&apos;univers de votre choix et testez vos
+            connaissances musicales
           </p>
         </div>
 
@@ -156,8 +156,8 @@ export default function HomePage() {
                 Aucun univers actif
               </h2>
               <p className="text-gray-400 text-lg mb-8">
-                Aucun univers de blind test n'est actuellement actif. Les
-                univers doivent être activés par l'administrateur pour
+                Aucun univers de blind test n&apos;est actuellement actif. Les
+                univers doivent être activés par l&apos;administrateur pour
                 apparaître ici.
               </p>
               <Link

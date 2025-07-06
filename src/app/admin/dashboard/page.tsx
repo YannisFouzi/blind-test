@@ -31,7 +31,6 @@ export default function AdminDashboard() {
     success,
     isAdmin,
     clearMessages,
-    loadUniverses,
     addUniverse,
     updateUniverse,
     deleteUniverse,

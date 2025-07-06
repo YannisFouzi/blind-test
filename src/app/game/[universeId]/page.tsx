@@ -21,7 +21,6 @@ export default function GamePage() {
     works,
     currentSong,
     selectedWork,
-    gameAnswer,
     showAnswer,
     usingDemoData,
     handleWorkSelection,

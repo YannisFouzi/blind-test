@@ -21,9 +21,8 @@ const rgbToHsl = (
   b /= 255;
   const max = Math.max(r, g, b),
     min = Math.min(r, g, b);
-  let h,
-    s,
-    l = (max + min) / 2;
+  let h, s;
+  const l = (max + min) / 2;
 
   if (max === min) {
     h = s = 0;
@@ -100,7 +99,6 @@ export const generateStylesFromColor = (hexColor: string): GeneratedStyles => {
   const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
 
   // Générer des variations de la couleur
-  const darkerColor = hslToHex(hsl.h, hsl.s, Math.max(hsl.l - 20, 10));
   const lighterColor = hslToHex(hsl.h, hsl.s, Math.min(hsl.l + 15, 90));
   const veryDarkColor = hslToHex(hsl.h, hsl.s, Math.max(hsl.l - 40, 5));
 

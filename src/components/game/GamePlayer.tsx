@@ -52,8 +52,8 @@ export const GamePlayer = ({
               <p className="font-medium">Mode démonstration</p>
               <p className="text-blue-300 mt-1">
                 Vous utilisez des chansons de démonstration car aucune chanson
-                n'a été ajoutée pour vos œuvres. Rendez-vous dans
-                l'administration pour ajouter de vraies chansons.
+                n&apos;a été ajoutée pour vos œuvres. Rendez-vous dans
+                l&apos;administration pour ajouter de vraies chansons.
               </p>
             </div>
           </div>
