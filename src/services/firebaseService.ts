@@ -183,6 +183,19 @@ export class FirebaseService {
     ]);
   }
 
+  /**
+   * Récupère uniquement les univers actifs (pour les utilisateurs publics)
+   */
+  static async getActiveUniverses(): Promise<{
+    success: boolean;
+    data?: Universe[];
+    error?: string;
+  }> {
+    return this.getDocuments<Universe>("universes", [
+      where("active", "==", true),
+    ]);
+  }
+
   static async addUniverse(
     universe: Omit<Universe, "id" | "createdAt">
   ): Promise<{

@@ -6,8 +6,8 @@ import { FaCog, FaPlay, FaStar } from "react-icons/fa";
 import { Universe } from "../../types";
 import { ErrorMessage } from "../components/ui/ErrorMessage";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
-import { useAdmin } from "../hooks/useAdmin";
 import { useAuth } from "../hooks/useAuth";
+import { useUniverses } from "../hooks/useUniverses";
 import { generateStylesFromColor } from "../utils/colorGenerator";
 import { AVAILABLE_ICONS } from "../utils/iconLibrary";
 import { UNIVERSE_THEMES } from "../utils/universeThemes";
@@ -15,7 +15,11 @@ import { UNIVERSE_THEMES } from "../utils/universeThemes";
 export default function HomePage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { universes, loading: universesLoading } = useAdmin(user);
+  const {
+    universes,
+    loading: universesLoading,
+    error: universesError,
+  } = useUniverses();
   const [hoveredUniverse, setHoveredUniverse] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -85,7 +89,7 @@ export default function HomePage() {
     };
   };
 
-  if (authLoading || universesLoading) {
+  if (universesLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900 flex items-center justify-center">
         <div className="text-center">
@@ -97,10 +101,6 @@ export default function HomePage() {
       </div>
     );
   }
-
-  const activeUniverses = universes.filter(
-    (universe) => universe.active !== false
-  );
 
   // Vérifier les droits admin de façon simple
   const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
@@ -171,9 +171,22 @@ export default function HomePage() {
         </div>
 
         {/* Grille des univers */}
-        {activeUniverses.length > 0 ? (
+        {universesError ? (
+          <div
+            className={`text-center ${isLoaded ? "fade-in-up" : "opacity-0"}`}
+            style={{ animationDelay: "0.6s" }}
+          >
+            <div className="magic-card p-12 max-w-2xl mx-auto">
+              <ErrorMessage message={universesError} />
+              <p className="text-purple-300 mt-4">
+                Les univers magiques sont en cours de préparation... Revenez
+                bientôt !
+              </p>
+            </div>
+          </div>
+        ) : universes.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
-            {activeUniverses.map((universe, index) => {
+            {universes.map((universe, index) => {
               const styles = getUniverseStyles(universe);
 
               // Déterminer si on utilise les styles inline ou les classes Tailwind

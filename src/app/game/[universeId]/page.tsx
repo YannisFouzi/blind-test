@@ -193,7 +193,7 @@ export default function GamePage() {
             }`}
             style={{ animationDelay: "0.3s" }}
           >
-            <div className="magic-card p-8">
+            <div className="magic-card p-8 hidden">
               <GameControls
                 isPlaying={isPlaying}
                 currentTime={currentTime}
