@@ -62,7 +62,9 @@ export const WorkSelector = ({
           <button
             key={work.id}
             onClick={() => onWorkSelection(work.id)}
-            className={getWorkButtonClassName(work)}
+            className={`${getWorkButtonClassName(work)} ${
+              showAnswer ? "cursor-default" : "cursor-pointer"
+            }`}
             disabled={showAnswer}
           >
             <div className="text-sm font-medium">{work.title}</div>

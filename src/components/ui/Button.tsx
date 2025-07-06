@@ -20,7 +20,7 @@ export const Button = ({
   type = "button",
 }: ButtonProps) => {
   const baseClasses =
-    "font-semibold rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
+    "font-semibold rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer";
 
   const variantClasses = {
     primary: "bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500",

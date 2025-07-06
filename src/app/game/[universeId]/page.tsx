@@ -72,12 +72,12 @@ export default function GamePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-8 select-none cursor-default">
       {/* Header avec bouton retour */}
       <div className="flex justify-between items-center mb-8">
         <button
           onClick={() => router.push("/")}
-          className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors"
+          className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors cursor-pointer"
         >
           <FaHome size={20} />
           <span>Retour aux univers</span>

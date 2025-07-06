@@ -55,14 +55,14 @@ export const GameControls = ({
         <button
           onClick={onPrevSong}
           disabled={!canGoPrev}
-          className="text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
         >
           <FaStepBackward size={24} />
         </button>
 
         <button
           onClick={onPlayPause}
-          className="bg-orange-500 hover:bg-orange-600 rounded-full p-4 text-white transition-colors"
+          className="bg-orange-500 hover:bg-orange-600 rounded-full p-4 text-white transition-colors cursor-pointer"
         >
           {isPlaying ? <FaPause size={24} /> : <FaPlay size={24} />}
         </button>
@@ -70,7 +70,7 @@ export const GameControls = ({
         <button
           onClick={onNextSong}
           disabled={!canGoNext}
-          className="text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
         >
           <FaStepForward size={24} />
         </button>
@@ -97,7 +97,7 @@ export const GameControls = ({
       <div className="flex items-center justify-center gap-4">
         <button
           onClick={onToggleMute}
-          className="text-gray-400 hover:text-white transition-colors"
+          className="text-gray-400 hover:text-white transition-colors cursor-pointer"
         >
           {isMuted ? <FaVolumeMute size={20} /> : <FaVolumeUp size={20} />}
         </button>
