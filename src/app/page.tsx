@@ -276,7 +276,7 @@ export default function HomePage() {
 
                         {/* Titre */}
                         <h2
-                          className={`text-xl md:text-2xl xl:text-3xl font-bold mb-2 md:mb-4 text-center uppercase leading-tight ${
+                          className={`text-xl md:text-2xl xl:text-3xl font-bold mb-1 md:mb-2 text-center uppercase leading-tight ${
                             hasInlineStyles
                               ? "text-transparent bg-clip-text"
                               : `bg-gradient-to-r ${styles.textGradient} bg-clip-text text-transparent`
@@ -292,6 +292,11 @@ export default function HomePage() {
                         >
                           {universe.name}
                         </h2>
+
+                        {/* Description */}
+                        <p className="text-sm md:text-base text-white/80 text-center leading-relaxed px-2 mb-2 md:mb-4">
+                          {universe.description}
+                        </p>
                       </div>
 
                       {/* Effet de particules */}
