@@ -171,7 +171,7 @@ export default function HomePage() {
         ) : (
           /* Grille des univers */
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
               {universes.map((universe) => {
                 // Détecter le type de données : ancien thème, couleur hex, ou ID d'icône
                 let styles;
@@ -276,7 +276,7 @@ export default function HomePage() {
 
                         {/* Titre */}
                         <h2
-                          className={`text-lg md:text-3xl lg:text-4xl font-bold mb-2 md:mb-4 text-center uppercase ${
+                          className={`text-xl md:text-2xl xl:text-3xl font-bold mb-2 md:mb-4 text-center uppercase leading-tight ${
                             hasInlineStyles
                               ? "text-transparent bg-clip-text"
                               : `bg-gradient-to-r ${styles.textGradient} bg-clip-text text-transparent`

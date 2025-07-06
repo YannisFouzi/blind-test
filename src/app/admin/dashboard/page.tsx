@@ -213,33 +213,6 @@ export default function AdminDashboard() {
 
   // Configuration des colonnes pour les tableaux
   const universeColumns = [
-    {
-      key: "icon" as keyof Universe,
-      label: "Icône",
-      render: (value: string, universe: Universe) => {
-        // Nouveau système : ID d'icône
-        if (!value.startsWith("#") && !value.includes("-")) {
-          const iconData = getIconById(value);
-          if (iconData) {
-            const IconComponent = iconData.component;
-            return (
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{
-                  backgroundColor: universe.color.startsWith("#")
-                    ? universe.color
-                    : "#3B82F6",
-                }}
-              >
-                <IconComponent className="text-sm text-white" />
-              </div>
-            );
-          }
-        }
-        // Fallback : emoji ou texte
-        return <span className="text-2xl">{value}</span>;
-      },
-    },
     { key: "name" as keyof Universe, label: "Nom" },
     { key: "description" as keyof Universe, label: "Description" },
     {
