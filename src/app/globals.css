@@ -42,3 +42,81 @@ body {
 .cursor-pointer {
   cursor: pointer;
 }
+
+/* Import des animations magiques */
+@import url("../styles/gameAnimations.css");
+
+/* Styles de base pour l'application */
+body {
+  font-family: "Cinzel", serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+  background: #0f0f23;
+  color: white;
+  overflow-x: hidden;
+}
+
+/* Scrollbar personnalisée */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 15, 35, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #ffd700, #7c3aed);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #7c3aed, #ffd700);
+}
+
+/* Amélioration des transitions globales */
+* {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Effet de focus accessible */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid #ffd700;
+  outline-offset: 2px;
+}
+
+/* Optimisation des performances d'animation */
+.magic-card,
+.card-hover,
+.magic-button {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Préchargement des polices */
+@font-face {
+  font-family: "Cinzel";
+  font-display: swap;
+}
+
+/* Amélioration du contraste pour l'accessibilité */
+.fantasy-text {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+}
+
+/* Désactivation des animations pour les utilisateurs qui préfèrent la performance */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .particle,
+  .floating,
+  .magic-pulse {
+    animation: none !important;
+  }
+}

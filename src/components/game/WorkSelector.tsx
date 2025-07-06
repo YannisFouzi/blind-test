@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Work } from "../../../types";
-import { Button } from "../ui/Button";
 
 interface WorkSelectorProps {
   works: Work[];
@@ -29,6 +28,10 @@ export const WorkSelector = ({
 }: WorkSelectorProps) => {
   const [isValidateButtonVisible, setIsValidateButtonVisible] = useState(true);
   const [isNextButtonVisible, setIsNextButtonVisible] = useState(true);
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [cardAnimations, setCardAnimations] = useState<{
+    [key: string]: boolean;
+  }>({});
   const validateButtonRef = useRef<HTMLDivElement>(null);
   const nextButtonRef = useRef<HTMLDivElement>(null);
 
@@ -77,27 +80,42 @@ export const WorkSelector = ({
     };
   }, [canValidate, showAnswer, canGoNext, isCurrentSongAnswered]);
 
-  const getWorkButtonClassName = (work: Work) => {
-    let className =
-      "p-4 rounded-xl border-2 transition-all duration-300 cursor-pointer text-center";
+  const handleCardClick = (workId: string) => {
+    if (showAnswer || isCurrentSongAnswered) return;
 
-    if (showAnswer) {
+    // Animation de clic
+    setCardAnimations((prev) => ({ ...prev, [workId]: true }));
+    setTimeout(() => {
+      setCardAnimations((prev) => ({ ...prev, [workId]: false }));
+    }, 300);
+
+    onWorkSelection(workId);
+  };
+
+  const getWorkCardClassName = (work: Work) => {
+    let className =
+      "relative group cursor-pointer transform transition-all duration-300 ease-out";
+
+    if (showAnswer || isCurrentSongAnswered) {
+      className += " cursor-default";
+
       if (work.id === currentSongWorkId) {
-        // Bonne réponse
-        className += " border-yellow-500 bg-yellow-500/20 text-yellow-400";
+        // Bonne réponse - effet doré magique
+        className += " scale-105";
       } else if (work.id === selectedWork) {
-        // Mauvaise réponse sélectionnée
-        className += " border-red-500 bg-red-500/20 text-red-400";
+        // Mauvaise réponse - effet rouge
+        className += " scale-95";
       } else {
-        // Autres options
-        className += " border-gray-600 bg-gray-700/30 text-gray-500";
+        // Autres options - effet fade
+        className += " opacity-50 scale-95";
       }
     } else {
       if (work.id === selectedWork) {
-        className += " border-blue-500 bg-blue-500/20 text-blue-400";
+        // Sélectionné
+        className += " scale-105 hover:scale-110";
       } else {
-        className +=
-          " border-gray-600 bg-gray-700/30 text-white hover:border-gray-500 hover:bg-gray-600/30";
+        // Non sélectionné
+        className += " hover:scale-105 hover:-translate-y-2";
       }
     }
 
@@ -106,72 +124,167 @@ export const WorkSelector = ({
 
   return (
     <>
-      <div className="bg-slate-800/50 rounded-2xl p-8 border border-gray-700/50">
-        <h3 className="text-2xl font-bold text-yellow-400 mb-6 text-center">
-          Sélectionnez l'oeuvre
-        </h3>
+      <div className="relative">
+        {/* Effet de lumière d'ambiance */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 rounded-3xl blur-xl" />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {works.map((work) => (
-            <button
-              key={work.id}
-              onClick={() => onWorkSelection(work.id)}
-              className={`${getWorkButtonClassName(work)} ${
-                showAnswer || isCurrentSongAnswered
-                  ? "cursor-default"
-                  : "cursor-pointer"
-              }`}
-              disabled={showAnswer || isCurrentSongAnswered}
-            >
-              <div className="text-sm font-medium">{work.title}</div>
-              {showAnswer && work.id === currentSongWorkId && (
-                <div className="text-xs text-yellow-300 mt-1">
-                  Réponse correcte
+        {/* Container principal */}
+        <div className="relative bg-slate-900/40 backdrop-blur-lg rounded-3xl p-8 border border-blue-500/20">
+          {/* Titre avec effet magique */}
+          <div className="text-center mb-8">
+            <h2 className="fantasy-text text-4xl md:text-5xl font-bold mb-4">
+              Sélectionnez l'œuvre
+            </h2>
+            <div className="w-24 h-1 bg-gradient-to-r from-blue-400 to-purple-500 mx-auto rounded-full glow-effect" />
+          </div>
+
+          {/* Grille de cartes responsive avec tailles uniformes */}
+          <div className="uniform-card-grid mb-8">
+            {works.map((work, index) => {
+              const isCorrect = work.id === currentSongWorkId;
+              const isSelected = work.id === selectedWork;
+              const isWrong =
+                isSelected &&
+                !isCorrect &&
+                (showAnswer || isCurrentSongAnswered);
+              const isAnimating = cardAnimations[work.id];
+
+              return (
+                <div
+                  key={work.id}
+                  className={getWorkCardClassName(work)}
+                  onClick={() => handleCardClick(work.id)}
+                  onMouseEnter={() => setHoveredCard(work.id)}
+                  onMouseLeave={() => setHoveredCard(null)}
+                  style={{
+                    animationDelay: `${index * 0.1}s`,
+                  }}
+                >
+                  <div className="relative overflow-hidden uniform-card">
+                    {/* Carte principale avec hauteur fixe */}
+                    <div
+                      className={`relative magic-card h-full flex flex-col justify-center items-center p-4 transform transition-all duration-300 ${
+                        isAnimating ? "scale-95" : ""
+                      } ${
+                        isSelected && !(showAnswer || isCurrentSongAnswered)
+                          ? "holographic-card shine-effect"
+                          : ""
+                      }`}
+                      style={{
+                        background:
+                          isSelected && !(showAnswer || isCurrentSongAnswered)
+                            ? undefined // Garde l'effet holographique
+                            : isCorrect && (showAnswer || isCurrentSongAnswered)
+                            ? "linear-gradient(135deg, rgba(234, 179, 8, 0.3), rgba(251, 146, 60, 0.3))"
+                            : isWrong
+                            ? "linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(244, 63, 94, 0.3))"
+                            : "linear-gradient(135deg, rgba(26, 27, 58, 0.8), rgba(15, 15, 35, 0.9))",
+                      }}
+                    >
+                      {/* Contenu centré */}
+                      <div className="relative z-10 text-center w-full flex flex-col justify-center h-full">
+                        {/* Titre avec gestion intelligente du débordement */}
+                        <h3
+                          className={`uniform-card-title font-bold text-base transition-all duration-300 px-2 mb-2 ${
+                            isCorrect && (showAnswer || isCurrentSongAnswered)
+                              ? "text-yellow-300"
+                              : isWrong
+                              ? "text-red-300"
+                              : isSelected &&
+                                !(showAnswer || isCurrentSongAnswered)
+                              ? "holographic-text"
+                              : "text-white group-hover:text-purple-300"
+                          }`}
+                          title={work.title} // Tooltip pour voir le titre complet
+                        >
+                          {work.title}
+                        </h3>
+
+                        {/* Particules holographiques pour la sélection */}
+                        {isSelected &&
+                          !(showAnswer || isCurrentSongAnswered) && (
+                            <>
+                              {[...Array(8)].map((_, i) => (
+                                <div
+                                  key={i}
+                                  className="holographic-particles"
+                                  style={{
+                                    top: `${10 + Math.random() * 80}%`,
+                                    left: `${10 + Math.random() * 80}%`,
+                                    animationDelay: `${i * 0.3}s`,
+                                  }}
+                                />
+                              ))}
+                            </>
+                          )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
-              {showAnswer &&
-                work.id === selectedWork &&
-                work.id !== currentSongWorkId && (
-                  <div className="text-xs text-red-300 mt-1">Votre choix ✗</div>
-                )}
-            </button>
-          ))}
+              );
+            })}
+          </div>
+
+          {/* Bouton valider avec nouveau design */}
+          {canValidate && !isCurrentSongAnswered && (
+            <div ref={validateButtonRef} className="text-center mb-6">
+              <button
+                onClick={onValidateAnswer}
+                className="magic-button px-8 py-4 text-lg font-bold shadow-2xl transform hover:scale-105 transition-all duration-300"
+              >
+                <span className="relative z-10 flex items-center gap-2">
+                  ✨ Valider ma réponse ✨
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* Bouton suivant avec nouveau design */}
+          {showAnswer && canGoNext && (
+            <div ref={nextButtonRef} className="text-center">
+              <button
+                onClick={onNextSong}
+                className="magic-button px-8 py-4 text-lg font-bold shadow-2xl transform hover:scale-105 transition-all duration-300"
+                style={{
+                  background: "linear-gradient(135deg, #3B82F6, #8B5CF6)",
+                }}
+              >
+                <span className="relative z-10 flex items-center gap-2">
+                  🎵 Morceau suivant 🎵
+                </span>
+              </button>
+            </div>
+          )}
         </div>
-
-        {/* Bouton valider */}
-        {canValidate && !isCurrentSongAnswered && (
-          <div ref={validateButtonRef} className="text-center">
-            <Button onClick={onValidateAnswer} variant="success" size="large">
-              Valider ma réponse
-            </Button>
-          </div>
-        )}
-
-        {/* Bouton suivant */}
-        {showAnswer && canGoNext && (
-          <div ref={nextButtonRef} className="text-center">
-            <Button onClick={onNextSong} variant="primary" size="large">
-              Morceau suivant
-            </Button>
-          </div>
-        )}
       </div>
 
-      {/* Bouton valider fixe */}
+      {/* Boutons fixes avec design amélioré */}
       {canValidate && !isCurrentSongAnswered && !isValidateButtonVisible && (
         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
-          <Button onClick={onValidateAnswer} variant="success" size="large">
-            Valider ma réponse
-          </Button>
+          <button
+            onClick={onValidateAnswer}
+            className="magic-button px-8 py-4 text-lg font-bold shadow-2xl animate-pulse"
+          >
+            <span className="relative z-10 flex items-center gap-2">
+              ✨ Valider ma réponse ✨
+            </span>
+          </button>
         </div>
       )}
 
-      {/* Bouton suivant fixe */}
       {showAnswer && canGoNext && !isNextButtonVisible && (
         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
-          <Button onClick={onNextSong} variant="primary" size="large">
-            Morceau suivant
-          </Button>
+          <button
+            onClick={onNextSong}
+            className="magic-button px-8 py-4 text-lg font-bold shadow-2xl animate-pulse"
+            style={{
+              background: "linear-gradient(135deg, #3B82F6, #8B5CF6)",
+            }}
+          >
+            <span className="relative z-10 flex items-center gap-2">
+              🎵 Morceau suivant 🎵
+            </span>
+          </button>
         </div>
       )}
     </>
