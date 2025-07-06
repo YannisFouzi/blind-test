@@ -9,6 +9,7 @@ interface WorkSelectorProps {
   showAnswer: boolean;
   canValidate: boolean;
   canGoNext: boolean;
+  isCurrentSongAnswered: boolean;
   onWorkSelection: (workId: string) => void;
   onValidateAnswer: () => void;
   onNextSong: () => void;
@@ -21,6 +22,7 @@ export const WorkSelector = ({
   showAnswer,
   canValidate,
   canGoNext,
+  isCurrentSongAnswered,
   onWorkSelection,
   onValidateAnswer,
   onNextSong,
@@ -62,7 +64,7 @@ export const WorkSelector = ({
       observerOptions
     );
 
-    if (validateButtonRef.current && canValidate) {
+    if (validateButtonRef.current && canValidate && !isCurrentSongAnswered) {
       validateObserver.observe(validateButtonRef.current);
     }
     if (nextButtonRef.current && showAnswer && canGoNext) {
@@ -73,7 +75,7 @@ export const WorkSelector = ({
       validateObserver.disconnect();
       nextObserver.disconnect();
     };
-  }, [canValidate, showAnswer, canGoNext]);
+  }, [canValidate, showAnswer, canGoNext, isCurrentSongAnswered]);
 
   const getWorkButtonClassName = (work: Work) => {
     let className =
@@ -115,9 +117,11 @@ export const WorkSelector = ({
               key={work.id}
               onClick={() => onWorkSelection(work.id)}
               className={`${getWorkButtonClassName(work)} ${
-                showAnswer ? "cursor-default" : "cursor-pointer"
+                showAnswer || isCurrentSongAnswered
+                  ? "cursor-default"
+                  : "cursor-pointer"
               }`}
-              disabled={showAnswer}
+              disabled={showAnswer || isCurrentSongAnswered}
             >
               <div className="text-sm font-medium">{work.title}</div>
               {showAnswer && work.id === currentSongWorkId && (
@@ -135,7 +139,7 @@ export const WorkSelector = ({
         </div>
 
         {/* Bouton valider */}
-        {canValidate && (
+        {canValidate && !isCurrentSongAnswered && (
           <div ref={validateButtonRef} className="text-center">
             <Button onClick={onValidateAnswer} variant="success" size="large">
               Valider ma réponse
@@ -154,7 +158,7 @@ export const WorkSelector = ({
       </div>
 
       {/* Bouton valider fixe */}
-      {canValidate && !isValidateButtonVisible && (
+      {canValidate && !isCurrentSongAnswered && !isValidateButtonVisible && (
         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
           <Button onClick={onValidateAnswer} variant="success" size="large">
             Valider ma réponse

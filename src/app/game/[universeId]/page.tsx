@@ -28,6 +28,7 @@ export default function GamePage() {
     correctWork,
     canGoNext,
     canGoPrev,
+    isCurrentSongAnswered,
   } = useGame(universeId);
 
   const {
@@ -122,6 +123,7 @@ export default function GamePage() {
           showAnswer={showAnswer}
           canValidate={!!selectedWork && !showAnswer}
           canGoNext={canGoNext}
+          isCurrentSongAnswered={isCurrentSongAnswered}
           onWorkSelection={handleWorkSelection}
           onValidateAnswer={handleValidateAnswer}
           onNextSong={handleNextSongWithReset}

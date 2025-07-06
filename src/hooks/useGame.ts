@@ -127,6 +127,18 @@ export const useGame = (universeId: string) => {
   // Actions du jeu
   const handleWorkSelection = (workId: string) => {
     if (showAnswer) return;
+
+    // Vérifier si la chanson actuelle a déjà été répondue
+    if (gameSession && currentSong) {
+      const existingAnswer = gameSession.answers.find(
+        (answer) => answer.songId === currentSong.id
+      );
+      if (existingAnswer) {
+        // Chanson déjà répondue, empêcher la re-sélection
+        return;
+      }
+    }
+
     setSelectedWork(workId);
   };
 
@@ -189,15 +201,58 @@ export const useGame = (universeId: string) => {
   };
 
   const resetGameState = () => {
-    setSelectedWork(null);
-    setGameAnswer(null);
-    setShowAnswer(false);
+    if (!gameSession || !currentSong) {
+      setSelectedWork(null);
+      setGameAnswer(null);
+      setShowAnswer(false);
+      return;
+    }
+
+    // Vérifier si cette chanson a déjà été répondue
+    const existingAnswer = gameSession.answers.find(
+      (answer) => answer.songId === currentSong.id
+    );
+
+    if (existingAnswer) {
+      // Charger l'état depuis l'historique
+      setSelectedWork(existingAnswer.selectedWorkId);
+      setGameAnswer(existingAnswer);
+      setShowAnswer(true);
+    } else {
+      // Nouvelle chanson, état vierge
+      setSelectedWork(null);
+      setGameAnswer(null);
+      setShowAnswer(false);
+    }
+  };
+
+  // Utilitaires
+  const isCurrentSongAnswered = () => {
+    if (!gameSession || !currentSong) return false;
+    return gameSession.answers.some(
+      (answer) => answer.songId === currentSong.id
+    );
+  };
+
+  const getCurrentSongAnswer = () => {
+    if (!gameSession || !currentSong) return null;
+    return (
+      gameSession.answers.find((answer) => answer.songId === currentSong.id) ||
+      null
+    );
   };
 
   // Initialisation au montage du composant
   useEffect(() => {
     initializeGame();
   }, [universeId]);
+
+  // Effet pour charger l'état quand la chanson change
+  useEffect(() => {
+    if (gameSession && currentSong) {
+      resetGameState();
+    }
+  }, [gameSession?.currentSongIndex, currentSong?.id]);
 
   return {
     // État
@@ -222,5 +277,7 @@ export const useGame = (universeId: string) => {
       ? gameSession.currentSongIndex < gameSession.songs.length - 1
       : false,
     canGoPrev: gameSession ? gameSession.currentSongIndex > 0 : false,
+    isCurrentSongAnswered: isCurrentSongAnswered(),
+    currentSongAnswer: getCurrentSongAnswer(),
   };
 };
