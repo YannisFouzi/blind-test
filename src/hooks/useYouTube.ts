@@ -15,12 +15,17 @@ export const useYouTube = () => {
   // Contrôles du lecteur
   const handlePlayPause = () => {
     if (youtubePlayer.current) {
-      if (isPlaying) {
-        youtubePlayer.current.pauseVideo();
-      } else {
-        youtubePlayer.current.playVideo();
+      try {
+        if (isPlaying) {
+          youtubePlayer.current.pauseVideo();
+        } else {
+          youtubePlayer.current.playVideo();
+        }
+        setIsPlaying(!isPlaying);
+      } catch (error) {
+        console.warn("Erreur lors du contrôle de lecture:", error);
+        // On ne met pas d'erreur visible pour l'utilisateur ici
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
@@ -61,9 +66,22 @@ export const useYouTube = () => {
   };
 
   const handleYoutubeError = (error: any) => {
+    // Détection mobile
+    const isMobile =
+      typeof window !== "undefined" &&
+      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    // Sur mobile, on ignore complètement les erreurs YouTube (autoplay bloqué, etc.)
+    if (isMobile) {
+      return; // Ne rien faire sur mobile
+    }
+
+    // Sur desktop uniquement
     if (process.env.NODE_ENV === "development") {
       console.error("Erreur YouTube:", error);
     }
+
+    // Afficher l'erreur seulement sur desktop
     setYoutubeError(
       "Impossible de charger la vidéo YouTube. Cela peut être dû à vos extensions de navigateur (adblockers). Le jeu fonctionne toujours sans audio."
     );
