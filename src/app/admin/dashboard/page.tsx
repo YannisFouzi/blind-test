@@ -9,6 +9,7 @@ import { DataTable } from "../../../components/admin/DataTable";
 import { SongForm } from "../../../components/admin/SongForm";
 import { UniverseForm } from "../../../components/admin/UniverseForm";
 import { WorkForm } from "../../../components/admin/WorkForm";
+import { WorksTable } from "../../../components/admin/WorksTable";
 import { Button } from "../../../components/ui/Button";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal";
 import { LoadingSpinner } from "../../../components/ui/LoadingSpinner";
@@ -38,6 +39,7 @@ export default function AdminDashboard() {
     addWork,
     updateWork,
     deleteWork,
+    reorderWorks,
     loadSongs,
     addSong,
     updateSong,
@@ -179,10 +181,35 @@ export default function AdminDashboard() {
     handleCloseModal();
   };
 
-  const handleWorkSubmit = async (data: Omit<Work, "id" | "createdAt">) => {
+  const handleWorkSubmit = async (
+    data: Omit<Work, "id" | "createdAt" | "order">
+  ) => {
+    // Calculer l'ordre selon le contexte
+    let calculatedOrder = 0;
+
+    if (!editingItem) {
+      // Pour les nouvelles œuvres, calculer l'ordre automatiquement
+      const currentWorks = works.filter(
+        (w) => w.universeId === data.universeId
+      );
+      const maxOrder =
+        currentWorks.length > 0
+          ? Math.max(...currentWorks.map((w) => w.order || 0))
+          : 0;
+      calculatedOrder = maxOrder + 1;
+    } else {
+      // Pour les modifications, garder l'ordre existant
+      calculatedOrder = (editingItem as Work).order || 0;
+    }
+
+    const workData: Omit<Work, "id" | "createdAt"> = {
+      ...data,
+      order: calculatedOrder,
+    };
+
     const result = editingItem
-      ? await updateWork(editingItem.id, data)
-      : await addWork(data);
+      ? await updateWork(editingItem.id, workData)
+      : await addWork(workData);
 
     if (result.success) {
       handleCloseModal();
@@ -208,6 +235,47 @@ export default function AdminDashboard() {
       handleCloseModal();
     }
     return result;
+  };
+
+  // Fonctions de réorganisation des œuvres
+  const handleMoveWorkUp = async (work: Work) => {
+    const currentWorks = works.filter((w) => w.universeId === work.universeId);
+    const sortedWorks = currentWorks.sort(
+      (a, b) => (a.order || 0) - (b.order || 0)
+    );
+    const currentIndex = sortedWorks.findIndex((w) => w.id === work.id);
+
+    if (currentIndex > 0) {
+      const workToUpdate = sortedWorks[currentIndex];
+      const workAbove = sortedWorks[currentIndex - 1];
+
+      const reorderData = [
+        { id: workToUpdate.id, order: workAbove.order || 0 },
+        { id: workAbove.id, order: workToUpdate.order || 0 },
+      ];
+
+      await reorderWorks(reorderData);
+    }
+  };
+
+  const handleMoveWorkDown = async (work: Work) => {
+    const currentWorks = works.filter((w) => w.universeId === work.universeId);
+    const sortedWorks = currentWorks.sort(
+      (a, b) => (a.order || 0) - (b.order || 0)
+    );
+    const currentIndex = sortedWorks.findIndex((w) => w.id === work.id);
+
+    if (currentIndex < sortedWorks.length - 1) {
+      const workToUpdate = sortedWorks[currentIndex];
+      const workBelow = sortedWorks[currentIndex + 1];
+
+      const reorderData = [
+        { id: workToUpdate.id, order: workBelow.order || 0 },
+        { id: workBelow.id, order: workToUpdate.order || 0 },
+      ];
+
+      await reorderWorks(reorderData);
+    }
   };
 
   // Configuration des colonnes pour les tableaux
@@ -276,15 +344,6 @@ export default function AdminDashboard() {
           {value ? "Actif" : "Inactif"}
         </span>
       ),
-    },
-  ];
-
-  const workColumns = [
-    { key: "title" as keyof Work, label: "Titre" },
-    {
-      key: "playlistId" as keyof Work,
-      label: "Playlist ID",
-      render: (value: string) => value || "Non définie",
     },
   ];
 
@@ -377,25 +436,18 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <DataTable
-              data={works}
-              columns={workColumns}
+            <WorksTable
+              works={works}
               loading={loading}
-              emptyMessage="Aucune œuvre créée"
               onEdit={(work) => handleOpenModal("work", work)}
               onDelete={(work) => handleConfirmDelete("work", work)}
-              actions={(work) => (
-                <Button
-                  variant="secondary"
-                  size="small"
-                  onClick={() => {
-                    setSelectedWork(work.id);
-                    loadSongs(work.id);
-                  }}
-                >
-                  Gérer les chansons
-                </Button>
-              )}
+              onManageSongs={(work) => {
+                setSelectedWork(work.id);
+                loadSongs(work.id);
+              }}
+              onMoveUp={handleMoveWorkUp}
+              onMoveDown={handleMoveWorkDown}
+              onReorder={reorderWorks}
             />
           </section>
         )}

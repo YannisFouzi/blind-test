@@ -3,3 +3,4 @@ export { DataTable } from "./DataTable";
 export { SongForm } from "./SongForm";
 export { UniverseForm } from "./UniverseForm";
 export { WorkForm } from "./WorkForm";
+export { WorksTable } from "./WorksTable";

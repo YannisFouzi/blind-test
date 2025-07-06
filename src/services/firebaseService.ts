@@ -213,7 +213,7 @@ export class FirebaseService {
   }> {
     return this.getDocuments<Work>("works", [
       where("universeId", "==", universeId),
-      orderBy("createdAt", "desc"),
+      orderBy("order", "asc"),
     ]);
   }
 
@@ -233,6 +233,41 @@ export class FirebaseService {
     error?: string;
   }> {
     return this.updateDocument<Work>("works", id, data);
+  }
+
+  static async reorderWorks(
+    works: Array<{ id: string; order: number }>
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      // Mettre à jour toutes les œuvres en parallèle
+      const updatePromises = works.map((work) =>
+        this.updateDocument<Work>("works", work.id, { order: work.order })
+      );
+
+      const results = await Promise.all(updatePromises);
+
+      // Vérifier si toutes les mises à jour ont réussi
+      const failedUpdate = results.find((result) => !result.success);
+      if (failedUpdate) {
+        return {
+          success: false,
+          error: failedUpdate.error || "Erreur lors de la réorganisation",
+        };
+      }
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Erreur lors de la réorganisation des œuvres",
+      };
+    }
   }
 
   /**

@@ -9,7 +9,7 @@ interface WorkFormProps {
   universes: Universe[];
   defaultUniverseId?: string; // Pré-sélection automatique de l'univers
   onSubmit: (
-    data: Omit<Work, "id" | "createdAt">
+    data: Omit<Work, "id" | "createdAt" | "order">
   ) => Promise<{ success: boolean; error?: string; id?: string }>;
   onCancel: () => void;
   loading?: boolean;

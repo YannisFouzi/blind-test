@@ -6,6 +6,7 @@ export const defaultWorks: Work[] = [
     title: "Harry Potter à l'École des Sorciers",
     universeId: "harry-potter",
     playlistId: "PLexample1",
+    order: 1,
     createdAt: new Date(),
   },
   {
@@ -13,6 +14,7 @@ export const defaultWorks: Work[] = [
     title: "Harry Potter et la Chambre des Secrets",
     universeId: "harry-potter",
     playlistId: "PLexample2",
+    order: 2,
     createdAt: new Date(),
   },
   {
@@ -20,6 +22,7 @@ export const defaultWorks: Work[] = [
     title: "Harry Potter et le Prisonnier d'Azkaban",
     universeId: "harry-potter",
     playlistId: "PLexample3",
+    order: 3,
     createdAt: new Date(),
   },
   {
@@ -27,6 +30,7 @@ export const defaultWorks: Work[] = [
     title: "Harry Potter et la Coupe de Feu",
     universeId: "harry-potter",
     playlistId: "PLexample4",
+    order: 4,
     createdAt: new Date(),
   },
   {
@@ -34,6 +38,7 @@ export const defaultWorks: Work[] = [
     title: "Harry Potter et l'Ordre du Phénix",
     universeId: "harry-potter",
     playlistId: "PLexample5",
+    order: 5,
     createdAt: new Date(),
   },
   {
@@ -41,6 +46,7 @@ export const defaultWorks: Work[] = [
     title: "Harry Potter et le Prince de Sang-Mélé",
     universeId: "harry-potter",
     playlistId: "PLexample6",
+    order: 6,
     createdAt: new Date(),
   },
   {
@@ -48,6 +54,7 @@ export const defaultWorks: Work[] = [
     title: "Harry Potter et les Reliques de la Mort - Partie 1",
     universeId: "harry-potter",
     playlistId: "PLexample7",
+    order: 7,
     createdAt: new Date(),
   },
   {
@@ -55,6 +62,7 @@ export const defaultWorks: Work[] = [
     title: "Harry Potter et les Reliques de la Mort - Partie 2",
     universeId: "harry-potter",
     playlistId: "PLexample8",
+    order: 8,
     createdAt: new Date(),
   },
 ];

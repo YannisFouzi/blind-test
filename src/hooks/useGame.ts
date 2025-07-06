@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { db } from "../../lib/firebase";
 import { GameAnswer, GameSession, Song, Work } from "../../types";
@@ -21,7 +21,8 @@ export const useGame = (universeId: string) => {
       // Charger les œuvres de l'univers
       const worksQuery = query(
         collection(db, "works"),
-        where("universeId", "==", universeId)
+        where("universeId", "==", universeId),
+        orderBy("order", "asc")
       );
       const worksSnapshot = await getDocs(worksQuery);
 

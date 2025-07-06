@@ -207,6 +207,26 @@ export const useAdmin = (user: User | null) => {
     return result;
   };
 
+  const reorderWorks = async (works: Array<{ id: string; order: number }>) => {
+    setLoading(true);
+    clearMessages();
+
+    const result = await FirebaseService.reorderWorks(works);
+    if (result.success) {
+      setSuccess("Ordre des œuvres mis à jour avec succès !");
+      // Rechargement des œuvres
+      const firstWork = state.works[0];
+      if (firstWork) {
+        loadWorks(firstWork.universeId);
+      }
+    } else {
+      setError(result.error || "Erreur lors de la réorganisation des œuvres");
+    }
+
+    setLoading(false);
+    return result;
+  };
+
   // Gestion des chansons
   const loadSongs = async (workId: string) => {
     setLoading(true);
@@ -390,6 +410,7 @@ export const useAdmin = (user: User | null) => {
     addWork,
     updateWork,
     deleteWork,
+    reorderWorks,
 
     // Actions chansons
     loadSongs,

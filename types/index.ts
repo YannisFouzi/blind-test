@@ -15,6 +15,7 @@ export interface Work {
   title: string;
   universeId: string;
   playlistId: string; // YouTube playlist ID
+  order: number; // Position d'affichage (1, 2, 3...)
   createdAt: Date;
 }
 
