@@ -235,34 +235,6 @@ export default function GamePage() {
             />
           </div>
         </div>
-
-        {/* Indicateurs de progression en bas */}
-        <div
-          className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 ${
-            isLoaded ? "fade-in-up" : "opacity-0"
-          }`}
-          style={{ animationDelay: "0.9s" }}
-        >
-          <div className="magic-card px-6 py-3 flex items-center gap-4 text-white backdrop-blur-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full" />
-              <span className="text-sm font-medium">
-                {gameSession.currentSongIndex + 1} / {gameSession.songs.length}
-              </span>
-            </div>
-            <div className="w-px h-4 bg-gradient-to-b from-transparent via-white/30 to-transparent" />
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <span className="text-green-400 text-sm">✓</span>
-                <span className="text-sm">{gameSession.score.correct}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-red-400 text-sm">✗</span>
-                <span className="text-sm">{gameSession.score.incorrect}</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Effets de lumière d'ambiance */}
