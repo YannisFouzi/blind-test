@@ -109,15 +109,44 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900 relative overflow-hidden">
       {/* Particules flottantes d'arrière-plan */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(30)].map((_, i) => (
+        {[
+          { top: 10, left: 15 },
+          { top: 25, left: 80 },
+          { top: 40, left: 30 },
+          { top: 60, left: 70 },
+          { top: 80, left: 20 },
+          { top: 15, left: 50 },
+          { top: 35, left: 85 },
+          { top: 75, left: 60 },
+          { top: 90, left: 40 },
+          { top: 20, left: 10 },
+          { top: 55, left: 25 },
+          { top: 70, left: 90 },
+          { top: 30, left: 55 },
+          { top: 85, left: 75 },
+          { top: 45, left: 5 },
+          { top: 65, left: 45 },
+          { top: 12, left: 65 },
+          { top: 50, left: 15 },
+          { top: 75, left: 35 },
+          { top: 95, left: 80 },
+          { top: 25, left: 40 },
+          { top: 40, left: 75 },
+          { top: 60, left: 10 },
+          { top: 18, left: 90 },
+          { top: 32, left: 20 },
+          { top: 78, left: 55 },
+          { top: 88, left: 25 },
+          { top: 42, left: 85 },
+          { top: 68, left: 65 },
+          { top: 52, left: 95 },
+        ].map((position, i) => (
           <div
             key={i}
             className="particle"
             style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 8}s`,
-              animationDuration: `${6 + Math.random() * 4}s`,
+              top: `${position.top}%`,
+              left: `${position.left}%`,
             }}
           />
         ))}

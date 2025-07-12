@@ -199,24 +199,6 @@ export const WorkSelector = ({
                         >
                           {work.title}
                         </h3>
-
-                        {/* Particules holographiques pour la sélection */}
-                        {isSelected &&
-                          !(showAnswer || isCurrentSongAnswered) && (
-                            <>
-                              {[...Array(8)].map((_, i) => (
-                                <div
-                                  key={i}
-                                  className="holographic-particles"
-                                  style={{
-                                    top: `${10 + Math.random() * 80}%`,
-                                    left: `${10 + Math.random() * 80}%`,
-                                    animationDelay: `${i * 0.3}s`,
-                                  }}
-                                />
-                              ))}
-                            </>
-                          )}
                       </div>
                     </div>
                   </div>

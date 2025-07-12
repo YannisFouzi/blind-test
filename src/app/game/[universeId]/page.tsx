@@ -118,13 +118,34 @@ export default function GamePage() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900 relative overflow-hidden">
       {/* Particules flottantes d'arrière-plan */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
+        {[
+          { top: 15, left: 20 },
+          { top: 35, left: 75 },
+          { top: 55, left: 25 },
+          { top: 70, left: 85 },
+          { top: 85, left: 15 },
+          { top: 20, left: 60 },
+          { top: 45, left: 90 },
+          { top: 65, left: 40 },
+          { top: 90, left: 70 },
+          { top: 25, left: 35 },
+          { top: 50, left: 80 },
+          { top: 75, left: 10 },
+          { top: 30, left: 55 },
+          { top: 60, left: 30 },
+          { top: 80, left: 65 },
+          { top: 40, left: 45 },
+          { top: 12, left: 85 },
+          { top: 67, left: 12 },
+          { top: 82, left: 92 },
+          { top: 38, left: 68 },
+        ].map((position, i) => (
           <div
             key={i}
             className="particle"
             style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
+              top: `${position.top}%`,
+              left: `${position.left}%`,
             }}
           />
         ))}
