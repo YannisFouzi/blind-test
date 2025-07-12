@@ -185,7 +185,7 @@ export const WorkSelector = ({
                       <div className="relative z-10 text-center w-full flex flex-col justify-center h-full">
                         {/* Titre avec gestion intelligente du débordement */}
                         <h3
-                          className={`uniform-card-title font-bold text-base transition-all duration-300 px-2 mb-2 ${
+                          className={`uniform-card-title font-bold text-base transition-all duration-300 px-2 ${
                             isCorrect && (showAnswer || isCurrentSongAnswered)
                               ? "text-yellow-300"
                               : isWrong
