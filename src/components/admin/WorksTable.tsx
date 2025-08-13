@@ -31,7 +31,6 @@ interface WorksTableProps {
 // Composant pour une ligne draggable
 const SortableWorkRow = ({
   work,
-  index,
   isFirst,
   isLast,
   onEdit,

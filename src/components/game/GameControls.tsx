@@ -22,47 +22,32 @@ interface GameControlsProps {
   onVolumeChange: (volume: number) => void;
   onToggleMute: () => void;
   onProgressClick: (e: React.MouseEvent<HTMLDivElement>) => void;
-  onError: (error: any) => void;
-  onReady: (event: any) => void;
-  onStateChange: (event: any) => void;
+  onError: (error: unknown) => void;
+  onReady: (event: {
+    target: {
+      playVideo: () => void;
+      pauseVideo: () => void;
+      setVolume: (volume: number) => void;
+      seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+      getCurrentTime: () => number;
+      getDuration: () => number;
+    };
+  }) => void;
+  onStateChange: (event: { target: unknown; data: number }) => void;
   formatTime: (seconds: number) => string;
 }
 
 export const GameControls = ({
-  isPlaying,
-  currentTime,
-  duration,
-  volume,
-  isMuted,
-  canGoPrev,
-  canGoNext,
   currentSongTitle,
   currentSongVideoId,
   showAnswer,
   usingDemoData,
   youtubeError,
   gameSession,
-  onPlayPause,
-  onPrevSong,
-  onNextSong,
-  onVolumeChange,
-  onToggleMute,
-  onProgressClick,
   onError,
   onReady,
   onStateChange,
-  formatTime,
 }: GameControlsProps) => {
-  const handleVolumeClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percentage = (clickX / rect.width) * 100;
-    const newVolume = Math.max(0, Math.min(100, percentage));
-    onVolumeChange(newVolume);
-  };
-
-  const progress = duration ? (currentTime / duration) * 100 : 0;
-
   return (
     <>
       {/* Zone principale avec titre et score */}
@@ -84,7 +69,7 @@ export const GameControls = ({
             ) : (
               <div className="fade-in-up">
                 <p className="text-white text-xl md:text-2xl font-semibold mb-2">
-                  Écoute et devine l'œuvre
+                  Écoute et devine l&apos;œuvre
                 </p>
               </div>
             )}
@@ -111,8 +96,8 @@ export const GameControls = ({
                   <p className="font-semibold">Mode démonstration</p>
                   <p className="text-sm text-blue-200 mt-1">
                     Vous utilisez des chansons de démonstration. Rendez-vous
-                    dans l'administration pour ajouter de vraies chansons et
-                    débloquer tous les pouvoirs magiques !
+                    dans l&apos;administration pour ajouter de vraies chansons
+                    et débloquer tous les pouvoirs magiques !
                   </p>
                 </div>
               </div>

@@ -18,22 +18,6 @@ export const GameScore = ({ gameSession }: GameScoreProps) => {
     ) {
       setIsAnimating(true);
 
-      const animateCounter = (
-        target: number,
-        current: number,
-        setter: (value: number) => void
-      ) => {
-        const diff = target - current;
-        const increment = diff > 0 ? 1 : -1;
-        const duration = 50;
-
-        if (diff !== 0) {
-          setTimeout(() => {
-            setter(current + increment);
-          }, duration);
-        }
-      };
-
       const interval = setInterval(() => {
         if (animatedCorrect < gameSession.score.correct) {
           setAnimatedCorrect((prev) => prev + 1);
@@ -65,10 +49,7 @@ export const GameScore = ({ gameSession }: GameScoreProps) => {
     animatedIncorrect,
   ]);
 
-  const totalQuestions =
-    gameSession.score.correct + gameSession.score.incorrect;
-  const successRate =
-    totalQuestions > 0 ? (gameSession.score.correct / totalQuestions) * 100 : 0;
+  // const totalQuestions = gameSession.score.correct + gameSession.score.incorrect;
 
   return (
     <div className="text-center">

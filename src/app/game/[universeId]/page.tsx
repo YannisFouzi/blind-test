@@ -15,7 +15,6 @@ import { GameControls } from "../../../components/game/GameControls";
 import { WorkSelector } from "../../../components/game/WorkSelector";
 import { ErrorMessage } from "../../../components/ui/ErrorMessage";
 import { LoadingSpinner } from "../../../components/ui/LoadingSpinner";
-import { useAuth } from "../../../hooks/useAuth";
 import { useGame } from "../../../hooks/useGame";
 import { useYouTube } from "../../../hooks/useYouTube";
 import "../../../styles/gameAnimations.css";
@@ -24,7 +23,6 @@ export default function GamePage() {
   const router = useRouter();
   const params = useParams();
   const universeId = params.universeId as string;
-  const { user } = useAuth();
 
   const {
     gameSession,
@@ -37,7 +35,6 @@ export default function GamePage() {
     handleValidateAnswer,
     handleNextSong,
     handlePrevSong,
-    correctWork,
     canGoNext,
     canGoPrev,
     isCurrentSongAnswered,
@@ -61,12 +58,8 @@ export default function GamePage() {
   } = useYouTube();
 
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Détection mobile côté client uniquement
-    setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
-
     // Animation d'entrée
     const timer = setTimeout(() => {
       setIsLoaded(true);
@@ -97,7 +90,7 @@ export default function GamePage() {
         <div className="text-center">
           <LoadingSpinner />
           <p className="text-white mt-4 font-medium">
-            Chargement de l'univers magique...
+            Chargement de l&apos;univers magique...
           </p>
         </div>
       </div>

@@ -7,15 +7,23 @@ interface GamePlayerProps {
   correctWorkTitle?: string;
   usingDemoData: boolean;
   youtubeError: string | null;
-  onError: (error: any) => void;
-  onReady: (event: any) => void;
-  onStateChange: (event: any) => void;
+  onError: (error: unknown) => void;
+  onReady: (event: {
+    target: {
+      playVideo: () => void;
+      pauseVideo: () => void;
+      setVolume: (volume: number) => void;
+      seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+      getCurrentTime: () => number;
+      getDuration: () => number;
+    };
+  }) => void;
+  onStateChange: (event: { target: unknown; data: number }) => void;
 }
 
 export const GamePlayer = ({
   currentSong,
   showAnswer,
-  correctWorkTitle,
   usingDemoData,
   youtubeError,
   onError,

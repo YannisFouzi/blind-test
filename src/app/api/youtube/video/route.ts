@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: video,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (process.env.NODE_ENV === "development") {
       console.error("Erreur API vidéo:", error);
     }
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
       {
         error: "Erreur lors de la récupération de la vidéo",
         details:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+          process.env.NODE_ENV === "development" ? String(error) : undefined,
       },
       { status: 500 }
     );
@@ -147,17 +147,31 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
 
-    const videos = data.items.map((item: any) => ({
-      id: item.id,
-      title: item.snippet.title || "",
-      description: item.snippet.description || "",
-      duration: item.contentDetails.duration || "PT0S",
-      thumbnails: item.snippet.thumbnails || {
-        default: { url: "" },
-        medium: { url: "" },
-        high: { url: "" },
-      },
-    }));
+    const videos = data.items.map(
+      (item: {
+        id: string;
+        snippet: {
+          title?: string;
+          description?: string;
+          thumbnails?: {
+            default?: { url: string };
+            medium?: { url: string };
+            high?: { url: string };
+          };
+        };
+        contentDetails: { duration?: string };
+      }) => ({
+        id: item.id,
+        title: item.snippet.title || "",
+        description: item.snippet.description || "",
+        duration: item.contentDetails.duration || "PT0S",
+        thumbnails: item.snippet.thumbnails || {
+          default: { url: "" },
+          medium: { url: "" },
+          high: { url: "" },
+        },
+      })
+    );
 
     return NextResponse.json({
       success: true,
@@ -165,7 +179,7 @@ export async function POST(request: NextRequest) {
       count: videos.length,
       requested: videoIds.length,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (process.env.NODE_ENV === "development") {
       console.error("Erreur validation vidéos:", error);
     }
@@ -174,7 +188,7 @@ export async function POST(request: NextRequest) {
       {
         error: "Erreur lors de la validation des vidéos",
         details:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+          process.env.NODE_ENV === "development" ? String(error) : undefined,
       },
       { status: 500 }
     );

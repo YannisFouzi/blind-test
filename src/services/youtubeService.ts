@@ -136,7 +136,11 @@ export class YouTubeService {
       title: string;
       description: string;
       duration: number;
-      thumbnails: any;
+      thumbnails: {
+        default?: { url: string };
+        medium?: { url: string };
+        high?: { url: string };
+      };
     }>;
     count?: number;
     error?: string;

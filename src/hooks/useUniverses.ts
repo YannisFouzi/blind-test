@@ -37,7 +37,7 @@ export const useUniverses = () => {
           error: result.error || "Erreur lors du chargement des univers",
         });
       }
-    } catch (error) {
+    } catch {
       setState({
         universes: [],
         loading: false,

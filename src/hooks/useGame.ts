@@ -1,5 +1,5 @@
 import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { db } from "../../lib/firebase";
 import { GameAnswer, GameSession, Song, Work } from "../../types";
 import { createDemoSongs, defaultSongs, defaultWorks } from "../utils/demoData";
@@ -16,7 +16,7 @@ export const useGame = (universeId: string) => {
   const [usingDemoData, setUsingDemoData] = useState(false);
 
   // Initialisation du jeu
-  const initializeGame = async () => {
+  const initializeGame = useCallback(async () => {
     try {
       // Charger les œuvres de l'univers
       const worksQuery = query(
@@ -122,7 +122,7 @@ export const useGame = (universeId: string) => {
         console.error("Erreur lors de l'initialisation du jeu:", error);
       }
     }
-  };
+  }, [universeId]);
 
   // Actions du jeu
   const handleWorkSelection = (workId: string) => {
@@ -200,7 +200,7 @@ export const useGame = (universeId: string) => {
     }
   };
 
-  const resetGameState = () => {
+  const resetGameState = useCallback(() => {
     if (!gameSession || !currentSong) {
       setSelectedWork(null);
       setGameAnswer(null);
@@ -224,7 +224,7 @@ export const useGame = (universeId: string) => {
       setGameAnswer(null);
       setShowAnswer(false);
     }
-  };
+  }, [gameSession, currentSong]);
 
   // Utilitaires
   const isCurrentSongAnswered = () => {
@@ -245,14 +245,14 @@ export const useGame = (universeId: string) => {
   // Initialisation au montage du composant
   useEffect(() => {
     initializeGame();
-  }, [universeId]);
+  }, [initializeGame]);
 
   // Effet pour charger l'état quand la chanson change
   useEffect(() => {
     if (gameSession && currentSong) {
       resetGameState();
     }
-  }, [gameSession?.currentSongIndex, currentSong?.id]);
+  }, [gameSession, currentSong, resetGameState]);
 
   return {
     // État

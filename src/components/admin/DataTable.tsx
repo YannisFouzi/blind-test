@@ -5,7 +5,7 @@ import { LoadingSpinner } from "../ui/LoadingSpinner";
 interface Column<T> {
   key: keyof T;
   label: string;
-  render?: (value: any, item: T) => ReactNode;
+  render?: (value: unknown, item: T) => ReactNode;
 }
 
 interface DataTableProps<T> {

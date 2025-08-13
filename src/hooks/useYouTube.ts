@@ -10,7 +10,14 @@ export const useYouTube = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [youtubeError, setYoutubeError] = useState<string | null>(null);
 
-  const youtubePlayer = useRef<any>(null);
+  const youtubePlayer = useRef<{
+    playVideo: () => void;
+    pauseVideo: () => void;
+    setVolume: (volume: number) => void;
+    seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+    getCurrentTime: () => number;
+    getDuration: () => number;
+  } | null>(null);
 
   // Contrôles du lecteur
   const handlePlayPause = () => {
@@ -65,7 +72,7 @@ export const useYouTube = () => {
     handleSeek(newTime);
   };
 
-  const handleYoutubeError = (error: any) => {
+  const handleYoutubeError = (error: unknown) => {
     // Détection mobile
     const isMobile =
       typeof window !== "undefined" &&
@@ -87,13 +94,22 @@ export const useYouTube = () => {
     );
   };
 
-  const handleYoutubeReady = (event: any) => {
+  const handleYoutubeReady = (event: {
+    target: {
+      playVideo: () => void;
+      pauseVideo: () => void;
+      setVolume: (volume: number) => void;
+      seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+      getCurrentTime: () => number;
+      getDuration: () => number;
+    };
+  }) => {
     youtubePlayer.current = event.target;
     setDuration(event.target.getDuration());
     setYoutubeError(null);
   };
 
-  const handleYoutubeStateChange = (event: any) => {
+  const handleYoutubeStateChange = (event: { data: number }) => {
     setIsPlaying(event.data === 1);
   };
 

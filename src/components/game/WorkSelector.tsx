@@ -28,7 +28,6 @@ export const WorkSelector = ({
 }: WorkSelectorProps) => {
   const [isValidateButtonVisible, setIsValidateButtonVisible] = useState(true);
   const [isNextButtonVisible, setIsNextButtonVisible] = useState(true);
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [cardAnimations, setCardAnimations] = useState<{
     [key: string]: boolean;
   }>({});
@@ -133,7 +132,7 @@ export const WorkSelector = ({
           {/* Titre avec effet magique */}
           <div className="text-center mb-8">
             <h2 className="fantasy-text text-4xl md:text-5xl font-bold mb-4">
-              Sélectionnez l'œuvre
+              Sélectionnez l&apos;œuvre
             </h2>
             <div className="w-24 h-1 bg-gradient-to-r from-blue-400 to-purple-500 mx-auto rounded-full glow-effect" />
           </div>
@@ -154,8 +153,6 @@ export const WorkSelector = ({
                   key={work.id}
                   className={getWorkCardClassName(work)}
                   onClick={() => handleCardClick(work.id)}
-                  onMouseEnter={() => setHoveredCard(work.id)}
-                  onMouseLeave={() => setHoveredCard(null)}
                   style={{
                     animationDelay: `${index * 0.1}s`,
                   }}

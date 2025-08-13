@@ -45,7 +45,8 @@ async function getPlaylistVideos(playlistId: string): Promise<YouTubeVideo[]> {
 
     const playlistData = await playlistResponse.json();
     const videoIds = playlistData.items.map(
-      (item: any) => item.snippet.resourceId.videoId
+      (item: { snippet: { resourceId: { videoId: string } } }) =>
+        item.snippet.resourceId.videoId
     );
 
     if (videoIds.length === 0) {
@@ -66,20 +67,34 @@ async function getPlaylistVideos(playlistId: string): Promise<YouTubeVideo[]> {
     const videosData = await videosResponse.json();
 
     // 3. Combiner les données
-    const videos: YouTubeVideo[] = videosData.items.map((video: any) => ({
-      id: video.id,
-      title: video.snippet.title,
-      description: video.snippet.description || "",
-      duration: parseDuration(video.contentDetails.duration),
-      thumbnails: video.snippet.thumbnails || {
-        default: { url: "" },
-        medium: { url: "" },
-        high: { url: "" },
-      },
-    }));
+    const videos: YouTubeVideo[] = videosData.items.map(
+      (video: {
+        id: string;
+        snippet: {
+          title: string;
+          description?: string;
+          thumbnails?: {
+            default?: { url: string };
+            medium?: { url: string };
+            high?: { url: string };
+          };
+        };
+        contentDetails: { duration: string };
+      }) => ({
+        id: video.id,
+        title: video.snippet.title,
+        description: video.snippet.description || "",
+        duration: parseDuration(video.contentDetails.duration),
+        thumbnails: video.snippet.thumbnails || {
+          default: { url: "" },
+          medium: { url: "" },
+          high: { url: "" },
+        },
+      })
+    );
 
     return videos;
-  } catch (error) {
+  } catch (error: unknown) {
     if (process.env.NODE_ENV === "development") {
       console.error("Erreur lors de la récupération de la playlist:", error);
     }
@@ -117,7 +132,7 @@ export async function GET(request: NextRequest) {
       data: videos,
       count: videos.length,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (process.env.NODE_ENV === "development") {
       console.error("Erreur API playlist:", error);
     }
@@ -126,7 +141,7 @@ export async function GET(request: NextRequest) {
       {
         error: "Erreur lors de la récupération de la playlist",
         details:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+          process.env.NODE_ENV === "development" ? String(error) : undefined,
       },
       { status: 500 }
     );
@@ -204,7 +219,7 @@ export async function POST(request: NextRequest) {
       title: data.items?.[0]?.snippet?.title || "Playlist YouTube",
       itemCount: data.pageInfo?.totalResults || 0,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (process.env.NODE_ENV === "development") {
       console.error("Erreur validation playlist:", error);
     }
@@ -254,7 +269,7 @@ export async function PUT(request: NextRequest) {
       songs: videos,
       count: videos.length,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (process.env.NODE_ENV === "development") {
       console.error("Erreur import playlist:", error);
     }
@@ -263,7 +278,7 @@ export async function PUT(request: NextRequest) {
       {
         error: "Erreur lors de l'import de la playlist",
         details:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+          process.env.NODE_ENV === "development" ? String(error) : undefined,
       },
       { status: 500 }
     );

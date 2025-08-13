@@ -59,6 +59,7 @@ export const WorkForm = ({
 
     if (!validateForm()) return;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { playlistUrl, ...submitData } = formData;
     await onSubmit(submitData);
   };
@@ -70,6 +71,7 @@ export const WorkForm = ({
     setImporting(true);
     try {
       // 1. Créer l'œuvre
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { playlistUrl, ...submitData } = formData;
       const result = await onSubmit(submitData);
 
@@ -130,7 +132,7 @@ export const WorkForm = ({
           playlistUrl: validation.error || "Playlist invalide",
         }));
       }
-    } catch (error) {
+    } catch {
       setErrors((prev) => ({
         ...prev,
         playlistUrl: "Erreur lors de la validation",

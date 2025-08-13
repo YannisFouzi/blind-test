@@ -14,13 +14,12 @@ import { UNIVERSE_THEMES } from "../utils/universeThemes";
 
 export default function HomePage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const {
     universes,
     loading: universesLoading,
     error: universesError,
   } = useUniverses();
-  const [hoveredUniverse, setHoveredUniverse] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -236,8 +235,6 @@ export default function HomePage() {
                     animationDelay: `${0.6 + index * 0.2}s`,
                   }}
                   onClick={() => handleUniverseClick(universe.id)}
-                  onMouseEnter={() => setHoveredUniverse(universe.id)}
-                  onMouseLeave={() => setHoveredUniverse(null)}
                 >
                   <button
                     className={`group relative backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-8 transition-all duration-500 transform hover:scale-105 hover:shadow-2xl w-full ${

@@ -1,6 +1,7 @@
 "use client";
 
 import { signInWithPopup, signOut } from "firebase/auth";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FaGoogle, FaSignOutAlt } from "react-icons/fa";
@@ -50,15 +51,16 @@ export default function AdminLoginPage() {
       setLoading(true);
       setError(null);
       await signInWithPopup(auth, googleProvider);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (process.env.NODE_ENV === "development") {
         console.error("Erreur de connexion:", error);
       }
 
       // Messages d'erreur plus spécifiques
-      if (error.code === "auth/popup-closed-by-user") {
+      const authError = error as { code?: string };
+      if (authError.code === "auth/popup-closed-by-user") {
         setError("Connexion annulée par l'utilisateur.");
-      } else if (error.code === "auth/popup-blocked") {
+      } else if (authError.code === "auth/popup-blocked") {
         setError("Popup bloquée. Veuillez autoriser les popups pour ce site.");
       } else {
         setError("Erreur lors de la connexion. Veuillez réessayer.");
@@ -72,7 +74,7 @@ export default function AdminLoginPage() {
       await signOut(auth);
       setUser(null);
       setError(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (process.env.NODE_ENV === "development") {
         console.error("Erreur de déconnexion:", error);
       }
@@ -131,9 +133,11 @@ export default function AdminLoginPage() {
             <div className="text-center">
               <div className="flex items-center justify-center mb-6">
                 {user.photoURL && (
-                  <img
+                  <Image
                     src={user.photoURL}
-                    alt={user.displayName}
+                    alt={user.displayName || "Photo de profil"}
+                    width={64}
+                    height={64}
                     className="w-16 h-16 rounded-full border-2 border-yellow-400"
                   />
                 )}

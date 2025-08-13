@@ -95,7 +95,7 @@ export default function AdminDashboard() {
     router.push("/");
   };
 
-  const handleOpenModal = (type: ModalType, item?: any) => {
+  const handleOpenModal = (type: ModalType, item?: Universe | Work | Song) => {
     setActiveModal(type);
     setEditingItem(item || null);
   };
@@ -285,8 +285,9 @@ export default function AdminDashboard() {
     {
       key: "color" as keyof Universe,
       label: "Thème",
-      render: (value: string, universe: Universe) => {
-        if (value.startsWith("#")) {
+      render: (value: unknown, universe: Universe) => {
+        const colorValue = String(value);
+        if (colorValue.startsWith("#")) {
           // Nouveau système : couleur hex
           const iconData = getIconById(universe.icon) || getIconById("wand");
           const IconComponent = iconData?.component;
@@ -295,7 +296,7 @@ export default function AdminDashboard() {
             <div className="flex items-center space-x-3">
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: value }}
+                style={{ backgroundColor: colorValue }}
               >
                 {IconComponent && (
                   <IconComponent className="text-sm text-[#1c1c35]" />
@@ -305,13 +306,13 @@ export default function AdminDashboard() {
                 <div className="text-white font-medium">
                   Couleur personnalisée
                 </div>
-                <div className="text-gray-400 text-xs">{value}</div>
+                <div className="text-gray-400 text-xs">{colorValue}</div>
               </div>
             </div>
           );
         } else {
           // Ancien système : thèmes prédéfinis
-          const theme = getUniverseTheme(value);
+          const theme = getUniverseTheme(colorValue);
           const IconComponent = theme.icon;
           return (
             <div className="flex items-center space-x-3">
@@ -335,13 +336,13 @@ export default function AdminDashboard() {
     {
       key: "active" as keyof Universe,
       label: "Actif",
-      render: (value: boolean) => (
+      render: (value: unknown) => (
         <span
           className={`px-2 py-1 rounded text-xs ${
-            value ? "bg-green-600 text-white" : "bg-red-600 text-white"
+            Boolean(value) ? "bg-green-600 text-white" : "bg-red-600 text-white"
           }`}
         >
-          {value ? "Actif" : "Inactif"}
+          {Boolean(value) ? "Actif" : "Inactif"}
         </span>
       ),
     },
@@ -354,9 +355,10 @@ export default function AdminDashboard() {
     {
       key: "duration" as keyof Song,
       label: "Durée",
-      render: (value: number) => {
-        const minutes = Math.floor(value / 60);
-        const seconds = value % 60;
+      render: (value: unknown) => {
+        const duration = Number(value) || 0;
+        const minutes = Math.floor(duration / 60);
+        const seconds = duration % 60;
         return `${minutes}:${seconds.toString().padStart(2, "0")}`;
       },
     },

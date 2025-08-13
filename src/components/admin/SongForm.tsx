@@ -61,6 +61,7 @@ export const SongForm = ({
 
     if (!validateForm()) return;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { youtubeUrl, ...submitData } = formData;
     await onSubmit(submitData);
   };
@@ -113,7 +114,7 @@ export const SongForm = ({
           youtubeUrl: validation.error || "Vidéo invalide",
         }));
       }
-    } catch (error) {
+    } catch {
       setErrors((prev) => ({
         ...prev,
         youtubeUrl: "Erreur lors de la validation",

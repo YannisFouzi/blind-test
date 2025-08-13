@@ -41,7 +41,7 @@ googleProvider.setCustomParameters({
 });
 
 // Analytics (only on client side)
-let analytics: any = null;
+let analytics: ReturnType<typeof getAnalytics> | null = null;
 if (typeof window !== "undefined" && firebaseConfig.measurementId) {
   analytics = getAnalytics(app);
 }

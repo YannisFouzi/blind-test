@@ -1,6 +1,6 @@
 import { User } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Song, Universe, Work } from "../../types";
 import { FirebaseService } from "../services/firebaseService";
 import { YouTubeService } from "../services/youtubeService";
@@ -35,13 +35,6 @@ export const useAdmin = (user: User | null) => {
     }
   }, [user, isAdmin, router]);
 
-  // Chargement initial des données
-  useEffect(() => {
-    if (isAdmin) {
-      loadUniverses();
-    }
-  }, [isAdmin]);
-
   // Utilitaires pour gérer l'état
   const setLoading = (loading: boolean) => {
     setState((prev) => ({ ...prev, loading }));
@@ -60,7 +53,7 @@ export const useAdmin = (user: User | null) => {
   };
 
   // Gestion des univers
-  const loadUniverses = async () => {
+  const loadUniverses = useCallback(async () => {
     setLoading(true);
     clearMessages();
 
@@ -72,7 +65,14 @@ export const useAdmin = (user: User | null) => {
     }
 
     setLoading(false);
-  };
+  }, []);
+
+  // Chargement initial des données
+  useEffect(() => {
+    if (isAdmin) {
+      loadUniverses();
+    }
+  }, [isAdmin, loadUniverses]);
 
   const addUniverse = async (
     universeData: Omit<Universe, "id" | "createdAt">
