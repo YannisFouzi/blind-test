@@ -1,16 +1,22 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import { FaCog, FaPlay, FaStar } from "react-icons/fa";
 import { Universe } from "../../types";
 import { ErrorMessage } from "../components/ui/ErrorMessage";
-import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { HomePageSkeleton } from "../components/HomePage/HomePageSkeleton";
 import { useAuth } from "../hooks/useAuth";
 import { useUniverses } from "../hooks/useUniverses";
 import { generateStylesFromColor } from "../utils/colorGenerator";
 import { AVAILABLE_ICONS } from "../utils/iconLibrary";
 import { UNIVERSE_THEMES } from "../utils/universeThemes";
+import {
+  fadeInUp,
+  slideInLeft,
+  staggerContainer,
+  staggerItem,
+} from "@/lib/animations/variants";
 
 export default function HomePage() {
   const router = useRouter();
@@ -20,16 +26,6 @@ export default function HomePage() {
     loading: universesLoading,
     error: universesError,
   } = useUniverses();
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    // Animation d'entrée avec délai
-    const timer = setTimeout(() => {
-      setIsLoaded(true);
-    }, 200);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleUniverseClick = (universeId: string) => {
     // Animation de clic
@@ -89,16 +85,7 @@ export default function HomePage() {
   };
 
   if (universesLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <LoadingSpinner />
-          <p className="text-white mt-4 font-medium">
-            Chargement des univers magiques...
-          </p>
-        </div>
-      </div>
-    );
+    return <HomePageSkeleton />;
   }
 
   // Vérifier les droits admin de façon simple
@@ -161,10 +148,11 @@ export default function HomePage() {
       {/* Contenu principal */}
       <div className="relative z-10 container mx-auto px-4 py-8">
         {/* Header avec bouton admin */}
-        <div
-          className={`flex justify-between items-center mb-12 ${
-            isLoaded ? "slide-in-left" : "opacity-0"
-          }`}
+        <motion.div
+          className="flex justify-between items-center mb-12"
+          initial="hidden"
+          animate="visible"
+          variants={slideInLeft}
         >
           <div className="flex-1" />
           {isAdmin && (
@@ -176,13 +164,14 @@ export default function HomePage() {
               <span className="hidden sm:inline">Administration</span>
             </button>
           )}
-        </div>
+        </motion.div>
 
         {/* Titre principal */}
-        <div
-          className={`text-center mb-16 ${
-            isLoaded ? "fade-in-up" : "opacity-0"
-          }`}
+        <motion.div
+          className="text-center mb-16"
+          initial="hidden"
+          animate="visible"
+          variants={fadeInUp}
         >
           <h1 className="fantasy-text text-6xl md:text-8xl font-bold mb-6">
             BLIND TEST
@@ -196,13 +185,15 @@ export default function HomePage() {
             Plongez dans vos univers favoris et testez vos connaissances
             musicales !
           </p>
-        </div>
+        </motion.div>
 
         {/* Grille des univers */}
         {universesError ? (
-          <div
-            className={`text-center ${isLoaded ? "fade-in-up" : "opacity-0"}`}
-            style={{ animationDelay: "0.6s" }}
+          <motion.div
+            className="text-center"
+            initial="hidden"
+            animate="visible"
+            variants={fadeInUp}
           >
             <div className="magic-card p-12 max-w-2xl mx-auto">
               <ErrorMessage message={universesError} />
@@ -211,9 +202,14 @@ export default function HomePage() {
                 bientôt !
               </p>
             </div>
-          </div>
+          </motion.div>
         ) : universes.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto"
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+          >
             {universes.map((universe, index) => {
               const styles = getUniverseStyles(universe);
 
@@ -226,18 +222,16 @@ export default function HomePage() {
                 styles.iconStyles;
 
               return (
-                <div
+                <motion.div
                   key={universe.id}
-                  className={`relative cursor-pointer transform transition-all duration-300 ${
-                    isLoaded ? "fade-in-up" : "opacity-0"
-                  }`}
-                  style={{
-                    animationDelay: `${0.6 + index * 0.2}s`,
-                  }}
+                  className="relative cursor-pointer"
+                  variants={staggerItem}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => handleUniverseClick(universe.id)}
                 >
                   <button
-                    className={`group relative backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-8 transition-all duration-500 transform hover:scale-105 hover:shadow-2xl w-full ${
+                    className={`group relative backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-8 transition-all duration-500 hover:shadow-2xl w-full ${
                       hasInlineStyles
                         ? "border hover:border-opacity-60"
                         : `bg-gradient-to-br border-2`
@@ -344,14 +338,16 @@ export default function HomePage() {
                       />
                     </div>
                   </button>
-                </div>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         ) : (
-          <div
-            className={`text-center ${isLoaded ? "fade-in-up" : "opacity-0"}`}
-            style={{ animationDelay: "0.6s" }}
+          <motion.div
+            className="text-center"
+            initial="hidden"
+            animate="visible"
+            variants={fadeInUp}
           >
             <div className="magic-card p-12 max-w-2xl mx-auto">
               <ErrorMessage message="Aucun univers disponible pour le moment" />
@@ -360,7 +356,7 @@ export default function HomePage() {
                 bientôt !
               </p>
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>

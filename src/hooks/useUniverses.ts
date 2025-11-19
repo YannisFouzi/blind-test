@@ -1,53 +1,29 @@
-import { useEffect, useState } from "react";
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { activeUniversesQueryOptions } from "@/lib/queries/universes";
 import { Universe } from "../../types";
-import { FirebaseService } from "../services/firebaseService";
 
-interface UniversesState {
-  universes: Universe[];
-  loading: boolean;
-  error: string | null;
-}
-
+/**
+ * Hook professionnel pour récupérer les univers actifs
+ * Utilise TanStack Query pour :
+ * - Cache automatique
+ * - Retry en cas d'échec
+ * - Refetch intelligent
+ * - Synchronisation entre composants
+ *
+ * @returns {Object} État de la query avec universes, loading, error et refetch
+ */
 export const useUniverses = () => {
-  const [state, setState] = useState<UniversesState>({
-    universes: [],
-    loading: true,
-    error: null,
-  });
-
-  useEffect(() => {
-    loadUniverses();
-  }, []);
-
-  const loadUniverses = async () => {
-    setState((prev) => ({ ...prev, loading: true, error: null }));
-
-    try {
-      const result = await FirebaseService.getActiveUniverses();
-      if (result.success && result.data) {
-        setState({
-          universes: result.data,
-          loading: false,
-          error: null,
-        });
-      } else {
-        setState({
-          universes: [],
-          loading: false,
-          error: result.error || "Erreur lors du chargement des univers",
-        });
-      }
-    } catch {
-      setState({
-        universes: [],
-        loading: false,
-        error: "Erreur lors du chargement des univers",
-      });
-    }
-  };
+  const query = useQuery(activeUniversesQueryOptions);
 
   return {
-    ...state,
-    refetch: loadUniverses,
+    universes: query.data || ([] as Universe[]),
+    loading: query.isLoading,
+    error: query.error ? String(query.error) : null,
+    refetch: query.refetch,
+    // Infos supplémentaires utiles de TanStack Query
+    isRefetching: query.isRefetching,
+    isFetching: query.isFetching,
   };
 };

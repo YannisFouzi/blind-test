@@ -157,6 +157,9 @@ const nextConfig: NextConfig = {
 
   // Configuration générale
   reactStrictMode: true,
+  
+  // Désactiver le télémetry pour éviter les problèmes de permissions
+  telemetry: false,
 
   // Configuration des domaines d'images autorisés
   images: {
