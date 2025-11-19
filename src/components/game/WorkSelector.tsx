@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Work } from "../../../types";
+import { Work } from "@/types";
 
 interface WorkSelectorProps {
   works: Work[];

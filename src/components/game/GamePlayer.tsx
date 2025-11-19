@@ -1,5 +1,5 @@
 import YouTube from "react-youtube";
-import { Song } from "../../../types";
+import { Song } from "@/types";
 
 interface GamePlayerProps {
   currentSong: Song;

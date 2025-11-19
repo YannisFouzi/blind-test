@@ -3,7 +3,10 @@
     "allow": [
       "WebSearch",
       "Bash(npm install:*)",
-      "Bash(npm run dev)"
+      "Bash(npm run dev)",
+      "Bash(nul)",
+      "Bash(test:*)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "ask": []

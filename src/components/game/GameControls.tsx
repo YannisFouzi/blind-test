@@ -1,5 +1,5 @@
 import YouTube from "react-youtube";
-import { GameSession } from "../../../types";
+import { GameSession } from "@/types";
 import { GameScore } from "./GameScore";
 
 interface GameControlsProps {

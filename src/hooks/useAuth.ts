@@ -5,7 +5,7 @@ import {
   signOut,
 } from "firebase/auth";
 import { useEffect, useState } from "react";
-import { auth, googleProvider } from "../../lib/firebase";
+import { auth, googleProvider } from "@/lib/firebase";
 
 interface AuthState {
   user: User | null;

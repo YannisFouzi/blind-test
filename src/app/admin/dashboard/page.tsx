@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FaPlus } from "react-icons/fa";
-import { Song, Universe, Work } from "../../../../types";
+import { Song, Universe, Work } from "@/types";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { DataTable } from "../../../components/admin/DataTable";
 import { SongForm } from "../../../components/admin/SongForm";

@@ -11,8 +11,8 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { db } from "../../lib/firebase";
-import { Song, Universe, Work } from "../../types";
+import { db } from "@/lib/firebase";
+import { Song, Universe, Work } from "@/types";
 
 /**
  * Service pour gérer les interactions avec Firebase

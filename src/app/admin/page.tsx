@@ -5,8 +5,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FaGoogle, FaSignOutAlt } from "react-icons/fa";
-import { ADMIN_EMAIL, auth, googleProvider } from "../../../lib/firebase";
-import { User } from "../../../types";
+import { ADMIN_EMAIL, auth, googleProvider } from "@/lib/firebase";
+import { User } from "@/types";
 
 export default function AdminLoginPage() {
   const [user, setUser] = useState<User | null>(null);

@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { FaCog, FaPlay, FaStar } from "react-icons/fa";
-import { Universe } from "../../types";
+import { Universe } from "@/types";
 import { ErrorMessage } from "../components/ui/ErrorMessage";
 import { HomePageSkeleton } from "../components/HomePage/HomePageSkeleton";
 import { useAuth } from "../hooks/useAuth";

@@ -1,7 +1,7 @@
 import { User } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { Song, Universe, Work } from "../../types";
+import { Song, Universe, Work } from "@/types";
 import { FirebaseService } from "../services/firebaseService";
 import { YouTubeService } from "../services/youtubeService";
 

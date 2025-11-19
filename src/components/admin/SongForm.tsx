@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Song, Work } from "../../../types";
+import { Song, Work } from "@/types";
 import { YouTubeService } from "../../services/youtubeService";
 import { Button } from "../ui/Button";
 import { LoadingSpinner } from "../ui/LoadingSpinner";

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { GameSession } from "../../../types";
+import { GameSession } from "@/types";
 
 interface GameScoreProps {
   gameSession: GameSession;

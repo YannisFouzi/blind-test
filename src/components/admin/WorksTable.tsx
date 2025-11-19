@@ -13,7 +13,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { FaArrowDown, FaArrowUp, FaGripVertical } from "react-icons/fa";
-import { Work } from "../../../types";
+import { Work } from "@/types";
 import { Button } from "../ui/Button";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 

@@ -1,4 +1,4 @@
-import { Song, Work } from "../../types";
+import { Song, Work } from "@/types";
 
 export const defaultWorks: Work[] = [
   {

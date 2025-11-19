@@ -1,7 +1,7 @@
 import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
-import { db } from "../../lib/firebase";
-import { GameAnswer, GameSession, Song, Work } from "../../types";
+import { db } from "@/lib/firebase";
+import { GameAnswer, GameSession, Song, Work } from "@/types";
 import { createDemoSongs, defaultSongs, defaultWorks } from "../utils/demoData";
 import { generateId, shuffleArray } from "../utils/formatters";
 

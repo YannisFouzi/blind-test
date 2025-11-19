@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { activeUniversesQueryOptions } from "@/lib/queries/universes";
-import { Universe } from "../../types";
+import { Universe } from "@/types";
 
 /**
  * Hook professionnel pour récupérer les univers actifs
