@@ -31,6 +31,8 @@ interface GameControlsProps {
       seekTo: (seconds: number, allowSeekAhead: boolean) => void;
       getCurrentTime: () => number;
       getDuration: () => number;
+      cueVideoById: (videoId: string) => void;
+      loadVideoById: (videoId: string) => void;
     };
   }) => void;
   onStateChange: (event: { target: unknown; data: number }) => void;

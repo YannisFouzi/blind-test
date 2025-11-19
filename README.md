@@ -1,24 +1,125 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎵 Blind Test - Application de Quiz Musical
 
-## Getting Started
+Ce projet est une application [Next.js](https://nextjs.org) pour créer et jouer à des blind tests musicaux.
 
-First, run the development server:
+## 🚀 Démarrage rapide
+
+### Prérequis
+
+- **Node.js** version 18 ou supérieure
+- **npm**, **yarn**, **pnpm** ou **bun** (gestionnaire de paquets)
+- Un projet **Firebase** configuré
+- Une **clé API YouTube** (Google Cloud Console)
+
+### Installation
+
+1. **Cloner le projet** (si ce n'est pas déjà fait)
+
+2. **Installer les dépendances**
+
+```bash
+cd blind-test
+npm install
+# ou
+yarn install
+# ou
+pnpm install
+# ou
+bun install
+```
+
+3. **Configurer les variables d'environnement**
+
+Créez un fichier `.env.local` à la racine du dossier `blind-test` avec les variables suivantes :
+
+```env
+# Configuration Firebase (obligatoire)
+NEXT_PUBLIC_FIREBASE_API_KEY=votre_clé_api_firebase
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=votre_projet.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=votre_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=votre_projet.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=votre_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=votre_app_id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=votre_measurement_id
+
+# Clé API YouTube (obligatoire pour les routes API)
+YOUTUBE_API_KEY=votre_clé_api_youtube
+
+# Configuration Admin (optionnel)
+NEXT_PUBLIC_ADMIN_EMAIL=yfouzi.dev@gmail.com
+ADMIN_EMAIL=yfouzi.dev@gmail.com
+```
+
+> **Note** : Les variables `NEXT_PUBLIC_*` sont accessibles côté client, tandis que `YOUTUBE_API_KEY` est uniquement côté serveur.
+
+4. **Lancer le serveur de développement**
 
 ```bash
 npm run dev
-# or
+# ou
 yarn dev
-# or
+# ou
 pnpm dev
-# or
+# ou
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5. **Ouvrir l'application**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Ouvrez [http://localhost:3000](http://localhost:3000) dans votre navigateur.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Scripts disponibles
+
+- `npm run dev` - Lance le serveur de développement
+- `npm run build` - Compile l'application pour la production
+- `npm run start` - Lance le serveur de production (après `build`)
+- `npm run lint` - Vérifie le code avec ESLint
+
+### Où obtenir les clés API ?
+
+#### Firebase
+
+1. Allez sur [Firebase Console](https://console.firebase.google.com/)
+2. Créez ou sélectionnez un projet
+3. Allez dans **Paramètres du projet** > **Vos applications**
+4. Créez une application web et copiez la configuration
+
+#### YouTube API
+
+1. Allez sur [Google Cloud Console](https://console.cloud.google.com/)
+2. Créez ou sélectionnez un projet
+3. Activez l'**API YouTube Data API v3**
+4. Créez des identifiants (clé API)
+5. Copiez la clé API dans votre `.env.local`
+
+### Structure du projet
+
+```
+blind-test/
+├── src/
+│   ├── app/              # Pages et routes Next.js
+│   ├── components/       # Composants React
+│   ├── hooks/           # Hooks personnalisés
+│   ├── services/        # Services (Firebase, YouTube)
+│   └── utils/           # Utilitaires
+├── lib/                 # Configuration (Firebase, YouTube)
+├── public/              # Fichiers statiques
+└── types/               # Types TypeScript
+```
+
+### Dépannage
+
+**Erreur "Configuration Firebase manquante"**
+- Vérifiez que toutes les variables `NEXT_PUBLIC_FIREBASE_*` sont définies dans `.env.local`
+- Redémarrez le serveur de développement après avoir modifié `.env.local`
+
+**Erreur "Clé API YouTube manquante"**
+- Vérifiez que `YOUTUBE_API_KEY` est définie dans `.env.local`
+- Assurez-vous que l'API YouTube Data API v3 est activée dans Google Cloud Console
+
+**Le serveur ne démarre pas**
+- Vérifiez que Node.js est installé : `node --version`
+- Supprimez `node_modules` et `package-lock.json`, puis réinstallez : `npm install`
 
 ## Learn More
 

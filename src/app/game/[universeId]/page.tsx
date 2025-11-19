@@ -11,7 +11,9 @@ import {
   FaVolumeMute,
   FaVolumeUp,
 } from "react-icons/fa";
+
 import { GameControls } from "../../../components/game/GameControls";
+import { PreloadPlayer } from "../../../components/game/PreloadPlayer";
 import { WorkSelector } from "../../../components/game/WorkSelector";
 import { ErrorMessage } from "../../../components/ui/ErrorMessage";
 import { LoadingSpinner } from "../../../components/ui/LoadingSpinner";
@@ -23,6 +25,28 @@ export default function GamePage() {
   const router = useRouter();
   const params = useParams();
   const universeId = params.universeId as string;
+
+  const {
+    isPlaying,
+    currentTime,
+    duration,
+    volume,
+    isMuted,
+    youtubeError,
+    preloadedVideoId,
+    isPreloading,
+    handlePlayPause,
+    handleVolumeChange,
+    toggleMute,
+    handleProgressClick,
+    handleYoutubeError,
+    handleYoutubeReady,
+    handleYoutubeStateChange,
+    preloadNextVideo,
+    preloadSystem,
+    debug,
+    formatTime,
+  } = useYouTube();
 
   const {
     gameSession,
@@ -38,24 +62,7 @@ export default function GamePage() {
     canGoNext,
     canGoPrev,
     isCurrentSongAnswered,
-  } = useGame(universeId);
-
-  const {
-    isPlaying,
-    currentTime,
-    duration,
-    volume,
-    isMuted,
-    youtubeError,
-    handlePlayPause,
-    handleVolumeChange,
-    toggleMute,
-    handleProgressClick,
-    handleYoutubeError,
-    handleYoutubeReady,
-    handleYoutubeStateChange,
-    formatTime,
-  } = useYouTube();
+  } = useGame(universeId, preloadNextVideo);
 
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -256,15 +263,17 @@ export default function GamePage() {
                 </button>
 
                 {/* Bouton play/pause principal - Version compacte */}
-                <button
-                  onClick={handlePlayPause}
-                  className="relative p-3 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 rounded-full text-white shadow-xl hover:shadow-yellow-500/50 transition-all duration-300 transform hover:scale-105"
-                >
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 blur-md opacity-50" />
-                  <div className="relative z-10">
-                    {isPlaying ? <FaPause size={20} /> : <FaPlay size={20} />}
-                  </div>
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => handlePlayPause(currentSong?.youtubeId)}
+                    className="relative p-3 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 rounded-full text-white shadow-xl hover:shadow-yellow-500/50 transition-all duration-300 transform hover:scale-105"
+                  >
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 blur-md opacity-50" />
+                    <div className="relative z-10">
+                      {isPlaying ? <FaPause size={20} /> : <FaPlay size={20} />}
+                    </div>
+                  </button>
+                </div>
 
                 {/* Bouton suivant */}
                 <button
@@ -360,6 +369,16 @@ export default function GamePage() {
           </div>
         </div>
       </div>
+
+      {/* Lecteur de préchargement invisible */}
+      <PreloadPlayer
+        onReady={preloadSystem.handlePreloadPlayerReady}
+        onError={(error) => {
+          if (process.env.NODE_ENV === "development") {
+            console.warn("Erreur lecteur de préchargement:", error);
+          }
+        }}
+      />
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatTime } from "../utils/formatters";
+import { usePreloadDebug } from "./usePreloadDebug";
+import { usePreloadPlayer } from "./usePreloadPlayer";
 
 export const useYouTube = () => {
   // État du lecteur
@@ -10,6 +12,12 @@ export const useYouTube = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [youtubeError, setYoutubeError] = useState<string | null>(null);
 
+  // System de debug
+  const debug = usePreloadDebug();
+
+  // Hook pour le lecteur de préchargement
+  const preloadSystem = usePreloadPlayer();
+
   const youtubePlayer = useRef<{
     playVideo: () => void;
     pauseVideo: () => void;
@@ -17,18 +25,27 @@ export const useYouTube = () => {
     seekTo: (seconds: number, allowSeekAhead: boolean) => void;
     getCurrentTime: () => number;
     getDuration: () => number;
+    cueVideoById: (videoId: string) => void;
+    loadVideoById: (videoId: string) => void;
   } | null>(null);
 
   // Contrôles du lecteur
-  const handlePlayPause = () => {
+  const handlePlayPause = (videoId?: string) => {
     if (youtubePlayer.current) {
       try {
         if (isPlaying) {
           youtubePlayer.current.pauseVideo();
+          setIsPlaying(false);
         } else {
-          youtubePlayer.current.playVideo();
+          if (videoId) {
+            // Jouer une vidéo spécifique (avec préchargement intelligent)
+            playVideo(videoId);
+          } else {
+            // Reprendre la lecture actuelle
+            youtubePlayer.current.playVideo();
+            setIsPlaying(true);
+          }
         }
-        setIsPlaying(!isPlaying);
       } catch (error) {
         console.warn("Erreur lors du contrôle de lecture:", error);
         // On ne met pas d'erreur visible pour l'utilisateur ici
@@ -102,6 +119,8 @@ export const useYouTube = () => {
       seekTo: (seconds: number, allowSeekAhead: boolean) => void;
       getCurrentTime: () => number;
       getDuration: () => number;
+      cueVideoById: (videoId: string) => void;
+      loadVideoById: (videoId: string) => void;
     };
   }) => {
     youtubePlayer.current = event.target;
@@ -117,6 +136,55 @@ export const useYouTube = () => {
     setCurrentTime(0);
     setIsPlaying(false);
     setYoutubeError(null);
+  };
+
+  // Préchargement de la vidéo suivante (délégué au lecteur de préchargement)
+  const preloadNextVideo = (videoId: string) => {
+    preloadSystem.preloadNextVideo(videoId);
+  };
+
+  // Jouer la vidéo préchargée ou charger une nouvelle
+  const playVideo = (videoId: string) => {
+    if (!youtubePlayer.current) return;
+
+    const isPreloaded = preloadSystem.preloadedVideoId === videoId;
+    const startTime = debug.logPlayStart(videoId, isPreloaded);
+
+    try {
+      if (isPreloaded) {
+        // La vidéo est préchargée dans le lecteur invisible, transférer vers le principal
+        const transferred = preloadSystem.transferPreloadedVideo(
+          youtubePlayer.current,
+          videoId
+        );
+        if (transferred) {
+          setIsPlaying(true);
+          setYoutubeError(null);
+
+          // Log performance de lecture instantanée
+          setTimeout(() => {
+            debug.logPlaySuccess(videoId, startTime, true);
+          }, 100);
+        } else {
+          // Fallback si le transfert échoue
+          youtubePlayer.current.loadVideoById(videoId);
+          setIsPlaying(true);
+        }
+      } else {
+        // Charger et jouer la vidéo normalement
+        youtubePlayer.current.loadVideoById(videoId);
+        setIsPlaying(true);
+
+        // Log performance de chargement
+        setTimeout(() => {
+          debug.logPlaySuccess(videoId, startTime, false);
+        }, 500);
+      }
+      setYoutubeError(null);
+    } catch (error) {
+      debug.logAction("PLAY_ERROR", { videoId, error });
+      console.warn("Erreur lors de la lecture:", error);
+    }
   };
 
   // Effet pour mettre à jour le temps actuel
@@ -149,6 +217,10 @@ export const useYouTube = () => {
     youtubeError,
     youtubePlayer,
 
+    // État du préchargement (depuis le système de préchargement)
+    preloadedVideoId: preloadSystem.preloadedVideoId,
+    isPreloading: preloadSystem.isPreloading,
+
     // Actions
     handlePlayPause,
     handleVolumeChange,
@@ -159,6 +231,16 @@ export const useYouTube = () => {
     handleYoutubeReady,
     handleYoutubeStateChange,
     resetPlayer,
+
+    // Actions de préchargement
+    preloadNextVideo,
+    playVideo,
+
+    // Système de debug
+    debug,
+
+    // Système de préchargement
+    preloadSystem,
 
     // Utilitaires
     formatTime,

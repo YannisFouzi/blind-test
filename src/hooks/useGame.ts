@@ -5,7 +5,10 @@ import { GameAnswer, GameSession, Song, Work } from "../../types";
 import { createDemoSongs, defaultSongs, defaultWorks } from "../utils/demoData";
 import { generateId, shuffleArray } from "../utils/formatters";
 
-export const useGame = (universeId: string) => {
+export const useGame = (
+  universeId: string,
+  preloadNextVideo?: (videoId: string) => void
+) => {
   // État du jeu
   const [gameSession, setGameSession] = useState<GameSession | null>(null);
   const [works, setWorks] = useState<Work[]>([]);
@@ -253,6 +256,25 @@ export const useGame = (universeId: string) => {
       resetGameState();
     }
   }, [gameSession, currentSong, resetGameState]);
+
+  // Effet pour précharger la chanson suivante dès l'arrivée sur une question
+  useEffect(() => {
+    if (gameSession && currentSong && preloadNextVideo) {
+      const nextIndex = gameSession.currentSongIndex + 1;
+      if (nextIndex < gameSession.songs.length) {
+        const nextSong = gameSession.songs[nextIndex];
+        if (process.env.NODE_ENV === "development") {
+          console.log(
+            `🎯 Préchargement automatique de la chanson suivante: ${nextSong.youtubeId}`
+          );
+        }
+        // Délai léger pour laisser le lecteur principal se stabiliser
+        setTimeout(() => {
+          preloadNextVideo(nextSong.youtubeId);
+        }, 1000);
+      }
+    }
+  }, [gameSession, currentSong, preloadNextVideo]);
 
   return {
     // État
