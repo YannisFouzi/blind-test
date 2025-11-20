@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+﻿import { ReactNode } from "react";
 import { Button } from "../ui/Button";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 
@@ -89,7 +89,7 @@ export function DataTable<T extends { id: string }>({
                       {onEdit && (
                         <Button
                           variant="secondary"
-                          size="small"
+                          size="sm"
                           onClick={() => onEdit(item)}
                         >
                           Modifier
@@ -98,7 +98,7 @@ export function DataTable<T extends { id: string }>({
                       {onDelete && (
                         <Button
                           variant="danger"
-                          size="small"
+                          size="sm"
                           onClick={() => onDelete(item)}
                         >
                           Supprimer

@@ -1,4 +1,14 @@
+﻿"use client";
+
 import { Button } from "./Button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./dialog";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -23,30 +33,25 @@ export const ConfirmModal = ({
   loading = false,
   variant = "danger",
 }: ConfirmModalProps) => {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md border border-gray-700/50">
-        <div className="flex items-center space-x-3 mb-4">
-          <div
-            className={`
-              w-10 h-10 rounded-full flex items-center justify-center
-              ${
-                variant === "danger"
-                  ? "bg-red-600/20 text-red-400"
-                  : "bg-yellow-600/20 text-yellow-400"
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3 text-white">
+            <span
+              className={
+                variant === "danger" ? "text-red-400" : "text-amber-400"
               }
-            `}
-          >
-            {variant === "danger" ? "⚠️" : "⚠️"}
-          </div>
-          <h3 className="text-xl font-bold text-white">{title}</h3>
-        </div>
-
-        <p className="text-gray-300 mb-6 leading-relaxed">{message}</p>
-
-        <div className="flex justify-end space-x-3">
+            >
+              {variant === "danger" ? "⚠️" : "⚡"}
+            </span>
+            {title}
+          </DialogTitle>
+          <DialogDescription className="text-slate-300">
+            {message}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="sm:space-x-2">
           <Button
             type="button"
             variant="secondary"
@@ -57,14 +62,14 @@ export const ConfirmModal = ({
           </Button>
           <Button
             type="button"
-            variant={variant}
+            variant={variant === "danger" ? "danger" : "warning"}
             onClick={onConfirm}
             disabled={loading}
           >
-            {loading ? "Suppression..." : confirmText}
+            {loading ? "Traitement..." : confirmText}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

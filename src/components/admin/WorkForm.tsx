@@ -264,7 +264,7 @@ export const WorkForm = ({
                 <Button
                   type="button"
                   variant="success"
-                  size="small"
+                  size="sm"
                   onClick={handleImportSongs}
                   disabled={importing}
                 >

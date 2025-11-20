@@ -1,4 +1,4 @@
-import {
+﻿import {
   DndContext,
   DragEndEvent,
   PointerSensor,
@@ -104,7 +104,7 @@ const SortableWorkRow = ({
           {/* Boutons flèches */}
           <Button
             variant="secondary"
-            size="small"
+            size="sm"
             onClick={() => onMoveUp(work)}
             disabled={isFirst}
             className="flex items-center space-x-1"
@@ -113,7 +113,7 @@ const SortableWorkRow = ({
           </Button>
           <Button
             variant="secondary"
-            size="small"
+            size="sm"
             onClick={() => onMoveDown(work)}
             disabled={isLast}
             className="flex items-center space-x-1"
@@ -124,19 +124,19 @@ const SortableWorkRow = ({
           {/* Bouton gérer chansons */}
           <Button
             variant="secondary"
-            size="small"
+            size="sm"
             onClick={() => onManageSongs(work)}
           >
             Gérer les chansons
           </Button>
 
           {/* Bouton modifier */}
-          <Button variant="secondary" size="small" onClick={() => onEdit(work)}>
+          <Button variant="secondary" size="sm" onClick={() => onEdit(work)}>
             Modifier
           </Button>
 
           {/* Bouton supprimer */}
-          <Button variant="danger" size="small" onClick={() => onDelete(work)}>
+          <Button variant="danger" size="sm" onClick={() => onDelete(work)}>
             Supprimer
           </Button>
         </div>
@@ -196,7 +196,7 @@ export const WorksTable = ({
 
   if (works.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-400">Aucune œuvre créée</div>
+      <div className="text-center py-8 text-gray-400">Aucune Å“uvre crÃ©Ã©e</div>
     );
   }
 

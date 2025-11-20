@@ -382,7 +382,7 @@ export default function AdminDashboard() {
             actions={(universe) => (
               <Button
                 variant="secondary"
-                size="small"
+                size="sm"
                 onClick={() => {
                   setSelectedUniverse(universe.id);
                   loadWorks(universe.id);
