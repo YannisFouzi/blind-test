@@ -1,6 +1,9 @@
-import { useState } from "react";
+﻿import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Song, Work } from "@/types";
 import { YouTubeService } from "@/services/youtubeService";
+import { SongFormSchema, type SongFormValues } from "@/validation/admin";
 import { Button } from "../ui/Button";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 
@@ -21,104 +24,100 @@ export const SongForm = ({
   onCancel,
   loading = false,
 }: SongFormProps) => {
-  const [formData, setFormData] = useState({
-    title: song?.title || "",
-    artist: song?.artist || "",
-    workId: song?.workId || "",
-    youtubeId: song?.youtubeId || "",
-    youtubeUrl: "",
-    duration: song?.duration || 0,
-  });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [validating, setValidating] = useState(false);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setValue,
+    setError,
+    clearErrors,
+    watch,
+    reset,
+  } = useForm<SongFormValues>({
+    resolver: zodResolver(SongFormSchema),
+    defaultValues: {
+      title: song?.title || "",
+      artist: song?.artist || "",
+      workId: song?.workId || "",
+      youtubeId: song?.youtubeId || "",
+      youtubeUrl: "",
+      duration: song?.duration || 0,
+    },
+  });
 
-    if (!formData.title.trim()) {
-      newErrors.title = "Le titre est requis";
-    }
+  useEffect(() => {
+    reset({
+      title: song?.title || "",
+      artist: song?.artist || "",
+      workId: song?.workId || "",
+      youtubeId: song?.youtubeId || "",
+      youtubeUrl: "",
+      duration: song?.duration || 0,
+    });
+  }, [song, reset]);
 
-    if (!formData.artist.trim()) {
-      newErrors.artist = "L'artiste est requis";
-    }
+  const youtubeUrl = watch("youtubeUrl") || "";
+  const youtubeId = watch("youtubeId");
 
-    if (!formData.workId) {
-      newErrors.workId = "L'œuvre est requise";
-    }
-
-    if (!formData.youtubeId) {
-      newErrors.youtubeId = "La vidéo YouTube est requise";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) return;
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { youtubeUrl, ...submitData } = formData;
-    await onSubmit(submitData);
-  };
-
-  const handleChange = (field: string, value: string | number) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    // Effacer l'erreur pour ce champ
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
-    }
+  const onFormSubmit = async (values: SongFormValues) => {
+    const { youtubeUrl, ...payload } = values;
+    void youtubeUrl;
+    await onSubmit(payload);
   };
 
   const handleVideoValidation = async () => {
-    if (!formData.youtubeUrl.trim()) {
-      setErrors((prev) => ({
-        ...prev,
-        youtubeUrl: "L'URL de la vidéo est requise",
-      }));
+    if (!youtubeUrl.trim()) {
+      setError("youtubeUrl", {
+        message: "L'URL de la vidéo est requise",
+        type: "manual",
+      });
       return;
     }
 
     setValidating(true);
-    setErrors((prev) => ({ ...prev, youtubeUrl: "" }));
+    clearErrors("youtubeUrl");
 
     try {
-      const videoId = YouTubeService.extractVideoId(formData.youtubeUrl);
-      if (!videoId) {
-        setErrors((prev) => ({
-          ...prev,
-          youtubeUrl: "URL de vidéo YouTube invalide",
-        }));
+      const extractedId = YouTubeService.extractVideoId(youtubeUrl);
+      if (!extractedId) {
+        setError("youtubeUrl", {
+          message: "URL de vidéo YouTube invalide",
+          type: "manual",
+        });
         return;
       }
 
-      const validation = await YouTubeService.validateVideo(
-        formData.youtubeUrl
-      );
+      const validation = await YouTubeService.validateVideo(youtubeUrl);
 
       if (validation.isValid && validation.videoId) {
-        setFormData((prev) => ({
-          ...prev,
-          youtubeId: validation.videoId!,
-          title: validation.title || prev.title,
-          duration: validation.duration || prev.duration,
-        }));
-        setErrors((prev) => ({ ...prev, youtubeUrl: "" }));
+        setValue("youtubeId", validation.videoId, { shouldValidate: true });
+
+        if (validation.title) {
+          setValue("title", validation.title, {
+            shouldValidate: true,
+            shouldDirty: true,
+          });
+        }
+
+        if (typeof validation.duration === "number") {
+          setValue("duration", validation.duration, {
+            shouldValidate: true,
+            shouldDirty: true,
+          });
+        }
       } else {
-        setErrors((prev) => ({
-          ...prev,
-          youtubeUrl: validation.error || "Vidéo invalide",
-        }));
+        setError("youtubeUrl", {
+          message: validation.error || "Vidéo invalide",
+          type: "manual",
+        });
       }
     } catch {
-      setErrors((prev) => ({
-        ...prev,
-        youtubeUrl: "Erreur lors de la validation",
-      }));
+      setError("youtubeUrl", {
+        message: "Erreur lors de la validation",
+        type: "manual",
+      });
     } finally {
       setValidating(false);
     }
@@ -133,15 +132,14 @@ export const SongForm = ({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
       <div>
         <label className="block text-sm font-medium text-gray-300 mb-2">
           Titre de la chanson *
         </label>
         <input
           type="text"
-          value={formData.title}
-          onChange={(e) => handleChange("title", e.target.value)}
+          {...register("title")}
           className={`
             w-full px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
             ${errors.title ? "border-red-500" : "border-gray-600"}
@@ -150,7 +148,7 @@ export const SongForm = ({
           placeholder="Ex: Hedwig's Theme"
         />
         {errors.title && (
-          <p className="text-red-400 text-sm mt-1">{errors.title}</p>
+          <p className="text-red-400 text-sm mt-1">{errors.title.message}</p>
         )}
       </div>
 
@@ -160,8 +158,7 @@ export const SongForm = ({
         </label>
         <input
           type="text"
-          value={formData.artist}
-          onChange={(e) => handleChange("artist", e.target.value)}
+          {...register("artist")}
           className={`
             w-full px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
             ${errors.artist ? "border-red-500" : "border-gray-600"}
@@ -170,7 +167,7 @@ export const SongForm = ({
           placeholder="Ex: John Williams"
         />
         {errors.artist && (
-          <p className="text-red-400 text-sm mt-1">{errors.artist}</p>
+          <p className="text-red-400 text-sm mt-1">{errors.artist.message}</p>
         )}
       </div>
 
@@ -179,8 +176,7 @@ export const SongForm = ({
           Œuvre *
         </label>
         <select
-          value={formData.workId}
-          onChange={(e) => handleChange("workId", e.target.value)}
+          {...register("workId")}
           className={`
             w-full px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
             ${errors.workId ? "border-red-500" : "border-gray-600"}
@@ -195,7 +191,7 @@ export const SongForm = ({
           ))}
         </select>
         {errors.workId && (
-          <p className="text-red-400 text-sm mt-1">{errors.workId}</p>
+          <p className="text-red-400 text-sm mt-1">{errors.workId.message}</p>
         )}
       </div>
 
@@ -206,8 +202,7 @@ export const SongForm = ({
         <div className="flex gap-2">
           <input
             type="url"
-            value={formData.youtubeUrl}
-            onChange={(e) => handleChange("youtubeUrl", e.target.value)}
+            {...register("youtubeUrl")}
             className={`
               flex-1 px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
               ${errors.youtubeUrl ? "border-red-500" : "border-gray-600"}
@@ -219,17 +214,19 @@ export const SongForm = ({
             type="button"
             variant="secondary"
             onClick={handleVideoValidation}
-            disabled={validating || !formData.youtubeUrl.trim()}
+            disabled={validating || !youtubeUrl.trim()}
           >
             {validating ? "Validation..." : "Valider"}
           </Button>
         </div>
         {errors.youtubeUrl && (
-          <p className="text-red-400 text-sm mt-1">{errors.youtubeUrl}</p>
+          <p className="text-red-400 text-sm mt-1">
+            {errors.youtubeUrl.message}
+          </p>
         )}
-        {formData.youtubeId && (
+        {youtubeId && (
           <p className="text-green-400 text-sm mt-1">
-            ✓ Vidéo validée: {formData.youtubeId}
+            ? Vidéo validée: {youtubeId}
           </p>
         )}
       </div>
@@ -240,24 +237,31 @@ export const SongForm = ({
         </label>
         <input
           type="number"
-          value={formData.duration}
-          onChange={(e) =>
-            handleChange("duration", parseInt(e.target.value) || 0)
-          }
           min="0"
-          className="w-full px-4 py-3 rounded-lg border-2 bg-gray-800 text-white border-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
           placeholder="Ex: 180"
+          className={`
+            w-full px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
+            ${errors.duration ? "border-red-500" : "border-gray-600"}
+            focus:outline-none focus:border-blue-500 transition-colors
+          `}
+          {...register("duration", { valueAsNumber: true })}
         />
-        <p className="text-gray-400 text-sm mt-1">
-          Sera automatiquement rempli lors de la validation YouTube
-        </p>
+        {errors.duration ? (
+          <p className="text-red-400 text-sm mt-1">
+            {errors.duration.message}
+          </p>
+        ) : (
+          <p className="text-gray-400 text-sm mt-1">
+            Sera automatiquement rempli lors de la validation YouTube
+          </p>
+        )}
       </div>
 
       <div className="flex justify-end space-x-4">
         <Button type="button" variant="secondary" onClick={onCancel}>
           Annuler
         </Button>
-        <Button type="submit" variant="primary">
+        <Button type="submit" variant="primary" disabled={isSubmitting}>
           {song ? "Mettre à jour" : "Créer"}
         </Button>
       </div>

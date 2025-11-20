@@ -1,13 +1,16 @@
-import { useState } from "react";
+﻿import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Universe, Work } from "@/types";
 import { YouTubeService } from "@/services/youtubeService";
+import { WorkFormSchema, type WorkFormValues } from "@/validation/admin";
 import { Button } from "../ui/Button";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 
 interface WorkFormProps {
   work?: Work;
   universes: Universe[];
-  defaultUniverseId?: string; // Pré-sélection automatique de l'univers
+  defaultUniverseId?: string;
   onSubmit: (
     data: Omit<Work, "id" | "createdAt" | "order">
   ) => Promise<{ success: boolean; error?: string; id?: string }>;
@@ -28,132 +31,143 @@ export const WorkForm = ({
   loading = false,
   onImportSongs,
 }: WorkFormProps) => {
-  const [formData, setFormData] = useState({
-    title: work?.title || "",
-    universeId: work?.universeId || defaultUniverseId || "",
-    playlistId: work?.playlistId || "",
-    playlistUrl: "",
-  });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [validating, setValidating] = useState(false);
   const [importing, setImporting] = useState(false);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    watch,
+    setValue,
+    setError,
+    clearErrors,
+    reset,
+  } = useForm<WorkFormValues>({
+    resolver: zodResolver(WorkFormSchema),
+    defaultValues: {
+      title: work?.title || "",
+      universeId: work?.universeId || defaultUniverseId || "",
+      playlistId: work?.playlistId || "",
+      playlistUrl: "",
+    },
+  });
 
-    if (!formData.title.trim()) {
-      newErrors.title = "Le titre est requis";
-    }
+  useEffect(() => {
+    reset({
+      title: work?.title || "",
+      universeId: work?.universeId || defaultUniverseId || "",
+      playlistId: work?.playlistId || "",
+      playlistUrl: "",
+    });
+  }, [work, defaultUniverseId, reset]);
 
-    if (!formData.universeId) {
-      newErrors.universeId = "L'univers est requis";
-    }
+  const playlistId = watch("playlistId") || "";
+  const playlistUrl = watch("playlistUrl") || "";
+  const universeValue = watch("universeId");
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const submitWork = async (values: WorkFormValues) => {
+    const { playlistUrl, playlistId, ...payload } = values;
+    void playlistUrl;
+    return onSubmit({
+      ...payload,
+      playlistId: playlistId || "",
+    });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) return;
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { playlistUrl, ...submitData } = formData;
-    await onSubmit(submitData);
-  };
-
-  const handleCreateAndImport = async () => {
-    if (!validateForm()) return;
-    if (!formData.playlistId || !onImportSongs) return;
-
-    setImporting(true);
-    try {
-      // 1. Créer l'œuvre
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { playlistUrl, ...submitData } = formData;
-      const result = await onSubmit(submitData);
-
-      // 2. Si création réussie, importer les chansons
-      if (result.success && result.id) {
-        await onImportSongs(result.id, formData.playlistId);
-      }
-    } catch (error) {
-      console.error("Erreur lors de la création et import:", error);
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    // Effacer l'erreur pour ce champ
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
-    }
-  };
+  const submitOnly = handleSubmit(submitWork);
 
   const handlePlaylistValidation = async () => {
-    if (!formData.playlistUrl.trim()) {
-      setErrors((prev) => ({
-        ...prev,
-        playlistUrl: "L'URL de la playlist est requise",
-      }));
+    if (!playlistUrl.trim()) {
+      setError("playlistUrl", {
+        message: "L'URL de la playlist est requise",
+        type: "manual",
+      });
       return;
     }
 
     setValidating(true);
-    setErrors((prev) => ({ ...prev, playlistUrl: "" }));
+    clearErrors("playlistUrl");
 
     try {
-      const playlistId = YouTubeService.extractPlaylistId(formData.playlistUrl);
-      if (!playlistId) {
-        setErrors((prev) => ({
-          ...prev,
-          playlistUrl: "URL de playlist YouTube invalide",
-        }));
+      const extractedId = YouTubeService.extractPlaylistId(playlistUrl);
+      if (!extractedId) {
+        setError("playlistUrl", {
+          message: "URL de playlist YouTube invalide",
+          type: "manual",
+        });
         return;
       }
 
-      const validation = await YouTubeService.validatePlaylist(
-        formData.playlistUrl
-      );
+      const validation = await YouTubeService.validatePlaylist(playlistUrl);
 
       if (validation.isValid && validation.playlistId) {
-        setFormData((prev) => ({
-          ...prev,
-          playlistId: validation.playlistId!,
-        }));
-        setErrors((prev) => ({ ...prev, playlistUrl: "" }));
+        setValue("playlistId", validation.playlistId, {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
       } else {
-        setErrors((prev) => ({
-          ...prev,
-          playlistUrl: validation.error || "Playlist invalide",
-        }));
+        setError("playlistUrl", {
+          message: validation.error || "Playlist invalide",
+          type: "manual",
+        });
       }
     } catch {
-      setErrors((prev) => ({
-        ...prev,
-        playlistUrl: "Erreur lors de la validation",
-      }));
+      setError("playlistUrl", {
+        message: "Erreur lors de la validation",
+        type: "manual",
+      });
     } finally {
       setValidating(false);
     }
   };
 
   const handleImportSongs = async () => {
-    if (!work?.id || !formData.playlistId || !onImportSongs) return;
+    if (!work?.id || !onImportSongs) {
+      return;
+    }
+
+    if (!playlistId) {
+      setError("playlistId", {
+        message: "Validez une playlist avant d'importer",
+        type: "manual",
+      });
+      return;
+    }
 
     setImporting(true);
     try {
-      await onImportSongs(work.id, formData.playlistId);
-    } catch (error) {
-      console.error("Erreur lors de l'import:", error);
+      await onImportSongs(work.id, playlistId);
     } finally {
       setImporting(false);
     }
   };
+
+  const handleCreateAndImport = handleSubmit(async (values) => {
+    if (!onImportSongs) {
+      await submitWork(values);
+      return;
+    }
+
+    if (!values.playlistId) {
+      setError("playlistId", {
+        message: "Validez une playlist avant d'importer",
+        type: "manual",
+      });
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const result = await submitWork(values);
+
+      if (result.success && result.id) {
+        await onImportSongs(result.id, values.playlistId);
+      }
+    } finally {
+      setImporting(false);
+    }
+  });
 
   if (loading) {
     return (
@@ -164,24 +178,23 @@ export const WorkForm = ({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={submitOnly} className="space-y-6">
       <div>
         <label className="block text-sm font-medium text-gray-300 mb-2">
           Titre de l&apos;œuvre *
         </label>
         <input
           type="text"
-          value={formData.title}
-          onChange={(e) => handleChange("title", e.target.value)}
+          {...register("title")}
           className={`
             w-full px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
             ${errors.title ? "border-red-500" : "border-gray-600"}
             focus:outline-none focus:border-blue-500 transition-colors
           `}
-          placeholder="Ex: Harry Potter à l'École des Sorciers"
+          placeholder="Ex: Harry Potter à l'école des Sorciers"
         />
         {errors.title && (
-          <p className="text-red-400 text-sm mt-1">{errors.title}</p>
+          <p className="text-red-400 text-sm mt-1">{errors.title.message}</p>
         )}
       </div>
 
@@ -190,8 +203,7 @@ export const WorkForm = ({
           Univers *
         </label>
         <select
-          value={formData.universeId}
-          onChange={(e) => handleChange("universeId", e.target.value)}
+          {...register("universeId")}
           className={`
             w-full px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
             ${errors.universeId ? "border-red-500" : "border-gray-600"}
@@ -206,15 +218,13 @@ export const WorkForm = ({
           ))}
         </select>
         {errors.universeId && (
-          <p className="text-red-400 text-sm mt-1">{errors.universeId}</p>
+          <p className="text-red-400 text-sm mt-1">{errors.universeId.message}</p>
         )}
-        {!work &&
-          defaultUniverseId &&
-          formData.universeId === defaultUniverseId && (
-            <p className="text-blue-400 text-sm mt-1">
-              ℹ️ Univers pré-sélectionné automatiquement
-            </p>
-          )}
+        {!work && defaultUniverseId && universeValue === defaultUniverseId && (
+          <p className="text-blue-400 text-sm mt-1">
+            ? Univers présélectionné automatiquement
+          </p>
+        )}
       </div>
 
       <div>
@@ -224,8 +234,7 @@ export const WorkForm = ({
         <div className="flex gap-2">
           <input
             type="url"
-            value={formData.playlistUrl}
-            onChange={(e) => handleChange("playlistUrl", e.target.value)}
+            {...register("playlistUrl")}
             className={`
               flex-1 px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
               ${errors.playlistUrl ? "border-red-500" : "border-gray-600"}
@@ -237,19 +246,19 @@ export const WorkForm = ({
             type="button"
             variant="secondary"
             onClick={handlePlaylistValidation}
-            disabled={validating || !formData.playlistUrl.trim()}
+            disabled={validating || !playlistUrl.trim()}
           >
             {validating ? "Validation..." : "Valider"}
           </Button>
         </div>
         {errors.playlistUrl && (
-          <p className="text-red-400 text-sm mt-1">{errors.playlistUrl}</p>
+          <p className="text-red-400 text-sm mt-1">
+            {errors.playlistUrl.message}
+          </p>
         )}
-        {formData.playlistId && (
+        {playlistId && (
           <div className="mt-2 space-y-2">
-            <p className="text-green-400 text-sm">
-              ✓ Playlist validée: {formData.playlistId}
-            </p>
+            <p className="text-green-400 text-sm">? Playlist validée: {playlistId}</p>
             {work?.id && onImportSongs && (
               <div className="flex items-center space-x-2">
                 <Button
@@ -259,9 +268,7 @@ export const WorkForm = ({
                   onClick={handleImportSongs}
                   disabled={importing}
                 >
-                  {importing
-                    ? "Import en cours..."
-                    : "🎵 Importer les chansons"}
+                  {importing ? "Import en cours..." : "Importer les chansons"}
                 </Button>
                 <p className="text-gray-400 text-xs">
                   Ajoute automatiquement toutes les chansons de la playlist
@@ -270,6 +277,11 @@ export const WorkForm = ({
             )}
           </div>
         )}
+        {errors.playlistId && (
+          <p className="text-red-400 text-sm mt-1">
+            {errors.playlistId.message}
+          </p>
+        )}
       </div>
 
       <div className="flex justify-end space-x-4">
@@ -277,10 +289,9 @@ export const WorkForm = ({
           Annuler
         </Button>
 
-        {/* Mode création avec playlist validée : proposer l'import automatique */}
-        {!work && formData.playlistId && onImportSongs ? (
+        {!work && playlistId && onImportSongs ? (
           <>
-            <Button type="submit" variant="secondary">
+            <Button type="submit" variant="secondary" disabled={isSubmitting}>
               Créer seulement
             </Button>
             <Button
@@ -289,13 +300,11 @@ export const WorkForm = ({
               onClick={handleCreateAndImport}
               disabled={importing}
             >
-              {importing
-                ? "Création et import..."
-                : "🎵 Créer et importer les chansons"}
+              {importing ? "Création et import..." : "Créer et importer"}
             </Button>
           </>
         ) : (
-          <Button type="submit" variant="primary">
+          <Button type="submit" variant="primary" disabled={isSubmitting}>
             {work ? "Mettre à jour" : "Créer"}
           </Button>
         )}
@@ -303,3 +312,4 @@ export const WorkForm = ({
     </form>
   );
 };
+
