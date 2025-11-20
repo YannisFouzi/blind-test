@@ -3,7 +3,7 @@ import type * as React from "react";
 declare global {
   namespace JSX {
     type Element = React.ReactElement<unknown, string | React.JSXElementConstructor<unknown>>;
-    interface ElementClass extends React.Component<any, any> {
+    interface ElementClass extends React.Component<unknown, unknown> {
       render(): React.ReactNode;
     }
     interface ElementAttributesProperty {
@@ -14,8 +14,8 @@ declare global {
     }
     type LibraryManagedAttributes<C, P> = React.JSX.LibraryManagedAttributes<C, P>;
     type IntrinsicAttributes = React.JSX.IntrinsicAttributes;
-    interface IntrinsicClassAttributes<T> extends React.JSX.IntrinsicClassAttributes<T> {}
-    interface IntrinsicElements extends React.JSX.IntrinsicElements {}
+    type IntrinsicClassAttributes<T> = React.JSX.IntrinsicClassAttributes<T>;
+    type IntrinsicElements = React.JSX.IntrinsicElements;
   }
 }
 
