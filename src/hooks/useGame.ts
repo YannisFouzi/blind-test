@@ -2,7 +2,6 @@ import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { GameAnswer, GameSession, Song, Work } from "@/types";
-import { createDemoSongs, defaultSongs, defaultWorks } from "../utils/demoData";
 import { generateId, shuffleArray } from "../utils/formatters";
 
 export const useGame = (
@@ -29,18 +28,19 @@ export const useGame = (
       );
       const worksSnapshot = await getDocs(worksQuery);
 
-      let fetchedWorks: Work[];
-      if (!worksSnapshot.empty) {
-        fetchedWorks = worksSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate() || new Date(),
-        })) as Work[];
-      } else {
-        // Utiliser les données par défaut pour le développement
-        fetchedWorks = defaultWorks.filter(
-          (work) => work.universeId === universeId
-        );
+      // Charger les works depuis Firebase
+      const fetchedWorks: Work[] = worksSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+      })) as Work[];
+
+      if (fetchedWorks.length === 0) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn(
+            `Aucune œuvre trouvée pour l'univers "${universeId}". Créez des œuvres dans l'admin panel.`
+          );
+        }
       }
 
       setWorks(fetchedWorks);
@@ -72,23 +72,14 @@ export const useGame = (
         }
       }
 
-      // Si aucune chanson n'est trouvée, créer des chansons de démonstration
+      // Vérifier qu'on a bien des chansons
       if (songs.length === 0) {
-        songs = defaultSongs.filter((song) =>
-          fetchedWorks.some((work) => work.id === song.workId)
-        );
-
-        if (songs.length === 0 && fetchedWorks.length > 0) {
-          if (process.env.NODE_ENV === "development") {
-            console.log(
-              "Création de chansons de démonstration pour les œuvres trouvées"
-            );
-          }
-          setUsingDemoData(true);
-          songs = createDemoSongs(fetchedWorks);
-        } else {
-          setUsingDemoData(false);
+        if (process.env.NODE_ENV === "development") {
+          console.warn(
+            `Aucune chanson trouvée pour l'univers "${universeId}". Ajoutez des chansons dans l'admin panel.`
+          );
         }
+        setUsingDemoData(false);
       }
 
       // Mélanger les chansons

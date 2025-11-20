@@ -6,7 +6,10 @@
       "Bash(npm run dev)",
       "Bash(nul)",
       "Bash(test:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(npx tsx:*)",
+      "Bash(curl:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

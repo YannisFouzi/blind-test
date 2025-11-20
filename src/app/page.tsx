@@ -9,8 +9,7 @@ import { HomePageSkeleton } from "../components/HomePage/HomePageSkeleton";
 import { useAuth } from "../hooks/useAuth";
 import { useUniverses } from "../hooks/useUniverses";
 import { generateStylesFromColor } from "../utils/colorGenerator";
-import { AVAILABLE_ICONS } from "../utils/iconLibrary";
-import { UNIVERSE_THEMES } from "../utils/universeThemes";
+import { AVAILABLE_ICONS } from "@/constants/icons";
 import {
   fadeInUp,
   slideInLeft,
@@ -45,34 +44,20 @@ export default function HomePage() {
   };
 
   const getUniverseStyles = (universe: Universe) => {
-    // Détecter le type de données : ancien thème, couleur hex, ou ID d'icône
-    if (universe.color.startsWith("#")) {
-      // Nouvelle logique : couleur hex + ID d'icône
-      const styles = generateStylesFromColor(universe.color);
-      return {
-        gradient: styles.inlineStyles.background,
-        border: styles.primaryColor,
-        iconColor: styles.primaryColor,
-        primaryColor: styles.primaryColor,
-        inlineStyles: styles.inlineStyles,
-        overlayStyles: styles.overlayStyles,
-        iconStyles: styles.iconStyles,
-      };
-    } else {
-      // Rétrocompatibilité : anciens thèmes prédéfinis
-      const theme = UNIVERSE_THEMES.find((t) => t.name === universe.color);
-      if (theme) {
-        return {
-          gradient: theme.gradient,
-          border: theme.primaryColor,
-          iconColor: theme.primaryColor,
-          primaryColor: theme.primaryColor,
-        };
-      }
+    // Validation : toutes les couleurs doivent être en format hex
+    const color = universe.color.startsWith("#")
+      ? universe.color
+      : "#3B82F6"; // Fallback bleu par défaut
+
+    // Avertir si format invalide détecté
+    if (!universe.color.startsWith("#")) {
+      console.error(
+        `[ERREUR] Univers "${universe.name}" a une couleur invalide: "${universe.color}"`,
+        "Format attendu: #XXXXXX (hex)"
+      );
     }
 
-    // Fallback par défaut
-    const styles = generateStylesFromColor("#3B82F6");
+    const styles = generateStylesFromColor(color);
     return {
       gradient: styles.inlineStyles.background,
       border: styles.primaryColor,

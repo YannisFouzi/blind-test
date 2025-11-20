@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Universe } from "@/types";
-import { AVAILABLE_ICONS, ICON_CATEGORIES, getIconById } from "../../utils";
+import { AVAILABLE_ICONS, ICON_CATEGORIES, getIconById } from "@/constants/icons";
 import { Button } from "../ui/Button";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 

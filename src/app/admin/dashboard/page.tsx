@@ -15,7 +15,7 @@ import { ConfirmModal } from "../../../components/ui/ConfirmModal";
 import { LoadingSpinner } from "../../../components/ui/LoadingSpinner";
 import { useAdmin } from "../../../hooks/useAdmin";
 import { useAuth } from "../../../hooks/useAuth";
-import { getIconById, getUniverseTheme } from "../../../utils";
+import { getIconById } from "@/constants/icons";
 
 type ModalType = "universe" | "work" | "song" | null;
 
@@ -287,50 +287,32 @@ export default function AdminDashboard() {
       label: "Thème",
       render: (value: unknown, universe: Universe) => {
         const colorValue = String(value);
-        if (colorValue.startsWith("#")) {
-          // Nouveau système : couleur hex
-          const iconData = getIconById(universe.icon) || getIconById("wand");
-          const IconComponent = iconData?.component;
+        // Toutes les couleurs doivent être en format hex
+        const color = colorValue.startsWith("#") ? colorValue : "#3B82F6";
+        const iconData = getIconById(universe.icon) || getIconById("wand");
+        const IconComponent = iconData?.component;
 
-          return (
-            <div className="flex items-center space-x-3">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: colorValue }}
-              >
-                {IconComponent && (
-                  <IconComponent className="text-sm text-[#1c1c35]" />
-                )}
-              </div>
-              <div>
-                <div className="text-white font-medium">
-                  Couleur personnalisée
-                </div>
-                <div className="text-gray-400 text-xs">{colorValue}</div>
-              </div>
-            </div>
-          );
-        } else {
-          // Ancien système : thèmes prédéfinis
-          const theme = getUniverseTheme(colorValue);
-          const IconComponent = theme.icon;
-          return (
-            <div className="flex items-center space-x-3">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: theme.primaryColor }}
-              >
+        return (
+          <div className="flex items-center space-x-3">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: color }}
+            >
+              {IconComponent && (
                 <IconComponent className="text-sm text-[#1c1c35]" />
-              </div>
-              <div>
-                <div className="text-white font-medium">{theme.name}</div>
-                <div className="text-gray-400 text-xs">
-                  {theme.primaryColor}
-                </div>
-              </div>
+              )}
             </div>
-          );
-        }
+            <div>
+              <div className="text-white font-medium">
+                {universe.name || "Couleur personnalisée"}
+              </div>
+              <div className="text-gray-400 text-xs">{color}</div>
+              {!colorValue.startsWith("#") && (
+                <div className="text-red-400 text-xs">⚠️ Format invalide</div>
+              )}
+            </div>
+          </div>
+        );
       },
     },
     {
