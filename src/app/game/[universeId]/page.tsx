@@ -33,8 +33,6 @@ export default function GamePage() {
     volume,
     isMuted,
     youtubeError,
-    preloadedVideoId,
-    isPreloading,
     handlePlayPause,
     handleVolumeChange,
     toggleMute,
@@ -44,7 +42,6 @@ export default function GamePage() {
     handleYoutubeStateChange,
     preloadNextVideo,
     preloadSystem,
-    debug,
     formatTime,
   } = useYouTube();
 

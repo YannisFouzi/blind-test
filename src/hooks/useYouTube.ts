@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { LegacyYouTubePlayer, YouTubeEvent } from "@/types/youtube";
 import { formatTime } from "../utils/formatters";
 import { usePreloadDebug } from "./usePreloadDebug";
 import { usePreloadPlayer } from "./usePreloadPlayer";
@@ -18,16 +19,7 @@ export const useYouTube = () => {
   // Hook pour le lecteur de préchargement
   const preloadSystem = usePreloadPlayer();
 
-  const youtubePlayer = useRef<{
-    playVideo: () => void;
-    pauseVideo: () => void;
-    setVolume: (volume: number) => void;
-    seekTo: (seconds: number, allowSeekAhead: boolean) => void;
-    getCurrentTime: () => number;
-    getDuration: () => number;
-    cueVideoById: (videoId: string) => void;
-    loadVideoById: (videoId: string) => void;
-  } | null>(null);
+  const youtubePlayer = useRef<LegacyYouTubePlayer | null>(null);
 
   // Contrôles du lecteur
   const handlePlayPause = (videoId?: string) => {
@@ -111,24 +103,14 @@ export const useYouTube = () => {
     );
   };
 
-  const handleYoutubeReady = (event: {
-    target: {
-      playVideo: () => void;
-      pauseVideo: () => void;
-      setVolume: (volume: number) => void;
-      seekTo: (seconds: number, allowSeekAhead: boolean) => void;
-      getCurrentTime: () => number;
-      getDuration: () => number;
-      cueVideoById: (videoId: string) => void;
-      loadVideoById: (videoId: string) => void;
-    };
-  }) => {
-    youtubePlayer.current = event.target;
-    setDuration(event.target.getDuration());
+  const handleYoutubeReady = (event: YouTubeEvent<void>) => {
+    const player = event.target as unknown as LegacyYouTubePlayer;
+    youtubePlayer.current = player;
+    setDuration(player.getDuration());
     setYoutubeError(null);
   };
 
-  const handleYoutubeStateChange = (event: { data: number }) => {
+  const handleYoutubeStateChange = (event: YouTubeEvent<number>) => {
     setIsPlaying(event.data === 1);
   };
 

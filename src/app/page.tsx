@@ -195,7 +195,7 @@ export default function HomePage() {
             animate="visible"
             variants={staggerContainer}
           >
-            {universes.map((universe, index) => {
+            {universes.map((universe) => {
               const styles = getUniverseStyles(universe);
 
               // Déterminer si on utilise les styles inline ou les classes Tailwind

@@ -1,21 +1,17 @@
 import YouTube from "react-youtube";
+import type {
+  YouTubeEvent,
+  YouTubePlayerOptions,
+} from "@/types/youtube";
 
 interface PreloadPlayerProps {
-  onReady: (event: {
-    target: {
-      cueVideoById: (videoId: string) => void;
-      loadVideoById: (videoId: string) => void;
-      playVideo: () => void;
-      pauseVideo: () => void;
-      setVolume: (volume: number) => void;
-    };
-  }) => void;
+  onReady: (event: YouTubeEvent<void>) => void;
   onError: (error: unknown) => void;
 }
 
 export const PreloadPlayer = ({ onReady, onError }: PreloadPlayerProps) => {
   // Options pour le lecteur invisible
-  const opts = {
+  const opts: YouTubePlayerOptions = {
     height: "0",
     width: "0",
     playerVars: {
@@ -28,7 +24,6 @@ export const PreloadPlayer = ({ onReady, onError }: PreloadPlayerProps) => {
       modestbranding: 1,
       playsinline: 1,
       rel: 0,
-      showinfo: 0,
     },
   };
 

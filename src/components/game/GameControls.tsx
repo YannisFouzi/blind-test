@@ -1,4 +1,5 @@
 import YouTube from "react-youtube";
+import type { YouTubeEvent, YouTubePlayerOptions } from "@/types/youtube";
 import { GameSession } from "@/types";
 import { GameScore } from "./GameScore";
 
@@ -23,19 +24,8 @@ interface GameControlsProps {
   onToggleMute: () => void;
   onProgressClick: (e: React.MouseEvent<HTMLDivElement>) => void;
   onError: (error: unknown) => void;
-  onReady: (event: {
-    target: {
-      playVideo: () => void;
-      pauseVideo: () => void;
-      setVolume: (volume: number) => void;
-      seekTo: (seconds: number, allowSeekAhead: boolean) => void;
-      getCurrentTime: () => number;
-      getDuration: () => number;
-      cueVideoById: (videoId: string) => void;
-      loadVideoById: (videoId: string) => void;
-    };
-  }) => void;
-  onStateChange: (event: { target: unknown; data: number }) => void;
+  onReady: (event: YouTubeEvent<void>) => void;
+  onStateChange: (event: YouTubeEvent<number>) => void;
   formatTime: (seconds: number) => string;
 }
 
@@ -117,20 +107,22 @@ export const GameControls = ({
       <div className="hidden">
         <YouTube
           videoId={currentSongVideoId}
-          opts={{
-            height: "0",
-            width: "0",
-            playerVars: {
-              autoplay: 0,
-              controls: 0,
-              playsinline: 1,
-              enablejsapi: 1,
-              origin:
-                typeof window !== "undefined"
-                  ? window.location.origin
-                  : undefined,
-            },
-          }}
+          opts={
+            {
+              height: "0",
+              width: "0",
+              playerVars: {
+                autoplay: 0,
+                controls: 0,
+                playsinline: 1,
+                enablejsapi: 1,
+                origin:
+                  typeof window !== "undefined"
+                    ? window.location.origin
+                    : undefined,
+              },
+            } satisfies YouTubePlayerOptions
+          }
           onReady={onReady}
           onStateChange={onStateChange}
           onError={onError}

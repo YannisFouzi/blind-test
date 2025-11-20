@@ -1,4 +1,5 @@
 import YouTube from "react-youtube";
+import type { YouTubeEvent, YouTubePlayerOptions } from "@/types/youtube";
 import { Song } from "@/types";
 
 interface GamePlayerProps {
@@ -8,19 +9,8 @@ interface GamePlayerProps {
   usingDemoData: boolean;
   youtubeError: string | null;
   onError: (error: unknown) => void;
-  onReady: (event: {
-    target: {
-      playVideo: () => void;
-      pauseVideo: () => void;
-      setVolume: (volume: number) => void;
-      seekTo: (seconds: number, allowSeekAhead: boolean) => void;
-      getCurrentTime: () => number;
-      getDuration: () => number;
-      cueVideoById: (videoId: string) => void;
-      loadVideoById: (videoId: string) => void;
-    };
-  }) => void;
-  onStateChange: (event: { target: unknown; data: number }) => void;
+  onReady: (event: YouTubeEvent<void>) => void;
+  onStateChange: (event: YouTubeEvent<number>) => void;
 }
 
 export const GamePlayer = ({
@@ -71,11 +61,13 @@ export const GamePlayer = ({
       <div className="mt-6">
         <YouTube
           videoId={currentSong.youtubeId}
-          opts={{
-            height: "0",
-            width: "0",
-            playerVars: { autoplay: 0, controls: 0 },
-          }}
+          opts={
+            {
+              height: "0",
+              width: "0",
+              playerVars: { autoplay: 0, controls: 0 },
+            } satisfies YouTubePlayerOptions
+          }
           onReady={onReady}
           onStateChange={onStateChange}
           onError={onError}
