@@ -2,20 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Plus } from "lucide-react";
 import { Song, Universe, Work } from "@/types";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
-import { DataTable } from "../../../components/admin/DataTable";
 import { SongForm } from "../../../components/admin/SongForm";
 import { UniverseForm } from "../../../components/admin/UniverseForm";
 import { WorkForm } from "../../../components/admin/WorkForm";
-import { WorksTable } from "../../../components/admin/WorksTable";
-import { Button } from "../../../components/ui/Button";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal";
 import { LoadingSpinner } from "../../../components/ui/LoadingSpinner";
 import { useAdmin } from "../../../hooks/useAdmin";
 import { useAuth } from "../../../hooks/useAuth";
-import { getIconById } from "@/constants/icons";
+import { UniverseSection } from "@/components/admin/dashboard/UniverseSection";
+import { WorksSection } from "@/components/admin/dashboard/WorksSection";
+import { SongsSection } from "@/components/admin/dashboard/SongsSection";
 
 type ModalType = "universe" | "work" | "song" | null;
 
@@ -278,73 +276,15 @@ export default function AdminDashboard() {
     }
   };
 
-  // Configuration des colonnes pour les tableaux
-  const universeColumns = [
-    { key: "name" as keyof Universe, label: "Nom" },
-    { key: "description" as keyof Universe, label: "Description" },
-    {
-      key: "color" as keyof Universe,
-      label: "Thème",
-      render: (value: unknown, universe: Universe) => {
-        const colorValue = String(value);
-        // Toutes les couleurs doivent être en format hex
-        const color = colorValue.startsWith("#") ? colorValue : "#3B82F6";
-        const iconData = getIconById(universe.icon) || getIconById("wand");
-        const IconComponent = iconData?.component;
-
-        return (
-          <div className="flex items-center space-x-3">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: color }}
-            >
-              {IconComponent && (
-                <IconComponent className="text-sm text-[#1c1c35]" />
-              )}
-            </div>
-            <div>
-              <div className="text-white font-medium">
-                {universe.name || "Couleur personnalisée"}
-              </div>
-              <div className="text-gray-400 text-xs">{color}</div>
-              {!colorValue.startsWith("#") && (
-                <div className="text-red-400 text-xs">⚠️ Format invalide</div>
-              )}
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      key: "active" as keyof Universe,
-      label: "Actif",
-      render: (value: unknown) => (
-        <span
-          className={`px-2 py-1 rounded text-xs ${
-            Boolean(value) ? "bg-green-600 text-white" : "bg-red-600 text-white"
-          }`}
-        >
-          {Boolean(value) ? "Actif" : "Inactif"}
-        </span>
-      ),
-    },
-  ];
-
-  const songColumns = [
-    { key: "title" as keyof Song, label: "Titre" },
-    { key: "artist" as keyof Song, label: "Artiste" },
-    { key: "youtubeId" as keyof Song, label: "YouTube ID" },
-    {
-      key: "duration" as keyof Song,
-      label: "Durée",
-      render: (value: unknown) => {
-        const duration = Number(value) || 0;
-        const minutes = Math.floor(duration / 60);
-        const seconds = duration % 60;
-        return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-      },
-    },
-  ];
+  const selectedUniverseData = selectedUniverse
+    ? universes.find((u) => u.id === selectedUniverse)
+    : null;
+  const filteredWorks = selectedUniverse
+    ? works.filter((work) => work.universeId === selectedUniverse)
+    : [];
+  const selectedWorkData = selectedWork
+    ? works.find((work) => work.id === selectedWork)
+    : null;
 
   return (
     <AdminLayout
@@ -358,118 +298,51 @@ export default function AdminDashboard() {
       onNavigateHome={handleNavigateHome}
     >
       <div className="space-y-8">
-        {/* Section Univers */}
-        <section>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold text-white">Univers</h2>
-            <Button
-              variant="primary"
-              onClick={() => handleOpenModal("universe")}
-              className="flex items-center space-x-2"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Nouveau</span>
-            </Button>
-          </div>
+        <UniverseSection
+          universes={universes}
+          loading={loading}
+          onCreate={() => handleOpenModal("universe")}
+          onEdit={(universe) => handleOpenModal("universe", universe)}
+          onDelete={(universe) => handleConfirmDelete("universe", universe)}
+          onManageWorks={(universe) => {
+            setSelectedUniverse(universe.id);
+            setSelectedWork(null);
+            loadWorks(universe.id);
+          }}
+        />
 
-          <DataTable
-            data={universes}
-            columns={universeColumns}
-            loading={loading}
-            emptyMessage="Aucun univers créé"
-            onEdit={(universe) => handleOpenModal("universe", universe)}
-            onDelete={(universe) => handleConfirmDelete("universe", universe)}
-            actions={(universe) => (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setSelectedUniverse(universe.id);
-                  loadWorks(universe.id);
-                }}
-              >
-                Gérer les œuvres
-              </Button>
-            )}
-          />
-        </section>
-
-        {/* Section Œuvres */}
         {selectedUniverse && (
-          <section>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-white">
-                Œuvres -{" "}
-                {universes.find((u) => u.id === selectedUniverse)?.name}
-              </h2>
-              <div className="flex space-x-2">
-                <Button
-                  variant="secondary"
-                  onClick={() => setSelectedUniverse(null)}
-                >
-                  Retour aux univers
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => handleOpenModal("work")}
-                  className="flex items-center space-x-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Nouvelle œuvre</span>
-                </Button>
-              </div>
-            </div>
-
-            <WorksTable
-              works={works}
-              loading={loading}
-              onEdit={(work) => handleOpenModal("work", work)}
-              onDelete={(work) => handleConfirmDelete("work", work)}
-              onManageSongs={(work) => {
-                setSelectedWork(work.id);
-                loadSongs(work.id);
-              }}
-              onMoveUp={handleMoveWorkUp}
-              onMoveDown={handleMoveWorkDown}
-              onReorder={reorderWorks}
-            />
-          </section>
+          <WorksSection
+            universeName={selectedUniverseData?.name}
+            works={filteredWorks}
+            loading={loading}
+            onBack={() => {
+              setSelectedUniverse(null);
+              setSelectedWork(null);
+            }}
+            onCreateWork={() => handleOpenModal("work")}
+            onEditWork={(work) => handleOpenModal("work", work)}
+            onDeleteWork={(work) => handleConfirmDelete("work", work)}
+            onManageSongs={(work) => {
+              setSelectedWork(work.id);
+              loadSongs(work.id);
+            }}
+            onMoveUp={handleMoveWorkUp}
+            onMoveDown={handleMoveWorkDown}
+            onReorder={reorderWorks}
+          />
         )}
 
-        {/* Section Chansons */}
         {selectedWork && (
-          <section>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-white">
-                Chansons - {works.find((w) => w.id === selectedWork)?.title}
-              </h2>
-              <div className="flex space-x-2">
-                <Button
-                  variant="secondary"
-                  onClick={() => setSelectedWork(null)}
-                >
-                  Retour aux œuvres
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => handleOpenModal("song")}
-                  className="flex items-center space-x-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Nouvelle chanson</span>
-                </Button>
-              </div>
-            </div>
-
-            <DataTable
-              data={songs}
-              columns={songColumns}
-              loading={loading}
-              emptyMessage="Aucune chanson créée"
-              onEdit={(song) => handleOpenModal("song", song)}
-              onDelete={(song) => handleConfirmDelete("song", song)}
-            />
-          </section>
+          <SongsSection
+            workTitle={selectedWorkData?.title}
+            songs={songs}
+            loading={loading}
+            onBack={() => setSelectedWork(null)}
+            onCreateSong={() => handleOpenModal("song")}
+            onEditSong={(song) => handleOpenModal("song", song)}
+            onDeleteSong={(song) => handleConfirmDelete("song", song)}
+          />
         )}
       </div>
 

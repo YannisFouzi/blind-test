@@ -1,0 +1,107 @@
+"use client";
+
+import { Plus } from "lucide-react";
+import { Universe } from "@/types";
+import { getIconById } from "@/constants/icons";
+import { DataTable } from "../../admin/DataTable";
+import { Button } from "../../ui/Button";
+
+interface UniverseSectionProps {
+  universes: Universe[];
+  loading: boolean;
+  onCreate: () => void;
+  onEdit: (universe: Universe) => void;
+  onDelete: (universe: Universe) => void;
+  onManageWorks: (universe: Universe) => void;
+}
+
+const buildUniverseColumns = () => [
+  { key: "name" as keyof Universe, label: "Nom" },
+  { key: "description" as keyof Universe, label: "Description" },
+  {
+    key: "color" as keyof Universe,
+    label: "Thème",
+    render: (value: unknown, universe: Universe) => {
+      const colorValue = String(value);
+      const color = colorValue.startsWith("#") ? colorValue : "#3B82F6";
+      const iconData = getIconById(universe.icon) || getIconById("wand");
+      const IconComponent = iconData?.component;
+
+      return (
+        <div className="flex items-center space-x-3">
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: color }}
+          >
+            {IconComponent && (
+              <IconComponent className="text-sm text-[#1c1c35]" />
+            )}
+          </div>
+          <div>
+            <div className="text-white font-medium">
+              {universe.name || "Couleur personnalisée"}
+            </div>
+            <div className="text-gray-400 text-xs">{color}</div>
+            {!colorValue.startsWith("#") && (
+              <div className="text-red-400 text-xs">⚠️ Format invalide</div>
+            )}
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    key: "active" as keyof Universe,
+    label: "Actif",
+    render: (value: unknown) => (
+      <span
+        className={`px-2 py-1 rounded text-xs ${
+          Boolean(value) ? "bg-green-600 text-white" : "bg-red-600 text-white"
+        }`}
+      >
+        {Boolean(value) ? "Actif" : "Inactif"}
+      </span>
+    ),
+  },
+];
+
+export const UniverseSection = ({
+  universes,
+  loading,
+  onCreate,
+  onEdit,
+  onDelete,
+  onManageWorks,
+}: UniverseSectionProps) => {
+  const universeColumns = buildUniverseColumns();
+
+  return (
+    <section>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold text-white">Univers</h2>
+        <Button variant="primary" onClick={onCreate} className="flex items-center space-x-2">
+          <Plus className="w-4 h-4" />
+          <span>Nouveau</span>
+        </Button>
+      </div>
+
+      <DataTable
+        data={universes}
+        columns={universeColumns}
+        loading={loading}
+        emptyMessage="Aucun univers créé"
+        onEdit={onEdit}
+        onDelete={onDelete}
+        actions={(universe) => (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onManageWorks(universe)}
+          >
+            Gérer les œuvres
+          </Button>
+        )}
+      />
+    </section>
+  );
+};
