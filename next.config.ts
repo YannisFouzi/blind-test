@@ -12,7 +12,7 @@ const normalizedAppBaseUrl = appBaseUrl.replace(/\/$/, "");
 
 const csp = `
   default-src 'self';
-  script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://www.youtube.com https://s.ytimg.com https://apis.google.com https://accounts.google.com https://gstatic.com;
+  script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.youtube.com https://s.ytimg.com https://apis.google.com https://accounts.google.com https://gstatic.com;
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   img-src 'self' data: https: blob:;
   font-src 'self' https://fonts.gstatic.com;
