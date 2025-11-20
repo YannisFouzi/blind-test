@@ -1,16 +1,12 @@
-﻿"use client";
+"use client";
 
-import { motion } from "framer-motion";
+import { memo, useMemo } from "react";
+import type { LucideIcon } from "lucide-react";
 import { Play as PlayIcon, Star as StarIcon } from "lucide-react";
 import { Universe } from "@/types";
 import { AVAILABLE_ICONS } from "@/constants/icons";
 import { generateStylesFromColor } from "@/utils/colorGenerator";
-import { ErrorMessage } from "../ui/ErrorMessage";
-import {
-  fadeInUp,
-  staggerContainer,
-  staggerItem,
-} from "@/lib/animations/variants";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 interface UniverseGridProps {
   universes: Universe[];
@@ -18,190 +14,137 @@ interface UniverseGridProps {
   onSelect: (id: string) => void;
 }
 
-const renderIcon = (iconName: string) => {
-  const iconData = AVAILABLE_ICONS.find((icon) => icon.id === iconName);
+const ICON_COMPONENTS = AVAILABLE_ICONS.reduce<Record<string, LucideIcon>>(
+  (acc, icon) => {
+    acc[icon.id] = icon.component;
+    return acc;
+  },
+  {}
+);
 
-  if (iconData) {
-    const IconComponent = iconData.component;
-    return <IconComponent className="text-2xl md:text-4xl text-[#1c1c35]" />;
-  }
+const getIconComponent = (iconName: string) =>
+  ICON_COMPONENTS[iconName] ?? StarIcon;
 
-  return <StarIcon className="text-2xl md:text-4xl text-[#1c1c35]" />;
-};
+const DEFAULT_COLOR = "#3B82F6";
 
-const getUniverseStyles = (universe: Universe) => {
-  const color = universe.color.startsWith("#")
-    ? universe.color
-    : "#3B82F6";
-
+const buildUniverseStyles = (universe: Universe) => {
+  const color = universe.color.startsWith("#") ? universe.color : DEFAULT_COLOR;
   const styles = generateStylesFromColor(color);
 
   return {
-    gradient: styles.inlineStyles.background,
-    border: styles.primaryColor,
-    iconColor: styles.primaryColor,
     inlineStyles: styles.inlineStyles,
     overlayStyles: styles.overlayStyles,
     iconStyles: styles.iconStyles,
+    accentColor: styles.primaryColor,
   };
 };
 
-export const UniverseGrid = ({
+const UniverseGridComponent = ({
   universes,
   error,
   onSelect,
 }: UniverseGridProps) => {
+  const styleCache = useMemo(() => {
+    const cache = new Map<string, ReturnType<typeof buildUniverseStyles>>();
+    universes.forEach((universe) => {
+      cache.set(universe.id, buildUniverseStyles(universe));
+    });
+    return cache;
+  }, [universes]);
+
   if (error) {
     return (
-      <motion.div
-        className="text-center"
-        initial="hidden"
-        animate="visible"
-        variants={fadeInUp}
-      >
+      <div className="text-center">
         <div className="magic-card p-12 max-w-2xl mx-auto">
           <ErrorMessage message={error} />
           <p className="text-purple-300 mt-4">
-            Les univers magiques sont en cours de préparation... Revenez bientôt !
+            Les univers magiques sont en cours de préparation... Revenez
+            bientôt !
           </p>
         </div>
-      </motion.div>
+      </div>
     );
   }
 
   if (universes.length === 0) {
     return (
-      <motion.div
-        className="text-center"
-        initial="hidden"
-        animate="visible"
-        variants={fadeInUp}
-      >
+      <div className="text-center">
         <div className="magic-card p-12 max-w-2xl mx-auto">
           <ErrorMessage message="Aucun univers disponible pour le moment" />
           <p className="text-purple-300 mt-4">
-            Les univers magiques sont en cours de préparation... Revenez bientôt !
+            Les univers magiques sont en cours de préparation... Revenez
+            bientôt !
           </p>
         </div>
-      </motion.div>
+      </div>
     );
   }
 
   return (
-    <motion.div
-      className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto"
-      initial="hidden"
-      animate="visible"
-      variants={staggerContainer}
-    >
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
       {universes.map((universe) => {
-        const styles = getUniverseStyles(universe);
-        const hasInlineStyles =
-          universe.color.startsWith("#") &&
-          styles.inlineStyles &&
-          styles.overlayStyles &&
-          styles.iconStyles;
+        const styles = styleCache.get(universe.id);
+        if (!styles) {
+          return null;
+        }
+
+        const IconComponent = getIconComponent(universe.icon);
 
         return (
-          <motion.div
-            key={universe.id}
-            className="relative cursor-pointer"
-            variants={staggerItem}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => onSelect(universe.id)}
-          >
+          <article key={universe.id}>
             <button
-              className={`group relative backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-8 transition-all duration-500 hover:shadow-2xl w-full ${
-                hasInlineStyles
-                  ? "border hover:border-opacity-60"
-                  : "bg-gradient-to-br border-2"
-              }`}
-              style={
-                hasInlineStyles
-                  ? {
-                      background: styles.inlineStyles!.background,
-                      borderColor: styles.inlineStyles!.borderColor,
-                      boxShadow: styles.inlineStyles!.boxShadow,
-                    }
-                  : {
-                      background: styles.gradient,
-                      borderColor: styles.border,
-                    }
-              }
+              className="group relative w-full overflow-hidden rounded-2xl md:rounded-3xl border border-white/10 bg-slate-900/40 p-5 md:p-8 text-left transition-transform duration-300 hover:-translate-y-1 hover:border-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+              style={{
+                background: styles.inlineStyles.background,
+                borderColor: styles.inlineStyles.borderColor,
+                boxShadow: styles.inlineStyles.boxShadow,
+              }}
+              onClick={() => onSelect(universe.id)}
             >
               <div
-                className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                style={
-                  hasInlineStyles
-                    ? { background: styles.overlayStyles!.background }
-                    : {
-                        background: `linear-gradient(135deg, ${styles.iconColor}20, transparent)`,
-                      }
-                }
+                className="absolute inset-0 rounded-[22px] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                style={{ background: styles.overlayStyles.background }}
+                aria-hidden
               />
 
-              <div className="relative z-10">
-                <div className="flex justify-center mb-3 md:mb-6">
-                  <div
-                    className="w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center group-hover:rotate-12 transition-transform duration-500"
-                    style={
-                      hasInlineStyles
-                        ? { background: styles.iconStyles!.background }
-                        : {
-                            background: `linear-gradient(135deg, ${styles.iconColor}, ${styles.iconColor}CC)`,
-                          }
-                    }
-                  >
-                    {renderIcon(universe.icon)}
-                  </div>
+              <div className="relative z-10 flex flex-col items-center gap-4">
+                <div
+                  className="flex h-20 w-20 items-center justify-center rounded-full transition-transform duration-300 group-hover:rotate-6"
+                  style={{ background: styles.iconStyles.background }}
+                >
+                  <IconComponent className="h-10 w-10 text-slate-900" />
                 </div>
 
-                <h2
-                  className={`text-xl md:text-2xl xl:text-3xl font-bold mb-1 md:mb-2 text-center uppercase leading-tight ${
-                    hasInlineStyles ? "text-transparent bg-clip-text" : "text-white"
-                  }`}
-                  style={
-                    hasInlineStyles
-                      ? { backgroundImage: styles.iconStyles!.background }
-                      : undefined
-                  }
-                >
+                <h2 className="text-center text-2xl font-bold uppercase tracking-wide text-white">
                   {universe.name}
                 </h2>
 
                 {universe.description && (
-                  <p className="text-sm md:text-base text-white/80 text-center leading-relaxed px-2 mb-2 md:mb-4">
+                  <p className="text-center text-sm text-white/80">
                     {universe.description}
                   </p>
                 )}
 
                 <div className="flex justify-center">
-                  <div className="bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-3 rounded-full flex items-center gap-2 text-white font-semibold hover:scale-110 transition-transform duration-300">
-                    <PlayIcon className="w-4 h-4" />
-                    <span>Jouer</span>
-                  </div>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-6 py-2 text-sm font-semibold text-white transition-transform duration-300 group-hover:scale-105">
+                    <PlayIcon className="h-4 w-4" />
+                    Jouer
+                  </span>
                 </div>
               </div>
 
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                <div
-                  className="absolute top-4 left-4 w-2 h-2 rounded-full animate-ping"
-                  style={{ backgroundColor: styles.iconColor }}
-                />
-                <div
-                  className="absolute top-12 right-8 w-1 h-1 rounded-full animate-pulse delay-300"
-                  style={{ backgroundColor: `${styles.iconColor}80` }}
-                />
-                <div
-                  className="absolute bottom-8 left-12 w-1.5 h-1.5 rounded-full animate-bounce delay-500"
-                  style={{ backgroundColor: styles.iconColor }}
-                />
-              </div>
+              <div
+                className="pointer-events-none absolute -right-6 top-8 h-16 w-16 rounded-full opacity-30 blur-3xl transition-opacity duration-300 group-hover:opacity-70"
+                style={{ backgroundColor: styles.accentColor }}
+                aria-hidden
+              />
             </button>
-          </motion.div>
+          </article>
         );
       })}
-    </motion.div>
+    </div>
   );
 };
+
+export const UniverseGrid = memo(UniverseGridComponent);
+UniverseGrid.displayName = "UniverseGrid";
