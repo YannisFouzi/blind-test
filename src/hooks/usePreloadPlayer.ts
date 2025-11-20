@@ -1,12 +1,10 @@
-import { useRef, useState } from "react";
+﻿import { useRef, useState } from "react";
 import { coerceYouTubeController } from "@/types/youtube";
 import type { YouTubeController, YouTubeEvent } from "@/types/youtube";
-import { usePreloadDebug } from "./usePreloadDebug";
 
 export const usePreloadPlayer = () => {
   const [preloadedVideoId, setPreloadedVideoId] = useState<string | null>(null);
   const [isPreloading, setIsPreloading] = useState(false);
-  const debug = usePreloadDebug();
 
   const preloadPlayer = useRef<YouTubeController | null>(null);
 
@@ -15,21 +13,17 @@ export const usePreloadPlayer = () => {
       return;
     }
 
-    const startTime = Date.now();
     setIsPreloading(true);
-    debug.logPreloadStart(videoId);
 
     try {
       preloadPlayer.current.cueVideoById(videoId);
       setPreloadedVideoId(videoId);
-      debug.logPreloadSuccess(videoId, startTime);
 
       if (process.env.NODE_ENV === "development") {
         console.log(`YouTube preload: ${videoId}`);
       }
     } catch (error) {
-      debug.logPreloadError(videoId, error);
-      console.warn("Erreur lors du préchargement:", error);
+      console.warn("Erreur lors du prechargement:", error);
     } finally {
       setIsPreloading(false);
     }
@@ -64,6 +58,5 @@ export const usePreloadPlayer = () => {
     preloadNextVideo,
     handlePreloadPlayerReady,
     transferPreloadedVideo,
-    debug,
   };
 };

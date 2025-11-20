@@ -1,12 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { coerceYouTubeController } from "@/types/youtube";
 import type { YouTubeController, YouTubeEvent } from "@/types/youtube";
 import { formatTime } from "../utils/formatters";
-import { usePreloadDebug } from "./usePreloadDebug";
 import { usePreloadPlayer } from "./usePreloadPlayer";
 
 export const useYouTube = () => {
-  // État du lecteur
+  // Ã‰tat du lecteur
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(50);
   const [currentTime, setCurrentTime] = useState(0);
@@ -14,15 +13,12 @@ export const useYouTube = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [youtubeError, setYoutubeError] = useState<string | null>(null);
 
-  // System de debug
-  const debug = usePreloadDebug();
-
-  // Hook pour le lecteur de préchargement
+  // Hook pour le lecteur de prÃ©chargement
   const preloadSystem = usePreloadPlayer();
 
   const youtubePlayer = useRef<YouTubeController | null>(null);
 
-  // Contrôles du lecteur
+  // ContrÃ´les du lecteur
   const handlePlayPause = (videoId?: string) => {
     if (youtubePlayer.current) {
       try {
@@ -31,7 +27,7 @@ export const useYouTube = () => {
           setIsPlaying(false);
         } else {
           if (videoId) {
-            // Jouer une vidéo spécifique (avec préchargement intelligent)
+            // Jouer une vidÃ©o spÃ©cifique (avec prÃ©chargement intelligent)
             playVideo(videoId);
           } else {
             // Reprendre la lecture actuelle
@@ -40,7 +36,7 @@ export const useYouTube = () => {
           }
         }
       } catch (error) {
-        console.warn("Erreur lors du contrôle de lecture:", error);
+        console.warn("Erreur lors du contrÃ´le de lecture:", error);
         // On ne met pas d'erreur visible pour l'utilisateur ici
       }
     }
@@ -83,12 +79,12 @@ export const useYouTube = () => {
   };
 
   const handleYoutubeError = (error: unknown) => {
-    // Détection mobile
+    // DÃ©tection mobile
     const isMobile =
       typeof window !== "undefined" &&
       /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-    // Sur mobile, on ignore complètement les erreurs YouTube (autoplay bloqué, etc.)
+    // Sur mobile, on ignore complÃ¨tement les erreurs YouTube (autoplay bloquÃ©, etc.)
     if (isMobile) {
       return; // Ne rien faire sur mobile
     }
@@ -100,7 +96,7 @@ export const useYouTube = () => {
 
     // Afficher l'erreur seulement sur desktop
     setYoutubeError(
-      "Impossible de charger la vidéo YouTube. Cela peut être dû à vos extensions de navigateur (adblockers). Le jeu fonctionne toujours sans audio."
+      "Impossible de charger la vidÃ©o YouTube. Cela peut Ãªtre dÃ» Ã  vos extensions de navigateur (adblockers). Le jeu fonctionne toujours sans audio."
     );
   };
 
@@ -121,21 +117,19 @@ export const useYouTube = () => {
     setYoutubeError(null);
   };
 
-  // Préchargement de la vidéo suivante (délégué au lecteur de préchargement)
+  // PrÃ©chargement de la vidÃ©o suivante (dÃ©lÃ©guÃ© au lecteur de prÃ©chargement)
   const preloadNextVideo = (videoId: string) => {
     preloadSystem.preloadNextVideo(videoId);
   };
 
-  // Jouer la vidéo préchargée ou charger une nouvelle
+  // Jouer la vidÃ©o prÃ©chargÃ©e ou charger une nouvelle
   const playVideo = (videoId: string) => {
     if (!youtubePlayer.current) return;
 
     const isPreloaded = preloadSystem.preloadedVideoId === videoId;
-    const startTime = debug.logPlayStart(videoId, isPreloaded);
 
     try {
       if (isPreloaded) {
-        // La vidéo est préchargée dans le lecteur invisible, transférer vers le principal
         const transferred = preloadSystem.transferPreloadedVideo(
           youtubePlayer.current,
           videoId
@@ -143,34 +137,21 @@ export const useYouTube = () => {
         if (transferred) {
           setIsPlaying(true);
           setYoutubeError(null);
-
-          // Log performance de lecture instantanée
-          setTimeout(() => {
-            debug.logPlaySuccess(videoId, startTime, true);
-          }, 100);
         } else {
-          // Fallback si le transfert échoue
           youtubePlayer.current.loadVideoById(videoId);
           setIsPlaying(true);
         }
       } else {
-        // Charger et jouer la vidéo normalement
         youtubePlayer.current.loadVideoById(videoId);
         setIsPlaying(true);
-
-        // Log performance de chargement
-        setTimeout(() => {
-          debug.logPlaySuccess(videoId, startTime, false);
-        }, 500);
       }
       setYoutubeError(null);
     } catch (error) {
-      debug.logAction("PLAY_ERROR", { videoId, error });
       console.warn("Erreur lors de la lecture:", error);
     }
   };
 
-  // Effet pour mettre à jour le temps actuel
+  // Effet pour mettre Ã  jour le temps actuel
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
@@ -191,7 +172,7 @@ export const useYouTube = () => {
   }, [isPlaying]);
 
   return {
-    // État
+    // Ã‰tat
     isPlaying,
     volume,
     currentTime,
@@ -200,7 +181,7 @@ export const useYouTube = () => {
     youtubeError,
     youtubePlayer,
 
-    // État du préchargement (depuis le système de préchargement)
+    // Ã‰tat du prÃ©chargement (depuis le systÃ¨me de prÃ©chargement)
     preloadedVideoId: preloadSystem.preloadedVideoId,
     isPreloading: preloadSystem.isPreloading,
 
@@ -215,17 +196,25 @@ export const useYouTube = () => {
     handleYoutubeStateChange,
     resetPlayer,
 
-    // Actions de préchargement
+    // Actions de prÃ©chargement
     preloadNextVideo,
     playVideo,
 
-    // Système de debug
-    debug,
-
-    // Système de préchargement
+    // SystÃ¨me de prÃ©chargement
     preloadSystem,
 
     // Utilitaires
     formatTime,
   };
 };
+
+
+
+
+
+
+
+
+
+
+
