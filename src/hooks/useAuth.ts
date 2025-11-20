@@ -5,7 +5,7 @@ import {
   signOut,
 } from "firebase/auth";
 import { useEffect, useState } from "react";
-import { auth, googleProvider } from "@/lib/firebase";
+import { ADMIN_EMAIL, auth, googleProvider } from "@/lib/firebase";
 
 interface AuthState {
   user: User | null;
@@ -39,7 +39,7 @@ export const useAuth = () => {
       const result = await signInWithPopup(auth, googleProvider);
 
       // Vérification si l'utilisateur est admin
-      if (result.user.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
+      if (result.user.email !== ADMIN_EMAIL) {
         await signOut(auth);
         throw new Error(
           "Accès non autorisé. Seul l'administrateur peut se connecter."
@@ -83,7 +83,7 @@ export const useAuth = () => {
     setState((prev) => ({ ...prev, error: null }));
   };
 
-  const isAdmin = state.user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  const isAdmin = state.user?.email === ADMIN_EMAIL;
 
   return {
     ...state,

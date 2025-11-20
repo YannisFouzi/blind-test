@@ -14,8 +14,11 @@ import { Universe } from "@/types";
  *
  * @returns {Object} État de la query avec universes, loading, error et refetch
  */
-export const useUniverses = () => {
-  const query = useQuery(activeUniversesQueryOptions);
+export const useUniverses = (initialData?: Universe[]) => {
+  const query = useQuery({
+    ...activeUniversesQueryOptions,
+    initialData,
+  });
 
   return {
     universes: query.data || ([] as Universe[]),

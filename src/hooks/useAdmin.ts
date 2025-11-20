@@ -1,6 +1,7 @@
 import { User } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { ADMIN_EMAIL } from "@/lib/firebase";
 import { Song, Universe, Work } from "@/types";
 import {
   addSong as createSong,
@@ -41,7 +42,7 @@ export const useAdmin = (user: User | null) => {
   });
 
   // Vérification des droits admin
-  const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   // Redirection si non admin
   useEffect(() => {

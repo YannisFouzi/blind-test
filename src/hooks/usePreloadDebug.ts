@@ -1,6 +1,10 @@
 import { useCallback, useState } from "react";
 import { ToastMessage } from "../components/debug/PreloadToast";
 
+const isPreloadDebugEnabled =
+  process.env.NEXT_PUBLIC_PRELOAD_DEBUG === "true" ||
+  process.env.NODE_ENV === "development";
+
 export const usePreloadDebug = () => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [performanceLog, setPerformanceLog] = useState<
@@ -12,7 +16,6 @@ export const usePreloadDebug = () => {
     }>
   >([]);
 
-  // Ajouter un toast
   const addToast = useCallback(
     (
       type: ToastMessage["type"],
@@ -20,6 +23,8 @@ export const usePreloadDebug = () => {
       message: string,
       duration?: number
     ) => {
+      if (!isPreloadDebugEnabled) return;
+
       const id = `toast-${Date.now()}-${Math.random()}`;
       const newToast: ToastMessage = {
         id,
@@ -31,7 +36,6 @@ export const usePreloadDebug = () => {
 
       setToasts((prev) => [...prev, newToast]);
 
-      // Log console avec emoji
       const emoji = {
         success: "✅",
         info: "ℹ️",
@@ -39,43 +43,37 @@ export const usePreloadDebug = () => {
         error: "❌",
       }[type];
 
-      console.log(`🎵 ${emoji} ${title}:`, message);
+      console.log(`[Preload] ${emoji} ${title}:`, message);
     },
     []
   );
 
-  // Supprimer un toast
   const removeToast = useCallback((id: string) => {
+    if (!isPreloadDebugEnabled) return;
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
-  // Logger une action avec performance
   const logAction = useCallback(
     (action: string, data: unknown, startTime?: number) => {
+      if (!isPreloadDebugEnabled) return;
+
       const timestamp = Date.now();
       const performance = startTime ? timestamp - startTime : undefined;
 
       setPerformanceLog((prev) => [
-        ...prev.slice(-19), // Garder seulement les 20 derniers logs
-        {
-          timestamp,
-          action,
-          data,
-          performance,
-        },
+        ...prev.slice(-19),
+        { timestamp, action, data, performance },
       ]);
 
-      // Console log détaillé
       if (performance !== undefined) {
-        console.log(`🎵 ⚡ ${action} (${performance}ms):`, data);
+        console.log(`[Preload] ${action} (${performance}ms):`, data);
       } else {
-        console.log(`🎵 📝 ${action}:`, data);
+        console.log(`[Preload] ${action}:`, data);
       }
     },
     []
   );
 
-  // Méthodes spécifiques pour le préchargement
   const logPreloadStart = useCallback(
     (videoId: string) => {
       logAction("PRELOAD_START", { videoId });
@@ -121,17 +119,10 @@ export const usePreloadDebug = () => {
       const startTime = Date.now();
       logAction("PLAY_START", { videoId, isPreloaded });
 
-      if (isPreloaded) {
+      if (isPreloadDebugEnabled) {
         addToast(
-          "success",
-          "Lecture instantanée !",
-          `Vidéo préchargée: ...${videoId.slice(-8)}`,
-          1500
-        );
-      } else {
-        addToast(
-          "warning",
-          "Chargement nécessaire",
+          isPreloaded ? "success" : "warning",
+          isPreloaded ? "Lecture instantanée" : "Chargement nécessaire",
           `Vidéo: ...${videoId.slice(-8)}`,
           2000
         );
@@ -147,12 +138,9 @@ export const usePreloadDebug = () => {
       const performance = Date.now() - startTime;
       logAction("PLAY_SUCCESS", { videoId, wasPreloaded }, startTime);
 
-      const emoji = wasPreloaded ? "⚡" : "⏱️";
-      const type = performance < 500 ? "success" : "warning";
-
       addToast(
-        type,
-        `${emoji} Lecture démarrée`,
+        performance < 500 ? "success" : "warning",
+        wasPreloaded ? "Lecture instantanée" : "Lecture démarrée",
         `Temps de réponse: ${performance}ms`,
         2000
       );
@@ -164,36 +152,22 @@ export const usePreloadDebug = () => {
     (fromVideoId: string | null, toVideoId: string, isPreloaded: boolean) => {
       logAction("SONG_CHANGE", { fromVideoId, toVideoId, isPreloaded });
 
-      if (isPreloaded) {
-        addToast(
-          "info",
-          "🎵 Changement de musique",
-          "Vidéo déjà préchargée !",
-          1500
-        );
-      } else {
-        addToast(
-          "warning",
-          "🎵 Changement de musique",
-          "Préchargement nécessaire",
-          2000
-        );
-      }
+      addToast(
+        isPreloaded ? "info" : "warning",
+        "Changement de musique",
+        isPreloaded ? "Vidéo déjà préchargée" : "Préchargement nécessaire",
+        2000
+      );
     },
     [addToast, logAction]
   );
 
   return {
-    // État
-    toasts,
-    performanceLog,
-
-    // Actions génériques
+    toasts: isPreloadDebugEnabled ? toasts : [],
+    performanceLog: isPreloadDebugEnabled ? performanceLog : [],
     addToast,
     removeToast,
     logAction,
-
-    // Actions spécifiques
     logPreloadStart,
     logPreloadSuccess,
     logPreloadError,
