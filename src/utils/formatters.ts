@@ -1,5 +1,4 @@
 import { nanoid } from "nanoid";
-import shuffle from "lodash.shuffle";
 
 /**
  * Formate un temps en secondes vers le format MM:SS
@@ -21,7 +20,12 @@ export const formatTime = (seconds: number): string => {
  * @returns Nouveau tableau mélangé de manière uniforme
  */
 export const shuffleArray = <T>(array: T[]): T[] => {
-  return shuffle(array);
+  const copy = [...array];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(getSecureRandom() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 };
 
 /**
@@ -33,4 +37,14 @@ export const shuffleArray = <T>(array: T[]): T[] => {
  */
 export const generateId = (): string => {
   return nanoid();
+};
+
+const getSecureRandom = (): number => {
+  const cryptoObj = typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
+  if (cryptoObj?.getRandomValues) {
+    const uint32 = new Uint32Array(1);
+    cryptoObj.getRandomValues(uint32);
+    return uint32[0] / 0xffffffff;
+  }
+  return Math.random();
 };
