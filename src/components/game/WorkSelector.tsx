@@ -160,22 +160,20 @@ export const WorkSelector = ({
                   <div className="relative overflow-hidden uniform-card">
                     {/* Carte principale avec hauteur fixe */}
                     <div
-                      className={`relative magic-card h-full flex flex-col justify-center items-center p-4 transform transition-all duration-300 ${
+                      className={`relative work-card h-full flex flex-col justify-center items-center p-4 transform transition-all duration-300 ${
                         isAnimating ? "scale-95" : ""
                       } ${
                         isSelected && !(showAnswer || isCurrentSongAnswered)
-                          ? "holographic-card shine-effect"
+                          ? "work-card--active"
                           : ""
                       }`}
                       style={{
                         background:
-                          isSelected && !(showAnswer || isCurrentSongAnswered)
-                            ? undefined // Garde l'effet holographique
-                            : isCorrect && (showAnswer || isCurrentSongAnswered)
-                            ? "linear-gradient(135deg, rgba(234, 179, 8, 0.3), rgba(251, 146, 60, 0.3))"
+                          isCorrect && (showAnswer || isCurrentSongAnswered)
+                            ? "linear-gradient(135deg, rgba(234, 179, 8, 0.25), rgba(251, 146, 60, 0.25))"
                             : isWrong
-                            ? "linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(244, 63, 94, 0.3))"
-                            : "linear-gradient(135deg, rgba(26, 27, 58, 0.8), rgba(15, 15, 35, 0.9))",
+                            ? "linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(244, 63, 94, 0.25))"
+                            : undefined,
                       }}
                     >
                       {/* Contenu centré */}
@@ -189,7 +187,7 @@ export const WorkSelector = ({
                               ? "text-red-300"
                               : isSelected &&
                                 !(showAnswer || isCurrentSongAnswered)
-                              ? "holographic-text"
+                              ? "work-card-title--active"
                               : "text-white group-hover:text-purple-300"
                           }`}
                           title={work.title} // Tooltip pour voir le titre complet
