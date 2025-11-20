@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
+import { z } from "zod";
 
-// Interface pour les détails d'une vidéo YouTube
-interface YouTubeVideo {
+interface YouTubeVideoDetails {
   id: string;
   title: string;
   description: string;
@@ -13,183 +13,134 @@ interface YouTubeVideo {
   };
 }
 
-// Fonction pour récupérer les détails d'une vidéo
-async function getVideoDetails(videoId: string): Promise<YouTubeVideo | null> {
-  const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+interface YouTubeVideoApiItem {
+  id: string;
+  snippet: {
+    title?: string;
+    description?: string;
+    thumbnails?: {
+      default?: { url: string };
+      medium?: { url: string };
+      high?: { url: string };
+    };
+  };
+  contentDetails: { duration?: string };
+}
 
-  if (!YOUTUBE_API_KEY) {
+const videoIdField = z.preprocess(
+  (value) => (typeof value === "string" ? value : ""),
+  z
+    .string()
+    .min(1, "ID de vidéo requis")
+    .regex(/^[a-zA-Z0-9_-]+$/, "Format d'ID de vidéo invalide")
+);
+
+const videoIdSchema = z.object({
+  videoId: videoIdField,
+});
+
+const videoIdsSchema = z.object({
+  videoIds: z
+    .array(videoIdSchema.shape.videoId)
+    .min(1, "Au moins un ID de vidéo est requis")
+    .max(50, "Maximum 50 vidéos par requête"),
+});
+
+const fetchVideoData = async (query: string) => {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
     throw new Error("Clé API YouTube manquante");
   }
 
-  try {
-    const response = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${YOUTUBE_API_KEY}`
+  const url = new URL(
+    `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&${query}`
+  );
+  url.searchParams.set("key", apiKey);
+
+  const response = await fetch(url.toString(), {
+    next: { revalidate: 300 },
+  });
+
+  if (!response.ok) {
+    throw new Error(`YouTube API error: ${response.status}`);
+  }
+
+  return response.json();
+};
+
+const mapVideo = (item: YouTubeVideoApiItem): YouTubeVideoDetails => {
+  const thumbnails = item.snippet.thumbnails || {};
+
+  return {
+    id: item.id,
+    title: item.snippet.title || "",
+    description: item.snippet.description || "",
+    duration: item.contentDetails.duration || "PT0S",
+    thumbnails: {
+      default: thumbnails.default || { url: "" },
+      medium: thumbnails.medium || { url: "" },
+      high: thumbnails.high || { url: "" },
+    },
+  };
+};
+
+export async function GET(request: Request) {
+  const searchParams = new URL(request.url).searchParams;
+  const parseResult = videoIdSchema.safeParse({
+    videoId: searchParams.get("videoId"),
+  });
+
+  if (!parseResult.success) {
+    return NextResponse.json(
+      { error: parseResult.error.issues[0].message },
+      { status: 400 }
     );
+  }
 
-    if (!response.ok) {
-      throw new Error(`Erreur API YouTube: ${response.status}`);
-    }
-
-    const data = await response.json();
+  try {
+    const data = await fetchVideoData(`id=${parseResult.data.videoId}`);
 
     if (data.items.length === 0) {
-      return null;
-    }
-
-    const item = data.items[0];
-
-    return {
-      id: item.id,
-      title: item.snippet.title || "",
-      description: item.snippet.description || "",
-      duration: item.contentDetails.duration || "PT0S",
-      thumbnails: item.snippet.thumbnails || {
-        default: { url: "" },
-        medium: { url: "" },
-        high: { url: "" },
-      },
-    };
-  } catch (error) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("Erreur lors de la récupération de la vidéo:", error);
-    }
-    throw error;
-  }
-}
-
-// Route GET pour récupérer les détails d'une vidéo
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const videoId = searchParams.get("videoId");
-
-    // Validation des paramètres
-    if (!videoId) {
-      return NextResponse.json(
-        { error: "ID de vidéo manquant" },
-        { status: 400 }
-      );
-    }
-
-    // Validation du format de l'ID vidéo
-    if (!videoId.match(/^[a-zA-Z0-9_-]+$/)) {
-      return NextResponse.json(
-        { error: "Format d'ID vidéo invalide" },
-        { status: 400 }
-      );
-    }
-
-    // Récupération des détails
-    const video = await getVideoDetails(videoId);
-
-    if (!video) {
       return NextResponse.json({ error: "Vidéo non trouvée" }, { status: 404 });
     }
 
-    return NextResponse.json({
-      success: true,
-      data: video,
-    });
-  } catch (error: unknown) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("Erreur API vidéo:", error);
-    }
-
+    return NextResponse.json({ success: true, data: mapVideo(data.items[0]) });
+  } catch (error) {
+    console.error("[YouTube video] GET error:", error);
     return NextResponse.json(
-      {
-        error: "Erreur lors de la récupération de la vidéo",
-        details:
-          process.env.NODE_ENV === "development" ? String(error) : undefined,
-      },
+      { error: "Erreur lors de la récupération de la vidéo" },
       { status: 500 }
     );
   }
 }
 
-// Route POST pour vérifier l'existence de plusieurs vidéos
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
+  const body = await request.json().catch(() => null);
+  const parseResult = videoIdsSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json(
+      { error: parseResult.error.issues[0].message },
+      { status: 400 }
+    );
+  }
+
   try {
-    const { videoIds } = await request.json();
+    const ids = parseResult.data.videoIds.join(",");
+    const data = await fetchVideoData(`id=${ids}`);
 
-    if (!videoIds || !Array.isArray(videoIds)) {
-      return NextResponse.json(
-        { error: "Liste d'IDs vidéo manquante ou invalide" },
-        { status: 400 }
-      );
-    }
-
-    // Limitation à 50 vidéos maximum par requête
-    if (videoIds.length > 50) {
-      return NextResponse.json(
-        { error: "Trop de vidéos demandées (maximum 50)" },
-        { status: 400 }
-      );
-    }
-
-    const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
-
-    if (!YOUTUBE_API_KEY) {
-      return NextResponse.json(
-        { error: "Configuration API manquante" },
-        { status: 500 }
-      );
-    }
-
-    // Récupération des vidéos en une seule requête
-    const videoIdsString = videoIds.join(",");
-    const response = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoIdsString}&key=${YOUTUBE_API_KEY}`
-    );
-
-    if (!response.ok) {
-      throw new Error(`Erreur API YouTube: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    const videos = data.items.map(
-      (item: {
-        id: string;
-        snippet: {
-          title?: string;
-          description?: string;
-          thumbnails?: {
-            default?: { url: string };
-            medium?: { url: string };
-            high?: { url: string };
-          };
-        };
-        contentDetails: { duration?: string };
-      }) => ({
-        id: item.id,
-        title: item.snippet.title || "",
-        description: item.snippet.description || "",
-        duration: item.contentDetails.duration || "PT0S",
-        thumbnails: item.snippet.thumbnails || {
-          default: { url: "" },
-          medium: { url: "" },
-          high: { url: "" },
-        },
-      })
-    );
+    const videos = data.items.map(mapVideo);
 
     return NextResponse.json({
       success: true,
       data: videos,
       count: videos.length,
-      requested: videoIds.length,
+      requested: parseResult.data.videoIds.length,
     });
-  } catch (error: unknown) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("Erreur validation vidéos:", error);
-    }
-
+  } catch (error) {
+    console.error("[YouTube video] POST error:", error);
     return NextResponse.json(
-      {
-        error: "Erreur lors de la validation des vidéos",
-        details:
-          process.env.NODE_ENV === "development" ? String(error) : undefined,
-      },
+      { error: "Erreur lors de la validation des vidéos" },
       { status: 500 }
     );
   }

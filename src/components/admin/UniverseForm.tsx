@@ -5,6 +5,7 @@ import { Universe } from "@/types";
 import {
   AVAILABLE_ICONS,
   ICON_CATEGORIES,
+  type IconCategoryId,
   getIconById,
 } from "@/constants/icons";
 import {
@@ -27,8 +28,10 @@ export const UniverseForm = ({
   onCancel,
   loading = false,
 }: UniverseFormProps) => {
-  const initialCategory = getIconById(universe?.icon || "")?.category || "magic";
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  const initialCategory: IconCategoryId =
+    getIconById(universe?.icon || "")?.category || "magic";
+  const [selectedCategory, setSelectedCategory] =
+    useState<IconCategoryId>(initialCategory);
 
   const {
     register,

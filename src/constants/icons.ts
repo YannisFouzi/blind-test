@@ -9,6 +9,7 @@ import {
   Film,
   Flower2,
   Gamepad2,
+  Gem,
   Ghost,
   Heart,
   Leaf,
@@ -33,65 +34,83 @@ import {
   Wand2,
 } from "lucide-react";
 
+export const ICON_CATEGORIES = [
+  { id: "magic", name: "Magie & Fantasy" },
+  { id: "war", name: "Guerre & Combat" },
+  { id: "nature", name: "Nature & \u00C9l\u00E9ments" },
+  { id: "space", name: "Espace & Sci-Fi" },
+  { id: "entertainment", name: "Divertissement" },
+  { id: "symbols", name: "Symboles" },
+] as const;
+
+export type IconCategoryId = (typeof ICON_CATEGORIES)[number]["id"];
+
 export interface IconOption {
   id: string;
   name: string;
   component: LucideIcon;
-  category: string;
+  category: IconCategoryId;
 }
 
-export const ICON_CATEGORIES = [
-  { id: "magic", name: "Magie & Fantasy" },
-  { id: "war", name: "Guerre & Combat" },
-  { id: "nature", name: "Nature & Éléments" },
-  { id: "space", name: "Espace & Sci-Fi" },
-  { id: "entertainment", name: "Divertissement" },
-  { id: "symbols", name: "Symboles" },
-];
+type IconDefinition = Omit<IconOption, "id">;
 
-export const AVAILABLE_ICONS: IconOption[] = [
-  { id: "wand", name: "Baguette magique", component: Wand2, category: "magic" },
-  { id: "sparkles", name: "Étincelles", component: Sparkles, category: "magic" },
-  { id: "crown", name: "Couronne", component: Crown, category: "magic" },
-  { id: "castle", name: "Château", component: Castle, category: "magic" },
-  { id: "diamond", name: "Gemme", component: Diamond, category: "magic" },
-  { id: "unicorn", name: "Licorne", component: Rainbow, category: "magic" },
-  { id: "magic-wand", name: "Magie", component: Wand, category: "magic" },
+const ICON_DEFINITIONS = {
+  wand: { name: "Baguette magique", component: Wand2, category: "magic" },
+  sparkles: { name: "\u00C9tincelles", component: Sparkles, category: "magic" },
+  crown: { name: "Couronne", component: Crown, category: "magic" },
+  castle: { name: "Ch\u00E2teau", component: Castle, category: "magic" },
+  diamond: { name: "Gemme", component: Diamond, category: "magic" },
+  unicorn: { name: "Arc-en-ciel", component: Rainbow, category: "magic" },
+  magicWand: { name: "Magie", component: Wand, category: "magic" },
+  ring: { name: "Anneau", component: Gem, category: "magic" },
 
-  { id: "sword", name: "Épée", component: Sword, category: "war" },
-  { id: "swords", name: "Lames croisées", component: Swords, category: "war" },
-  { id: "shield", name: "Bouclier", component: Shield, category: "war" },
-  { id: "bolt", name: "Tonnerre", component: Bolt, category: "war" },
-  { id: "skull", name: "Crâne", component: Skull, category: "war" },
+  sword: { name: "\u00C9p\u00E9e", component: Sword, category: "war" },
+  swords: { name: "Lames crois\u00E9es", component: Swords, category: "war" },
+  shield: { name: "Bouclier", component: Shield, category: "war" },
+  bolt: { name: "Tonnerre", component: Bolt, category: "war" },
+  skull: { name: "Cr\u00E2ne", component: Skull, category: "war" },
 
-  { id: "leaf", name: "Feuille", component: Leaf, category: "nature" },
-  { id: "sun", name: "Soleil", component: Sun, category: "nature" },
-  { id: "moon", name: "Lune", component: Moon, category: "nature" },
-  { id: "snowflake", name: "Flocon", component: Snowflake, category: "nature" },
-  { id: "mountain", name: "Montagnes", component: Mountain, category: "nature" },
-  { id: "trees", name: "Forêt", component: Trees, category: "nature" },
-  { id: "flower", name: "Fleur", component: Flower2, category: "nature" },
+  leaf: { name: "Feuille", component: Leaf, category: "nature" },
+  sun: { name: "Soleil", component: Sun, category: "nature" },
+  moon: { name: "Lune", component: Moon, category: "nature" },
+  snowflake: { name: "Flocon", component: Snowflake, category: "nature" },
+  mountain: { name: "Montagnes", component: Mountain, category: "nature" },
+  trees: { name: "For\u00EAt", component: Trees, category: "nature" },
+  flower: { name: "Fleur", component: Flower2, category: "nature" },
 
-  { id: "rocket", name: "Fusée", component: Rocket, category: "space" },
-  { id: "alien", name: "Alien", component: Orbit, category: "space" },
-  { id: "telescope", name: "Télescope", component: Telescope, category: "space" },
+  rocket: { name: "Fus\u00E9e", component: Rocket, category: "space" },
+  alien: { name: "Alien", component: Orbit, category: "space" },
+  telescope: { name: "T\u00E9lescope", component: Telescope, category: "space" },
 
-  { id: "gamepad", name: "Manette", component: Gamepad2, category: "entertainment" },
-  { id: "music", name: "Musique", component: Music2, category: "entertainment" },
-  { id: "film", name: "Film", component: Film, category: "entertainment" },
-  { id: "book", name: "Livre", component: Book, category: "entertainment" },
-  { id: "scroll", name: "Parchemin", component: Scroll, category: "entertainment" },
+  gamepad: { name: "Manette", component: Gamepad2, category: "entertainment" },
+  music: { name: "Musique", component: Music2, category: "entertainment" },
+  film: { name: "Film", component: Film, category: "entertainment" },
+  book: { name: "Livre", component: Book, category: "entertainment" },
+  scroll: { name: "Parchemin", component: Scroll, category: "entertainment" },
 
-  { id: "star", name: "Étoile", component: Star, category: "symbols" },
-  { id: "heart", name: "Cœur", component: Heart, category: "symbols" },
-  { id: "ghost", name: "Fantôme", component: Ghost, category: "symbols" },
-  { id: "feather", name: "Plume", component: Feather, category: "symbols" },
-  { id: "spark", name: "Étincelle", component: Sparkles, category: "symbols" },
-];
+  star: { name: "\u00C9toile", component: Star, category: "symbols" },
+  heart: { name: "C\u0153ur", component: Heart, category: "symbols" },
+  ghost: { name: "Fant\u00F4me", component: Ghost, category: "symbols" },
+  feather: { name: "Plume", component: Feather, category: "symbols" },
+  spark: { name: "\u00C9tincelle", component: Sparkles, category: "symbols" },
+} satisfies Record<string, IconDefinition>;
+
+export type IconId = keyof typeof ICON_DEFINITIONS;
+
+const ICON_ENTRIES = Object.entries(ICON_DEFINITIONS) as Array<
+  [IconId, IconDefinition]
+>;
+
+export const AVAILABLE_ICONS: IconOption[] = ICON_ENTRIES.map(
+  ([id, config]) => ({
+    id,
+    ...config,
+  })
+);
 
 export const getIconById = (iconId: string): IconOption | null =>
   AVAILABLE_ICONS.find((icon) => icon.id === iconId) || null;
 
-export const getIconsByCategory = (categoryId: string): IconOption[] =>
-  AVAILABLE_ICONS.filter((icon) => icon.category === categoryId);
-
+export const getIconsByCategory = (
+  categoryId: IconCategoryId
+): IconOption[] => AVAILABLE_ICONS.filter((icon) => icon.category === categoryId);
