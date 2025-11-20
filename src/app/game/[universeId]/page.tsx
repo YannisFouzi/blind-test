@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import YouTube from "react-youtube";
 import {
   Home as HomeIcon,
   Pause,
@@ -11,8 +12,8 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
+import type { YouTubePlayerOptions } from "@/types/youtube";
 
-import { GameControls } from "../../../components/game/GameControls";
 import { PreloadPlayer } from "../../../components/game/PreloadPlayer";
 import { WorkSelector } from "../../../components/game/WorkSelector";
 import { ErrorMessage } from "../../../components/ui/ErrorMessage";
@@ -49,7 +50,6 @@ export default function GamePage() {
     currentSong,
     selectedWork,
     showAnswer,
-    usingDemoData,
     handleWorkSelection,
     handleValidateAnswer,
     handleNextSong,
@@ -60,6 +60,16 @@ export default function GamePage() {
   } = useGame(universeId, preloadNextVideo);
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const hiddenPlayerOptions: YouTubePlayerOptions = {
+    height: "0",
+    width: "0",
+    playerVars: {
+      autoplay: 0,
+      controls: 0,
+      playsinline: 1,
+      enablejsapi: 1,
+    },
+  };
 
   useEffect(() => {
     // Animation d'entrée
@@ -170,42 +180,6 @@ export default function GamePage() {
       <div className="container mx-auto px-4 py-8 pb-24 relative z-10">
         {/* Grille principale responsive */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-7xl mx-auto">
-          {/* Lecteur audio - Position centrale avec effet lumineux */}
-          <div
-            className={`xl:col-span-1 ${
-              isLoaded ? "slide-in-left" : "opacity-0"
-            }`}
-            style={{ animationDelay: "0.3s" }}
-          >
-            <div className="magic-card p-8 hidden">
-              <GameControls
-                isPlaying={isPlaying}
-                currentTime={currentTime}
-                duration={duration}
-                volume={volume}
-                isMuted={isMuted}
-                canGoPrev={canGoPrev}
-                canGoNext={canGoNext}
-                currentSongTitle={currentSong.title}
-                currentSongVideoId={currentSong.youtubeId}
-                showAnswer={showAnswer}
-                usingDemoData={usingDemoData}
-                youtubeError={youtubeError}
-                gameSession={gameSession}
-                onPlayPause={handlePlayPause}
-                onPrevSong={handlePrevSongWithReset}
-                onNextSong={handleNextSongWithReset}
-                onVolumeChange={handleVolumeChange}
-                onToggleMute={toggleMute}
-                onProgressClick={handleProgressClick}
-                onError={handleYoutubeError}
-                onReady={handleYoutubeReady}
-                onStateChange={handleYoutubeStateChange}
-                formatTime={formatTime}
-              />
-            </div>
-          </div>
-
           {/* Sélecteur d'œuvres - Cartes interactives */}
           <div
             className={`xl:col-span-1 ${
@@ -368,8 +342,22 @@ export default function GamePage() {
           </div>
         </div>
       </div>
+      {youtubeError && (
+        <div className="mt-4 text-center text-sm text-yellow-300">
+          {youtubeError}
+        </div>
+      )}
 
       {/* Lecteur de préchargement invisible */}
+      <div className="hidden">
+        <YouTube
+          videoId={currentSong.youtubeId}
+          opts={hiddenPlayerOptions}
+          onReady={handleYoutubeReady}
+          onStateChange={handleYoutubeStateChange}
+          onError={handleYoutubeError}
+        />
+      </div>
       <PreloadPlayer
         onReady={preloadSystem.handlePreloadPlayerReady}
         onError={(error) => {
