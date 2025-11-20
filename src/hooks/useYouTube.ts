@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import type { LegacyYouTubePlayer, YouTubeEvent } from "@/types/youtube";
+import { coerceYouTubeController } from "@/types/youtube";
+import type { YouTubeController, YouTubeEvent } from "@/types/youtube";
 import { formatTime } from "../utils/formatters";
 import { usePreloadDebug } from "./usePreloadDebug";
 import { usePreloadPlayer } from "./usePreloadPlayer";
@@ -19,7 +20,7 @@ export const useYouTube = () => {
   // Hook pour le lecteur de préchargement
   const preloadSystem = usePreloadPlayer();
 
-  const youtubePlayer = useRef<LegacyYouTubePlayer | null>(null);
+  const youtubePlayer = useRef<YouTubeController | null>(null);
 
   // Contrôles du lecteur
   const handlePlayPause = (videoId?: string) => {
@@ -104,7 +105,7 @@ export const useYouTube = () => {
   };
 
   const handleYoutubeReady = (event: YouTubeEvent<void>) => {
-    const player = event.target as unknown as LegacyYouTubePlayer;
+    const player = coerceYouTubeController(event.target);
     youtubePlayer.current = player;
     setDuration(player.getDuration());
     setYoutubeError(null);

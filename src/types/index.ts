@@ -1,59 +1,90 @@
-// Types pour l'application Blind Test
+import { z } from "zod";
 
-export interface Universe {
-  id: string;
-  name: string;
-  description: string;
-  color: string;
-  icon: string;
-  active?: boolean;
-  createdAt: Date;
-}
+const timestampSchema = z.preprocess((value) => {
+  if (value instanceof Date) {
+    return value;
+  }
 
-export interface Work {
-  id: string;
-  title: string;
-  universeId: string;
-  playlistId: string; // YouTube playlist ID
-  order: number; // Position d'affichage (1, 2, 3...)
-  createdAt: Date;
-}
+  if (value && typeof value === "object" && "toDate" in (value as Record<string, unknown>)) {
+    const maybeTimestamp = value as { toDate?: () => Date };
+    return typeof maybeTimestamp.toDate === "function" ? maybeTimestamp.toDate() : value;
+  }
 
-export interface Song {
-  id: string;
-  title: string;
-  artist: string;
-  workId: string;
-  youtubeId: string; // YouTube video ID
-  duration: number; // en secondes
-  createdAt: Date;
-}
+  if (typeof value === "string" || typeof value === "number") {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
 
-export interface GameSession {
-  id: string;
-  universeId: string;
-  songs: Song[];
-  currentSongIndex: number;
-  score: {
-    correct: number;
-    incorrect: number;
-  };
-  answers: GameAnswer[];
-  createdAt: Date;
-}
+  return value;
+}, z.date());
 
-export interface GameAnswer {
-  songId: string;
-  workId: string;
-  selectedWorkId: string | null;
-  isCorrect: boolean;
-  answeredAt: Date;
-}
+export const GameAnswerSchema = z.object({
+  songId: z.string().min(1),
+  workId: z.string().min(1),
+  selectedWorkId: z.string().min(1).nullable(),
+  isCorrect: z.boolean(),
+  answeredAt: timestampSchema,
+});
 
-export interface User {
-  uid: string;
-  email: string;
-  displayName: string;
-  photoURL?: string;
-  isAdmin: boolean;
-}
+export const ScoreSchema = z.object({
+  correct: z.number().int().min(0),
+  incorrect: z.number().int().min(0),
+});
+
+export const SongSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  artist: z.string().min(1),
+  workId: z.string().min(1),
+  youtubeId: z.string().min(1),
+  duration: z.number().int().min(0),
+  createdAt: timestampSchema,
+});
+
+export const WorkSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  universeId: z.string().min(1),
+  playlistId: z.string().min(1),
+  order: z.number().int().min(0),
+  createdAt: timestampSchema,
+});
+
+export const UniverseSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().default(""),
+  color: z
+    .string()
+    .regex(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/, "Color must be a valid hex value"),
+  icon: z.string().min(1),
+  active: z.boolean().optional(),
+  createdAt: timestampSchema,
+});
+
+export const GameSessionSchema = z.object({
+  id: z.string().min(1),
+  universeId: z.string().min(1),
+  songs: z.array(SongSchema),
+  currentSongIndex: z.number().int().min(0),
+  score: ScoreSchema,
+  answers: z.array(GameAnswerSchema),
+  createdAt: timestampSchema,
+});
+
+export const UserSchema = z.object({
+  uid: z.string().min(1),
+  email: z.string().email(),
+  displayName: z.string().min(1),
+  photoURL: z.string().url().optional(),
+  isAdmin: z.boolean(),
+});
+
+export type Universe = z.infer<typeof UniverseSchema>;
+export type Work = z.infer<typeof WorkSchema>;
+export type Song = z.infer<typeof SongSchema>;
+export type GameSession = z.infer<typeof GameSessionSchema>;
+export type GameAnswer = z.infer<typeof GameAnswerSchema>;
+export type User = z.infer<typeof UserSchema>;

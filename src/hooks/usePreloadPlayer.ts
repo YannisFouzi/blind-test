@@ -1,9 +1,6 @@
 import { useRef, useState } from "react";
-import type {
-  LegacyPreloadPlayer,
-  LegacyYouTubePlayer,
-  YouTubeEvent,
-} from "@/types/youtube";
+import { coerceYouTubeController } from "@/types/youtube";
+import type { YouTubeController, YouTubeEvent } from "@/types/youtube";
 import { usePreloadDebug } from "./usePreloadDebug";
 
 export const usePreloadPlayer = () => {
@@ -11,7 +8,7 @@ export const usePreloadPlayer = () => {
   const [isPreloading, setIsPreloading] = useState(false);
   const debug = usePreloadDebug();
 
-  const preloadPlayer = useRef<LegacyPreloadPlayer | null>(null);
+  const preloadPlayer = useRef<YouTubeController | null>(null);
 
   const preloadNextVideo = (videoId: string) => {
     if (!preloadPlayer.current || !videoId || preloadedVideoId === videoId) {
@@ -39,7 +36,7 @@ export const usePreloadPlayer = () => {
   };
 
   const handlePreloadPlayerReady = (event: YouTubeEvent<void>) => {
-    const player = event.target as unknown as LegacyPreloadPlayer;
+    const player = coerceYouTubeController(event.target);
     preloadPlayer.current = player;
     preloadPlayer.current.setVolume(0);
 
@@ -49,7 +46,7 @@ export const usePreloadPlayer = () => {
   };
 
   const transferPreloadedVideo = (
-    mainPlayer: LegacyYouTubePlayer,
+    mainPlayer: YouTubeController,
     videoId: string
   ) => {
     if (preloadedVideoId === videoId && mainPlayer) {

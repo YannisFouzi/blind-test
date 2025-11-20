@@ -16,7 +16,7 @@
     "baseUrl": ".",
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["react", "react-dom", "node"],
+    "types": ["react", "react-dom", "node", "youtube"],
     "plugins": [
       {
         "name": "next"

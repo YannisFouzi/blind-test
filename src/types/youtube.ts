@@ -1,13 +1,15 @@
-import type { Options, YouTubePlayer as Player } from "youtube-player/dist/types";
+import type { Options, YouTubePlayer as RawPlayer } from "youtube-player/dist/types";
 
-export type YouTubePlayer = Player;
+export type YouTubePlayer = RawPlayer;
+
+export type YouTubePlayerOptions = Options;
 
 export type YouTubeEvent<T = number> = {
   data: T;
-  target: Player;
+  target: RawPlayer;
 };
 
-export type LegacyYouTubePlayer = {
+export type YouTubeController = {
   playVideo: () => void;
   pauseVideo: () => void;
   setVolume: (volume: number) => void;
@@ -18,9 +20,6 @@ export type LegacyYouTubePlayer = {
   loadVideoById: (videoId: string) => void;
 };
 
-export type LegacyPreloadPlayer = Pick<
-  LegacyYouTubePlayer,
-  "cueVideoById" | "loadVideoById" | "playVideo" | "pauseVideo" | "setVolume"
->;
-
-export type YouTubePlayerOptions = Options;
+export const coerceYouTubeController = (player: RawPlayer): YouTubeController => {
+  return player as unknown as YouTubeController;
+};
