@@ -12,7 +12,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { FaArrowDown, FaArrowUp, FaGripVertical } from "react-icons/fa";
+import { ArrowDown, ArrowUp, GripVertical } from "lucide-react";
 import { Work } from "@/types";
 import { Button } from "../ui/Button";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
@@ -79,7 +79,7 @@ const SortableWorkRow = ({
           {...listeners}
           className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-white p-1"
         >
-          <FaGripVertical />
+          <GripVertical className="w-4 h-4" />
         </div>
       </td>
 
@@ -109,7 +109,7 @@ const SortableWorkRow = ({
             disabled={isFirst}
             className="flex items-center space-x-1"
           >
-            <FaArrowUp />
+            <ArrowUp className="w-4 h-4" />
           </Button>
           <Button
             variant="secondary"
@@ -118,7 +118,7 @@ const SortableWorkRow = ({
             disabled={isLast}
             className="flex items-center space-x-1"
           >
-            <FaArrowDown />
+            <ArrowDown className="w-4 h-4" />
           </Button>
 
           {/* Bouton gérer chansons */}

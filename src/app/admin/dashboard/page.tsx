@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { FaPlus } from "react-icons/fa";
+import { Plus } from "lucide-react";
 import { Song, Universe, Work } from "@/types";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
 import { DataTable } from "../../../components/admin/DataTable";
@@ -367,7 +367,7 @@ export default function AdminDashboard() {
               onClick={() => handleOpenModal("universe")}
               className="flex items-center space-x-2"
             >
-              <FaPlus />
+              <Plus className="w-4 h-4" />
               <span>Nouveau</span>
             </Button>
           </div>
@@ -414,7 +414,7 @@ export default function AdminDashboard() {
                   onClick={() => handleOpenModal("work")}
                   className="flex items-center space-x-2"
                 >
-                  <FaPlus />
+                  <Plus className="w-4 h-4" />
                   <span>Nouvelle œuvre</span>
                 </Button>
               </div>
@@ -455,7 +455,7 @@ export default function AdminDashboard() {
                   onClick={() => handleOpenModal("song")}
                   className="flex items-center space-x-2"
                 >
-                  <FaPlus />
+                  <Plus className="w-4 h-4" />
                   <span>Nouvelle chanson</span>
                 </Button>
               </div>
@@ -544,3 +544,4 @@ export default function AdminDashboard() {
     </AdminLayout>
   );
 }
+

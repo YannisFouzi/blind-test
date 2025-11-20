@@ -1,6 +1,6 @@
 import { User } from "firebase/auth";
 import { ReactNode } from "react";
-import { FaHome, FaSignOutAlt, FaUser } from "react-icons/fa";
+import { Home, LogOut, UserRound } from "lucide-react";
 import { Button } from "../ui/Button";
 import { Toast } from "../ui/Toast";
 
@@ -46,14 +46,14 @@ export const AdminLayout = ({
                 onClick={onNavigateHome}
                 className="flex items-center space-x-2"
               >
-                <FaHome />
+                <Home className="w-4 h-4" />
                 <span>Accueil</span>
               </Button>
 
               {user && (
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center space-x-2 text-gray-300">
-                    <FaUser />
+                    <UserRound className="w-4 h-4" />
                     <span className="text-sm">
                       {user.displayName || user.email}
                     </span>
@@ -64,7 +64,7 @@ export const AdminLayout = ({
                     onClick={onLogout}
                     className="flex items-center space-x-2"
                   >
-                    <FaSignOutAlt />
+                    <LogOut className="w-4 h-4" />
                     <span>Déconnexion</span>
                   </Button>
                 </div>

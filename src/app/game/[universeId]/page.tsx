@@ -3,14 +3,14 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  FaHome,
-  FaPause,
-  FaPlay,
-  FaStepBackward,
-  FaStepForward,
-  FaVolumeMute,
-  FaVolumeUp,
-} from "react-icons/fa";
+  Home as HomeIcon,
+  Pause,
+  Play as PlayIcon,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 
 import { GameControls } from "../../../components/game/GameControls";
 import { PreloadPlayer } from "../../../components/game/PreloadPlayer";
@@ -161,7 +161,7 @@ export default function GamePage() {
           }}
           className="magic-button px-6 py-3 flex items-center gap-2 text-white font-semibold"
         >
-          <FaHome className="text-lg" />
+                  <HomeIcon className="text-lg" />
           <span className="hidden sm:inline">Accueil</span>
         </button>
       </div>
@@ -254,7 +254,7 @@ export default function GamePage() {
                       : "bg-gray-700 text-gray-400 cursor-not-allowed"
                   }`}
                 >
-                  <FaStepBackward size={16} />
+                  <SkipBack className="w-4 h-4" />
                 </button>
 
                 {/* Bouton play/pause principal - Version compacte */}
@@ -265,7 +265,11 @@ export default function GamePage() {
                   >
                     <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 blur-md opacity-50" />
                     <div className="relative z-10">
-                      {isPlaying ? <FaPause size={20} /> : <FaPlay size={20} />}
+                      {isPlaying ? (
+                        <Pause className="w-5 h-5" />
+                      ) : (
+                        <PlayIcon className="w-5 h-5" />
+                      )}
                     </div>
                   </button>
                 </div>
@@ -280,7 +284,7 @@ export default function GamePage() {
                       : "bg-gray-700 text-gray-400 cursor-not-allowed"
                   }`}
                 >
-                  <FaStepForward size={16} />
+                  <SkipForward className="w-4 h-4" />
                 </button>
               </div>
 
@@ -334,9 +338,9 @@ export default function GamePage() {
                 className="p-2 rounded-full bg-slate-800/50 text-white hover:bg-slate-700/50 transition-all duration-300 hover:scale-110"
               >
                 {isMuted ? (
-                  <FaVolumeMute size={16} />
+                  <VolumeX className="w-4 h-4" />
                 ) : (
-                  <FaVolumeUp size={16} />
+                  <Volume2 className="w-4 h-4" />
                 )}
               </button>
 

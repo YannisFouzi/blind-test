@@ -1,8 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Cog, Play as PlayIcon, Star as StarIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { FaCog, FaPlay, FaStar } from "react-icons/fa";
 import { Universe } from "@/types";
 import { ErrorMessage } from "../components/ui/ErrorMessage";
 import { HomePageSkeleton } from "../components/HomePage/HomePageSkeleton";
@@ -40,7 +40,7 @@ export default function HomePage() {
     }
 
     // Si l'icône n'est pas trouvée, afficher une icône par défaut
-    return <FaStar className="text-2xl md:text-4xl text-[#1c1c35]" />;
+    return <StarIcon className="text-2xl md:text-4xl text-[#1c1c35]" />;
   };
 
   const getUniverseStyles = (universe: Universe) => {
@@ -145,7 +145,7 @@ export default function HomePage() {
               onClick={() => router.push("/admin")}
               className="magic-button px-6 py-3 flex items-center gap-2 text-white font-semibold"
             >
-              <FaCog className="text-lg" />
+            <Cog className="w-4 h-4" />
               <span className="hidden sm:inline">Administration</span>
             </button>
           )}
@@ -163,7 +163,7 @@ export default function HomePage() {
           </h1>
           <div className="flex items-center justify-center gap-4 mb-8">
             <div className="w-16 h-1 bg-gradient-to-r from-yellow-400 to-purple-500 rounded-full" />
-            <FaStar className="text-yellow-400 text-2xl" />
+            <StarIcon className="text-yellow-400 w-6 h-6" />
             <div className="w-16 h-1 bg-gradient-to-r from-purple-500 to-yellow-400 rounded-full" />
           </div>
           <p className="text-xl md:text-2xl text-purple-200 max-w-3xl mx-auto leading-relaxed">
@@ -295,7 +295,7 @@ export default function HomePage() {
                       {/* Bouton play */}
                       <div className="flex justify-center">
                         <div className="bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-3 rounded-full flex items-center gap-2 text-white font-semibold hover:scale-110 transition-transform duration-300">
-                          <FaPlay className="text-lg" />
+                          <PlayIcon className="w-4 h-4" />
                           <span>Jouer</span>
                         </div>
                       </div>

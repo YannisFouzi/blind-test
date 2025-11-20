@@ -1,12 +1,38 @@
 "use client";
 
 import { signInWithPopup, signOut } from "firebase/auth";
+import { LogOut } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FaGoogle, FaSignOutAlt } from "react-icons/fa";
 import { ADMIN_EMAIL, auth, googleProvider } from "@/lib/firebase";
 import { User } from "@/types";
+
+const GoogleIcon = () => (
+  <svg
+    className="w-5 h-5"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path
+      fill="#4285F4"
+      d="M23.6 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5c-.3 1.4-1.1 2.6-2.4 3.4v2.8h3.9c2.3-2.1 3.6-5.2 3.6-8.3z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 24c3.2 0 5.9-1.1 7.8-3l-3.9-2.8c-1.1.8-2.5 1.3-3.9 1.3-3 0-5.5-2-6.4-4.8H1.6v3.1C3.5 21.4 7.5 24 12 24z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M5.6 14.7c-.3-1-.3-2.1 0-3.1V8.5H1.6c-1.3 2.5-1.3 5.5 0 8l4-2.8z"
+    />
+    <path
+      fill="#EA4335"
+      d="M12 4.7c1.7 0 3.1.6 4.3 1.7l3.2-3.2C18 1.2 15.3 0 12 0 7.5 0 3.5 2.6 1.6 6.5l4 3.1C6.5 6.7 9 4.7 12 4.7z"
+    />
+  </svg>
+);
 
 export default function AdminLoginPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -120,7 +146,7 @@ export default function AdminLoginPage() {
                 disabled={loading}
                 className="w-full bg-white hover:bg-gray-100 text-gray-900 font-semibold py-3 px-6 rounded-xl flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-4"
               >
-                <FaGoogle size={20} />
+                <GoogleIcon />
                 Se connecter avec Google
               </button>
 
@@ -164,7 +190,7 @@ export default function AdminLoginPage() {
                   onClick={handleSignOut}
                   className="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center gap-3 transition-colors"
                 >
-                  <FaSignOutAlt size={16} />
+                  <LogOut className="w-4 h-4" />
                   Se déconnecter
                 </button>
               </div>
