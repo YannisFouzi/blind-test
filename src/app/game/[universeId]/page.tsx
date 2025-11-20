@@ -19,8 +19,6 @@ import { ErrorMessage } from "../../../components/ui/ErrorMessage";
 import { LoadingSpinner } from "../../../components/ui/LoadingSpinner";
 import { useGame } from "../../../hooks/useGame";
 import { useYouTube } from "../../../hooks/useYouTube";
-import "../../../styles/gameAnimations.css";
-
 export default function GamePage() {
   const router = useRouter();
   const params = useParams();

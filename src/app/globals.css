@@ -3,6 +3,17 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --magic-gold: #ffd700;
+  --magic-purple: #6b46c1;
+  --magic-blue: #1e40af;
+  --magic-violet: #7c3aed;
+  --magic-cyan: #06b6d4;
+  --magic-emerald: #059669;
+  --magic-rose: #ec4899;
+  --dark-bg: #0f0f23;
+  --dark-card: #1a1b3a;
+  --glow-color: rgba(255, 215, 0, 0.5);
+  --shadow-magic: 0 0 30px rgba(123, 58, 237, 0.3);
 }
 
 @theme inline {
@@ -17,12 +28,6 @@
     --background: #0a0a0a;
     --foreground: #ededed;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
 
 /* Empêcher la sélection de texte sur les pages de jeu */
@@ -44,12 +49,10 @@ body {
 }
 
 /* Import des animations magiques */
-@import url("../styles/gameAnimations.css");
-
 /* Styles de base pour l'application */
 body {
-  font-family: "Cinzel", serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-cinzel), "Cinzel", serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: #0f0f23;
   color: white;
   overflow-x: hidden;
@@ -114,9 +117,348 @@ a:focus-visible {
     transition-duration: 0.01ms !important;
   }
 
-  .particle,
-  .floating,
-  .magic-pulse {
+  .particle {
     animation: none !important;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes holographic-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes shine-sweep {
+  0% {
+    left: -100%;
+  }
+  50% {
+    left: 100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+@keyframes holographic-text-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@layer components {
+  .magic-button {
+    position: relative;
+    overflow: hidden;
+    border: none;
+    border-radius: 15px;
+    color: #fff;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, var(--magic-gold), var(--magic-violet));
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .magic-button:hover {
+    background: linear-gradient(135deg, var(--magic-violet), var(--magic-gold));
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(123, 58, 237, 0.5);
+  }
+
+  .magic-button:active {
+    transform: translateY(0);
+  }
+
+  .magic-button::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+    transition: left 0.5s ease;
+  }
+
+  .magic-button:hover::after {
+    left: 100%;
+  }
+
+  .fantasy-text {
+    font-family: var(--font-cinzel), "Cinzel", serif;
+    background: linear-gradient(45deg, var(--magic-gold), var(--magic-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  }
+
+  .particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: radial-gradient(circle, var(--magic-gold), transparent);
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  .magic-progress-bar {
+    position: relative;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .magic-progress-fill {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, var(--magic-gold), var(--magic-violet));
+    transition: width 0.3s ease;
+    position: relative;
+  }
+
+  .magic-progress-fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+  }
+
+  .magic-card {
+    position: relative;
+    border-radius: 20px;
+    border: 2px solid transparent;
+    background: linear-gradient(
+      135deg,
+      rgba(26, 27, 58, 0.8),
+      rgba(15, 15, 35, 0.9)
+    );
+    overflow: hidden;
+  }
+
+  .magic-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      45deg,
+      var(--magic-gold),
+      var(--magic-violet),
+      var(--magic-cyan)
+    );
+    border-radius: 20px;
+    padding: 2px;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: destination-out;
+  }
+
+  .magic-card:hover::before {
+    background: linear-gradient(
+      45deg,
+      var(--magic-violet),
+      var(--magic-gold),
+      var(--magic-rose)
+    );
+  }
+
+  .uniform-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .uniform-card {
+    height: 128px;
+    min-height: 128px;
+    max-height: 128px;
+  }
+
+  .uniform-card-title {
+    line-height: 1.2;
+    word-break: break-word;
+    hyphens: auto;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  @media (max-width: 768px) {
+    .uniform-card-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    .uniform-card {
+      height: 120px;
+      min-height: 120px;
+      max-height: 120px;
+    }
+
+    .uniform-card-title {
+      font-size: 0.875rem;
+      line-height: 1.1;
+    }
+  }
+
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .uniform-card-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 1025px) {
+    .uniform-card-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .holographic-card {
+    position: relative;
+    border: 2px solid transparent;
+    background: linear-gradient(
+      45deg,
+      rgba(255, 0, 150, 0.3) 0%,
+      rgba(0, 255, 255, 0.3) 25%,
+      rgba(150, 0, 255, 0.3) 50%,
+      rgba(255, 150, 0, 0.3) 75%,
+      rgba(0, 255, 150, 0.3) 100%
+    );
+    background-size: 400% 400%;
+    animation: holographic-shift 3s ease-in-out infinite;
+    background-clip: padding-box;
+  }
+
+  .holographic-card::before {
+    content: "";
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: inherit;
+    background: linear-gradient(
+      45deg,
+      #ff0096,
+      #00ffff,
+      #9600ff,
+      #ff9600,
+      #00ff96,
+      #ff0096
+    );
+    background-size: 400% 400%;
+    animation: holographic-shift 3s ease-in-out infinite;
+    z-index: -1;
+  }
+
+  .shine-effect {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shine-effect::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.4),
+      transparent
+    );
+    animation: shine-sweep 2s ease-in-out infinite;
+  }
+
+  .holographic-text {
+    background: linear-gradient(
+      45deg,
+      #ff0096,
+      #00ffff,
+      #9600ff,
+      #ff9600,
+      #00ff96
+    );
+    background-size: 400% 400%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: holographic-text-shift 2s ease-in-out infinite;
+    font-weight: 700;
+  }
+}
+
+@layer utilities {
+  .fade-in-up {
+    animation: fadeInUp 0.8s ease-out;
+  }
+
+  .slide-in-left {
+    animation: slideInLeft 0.8s ease-out;
+  }
+
+  .slide-in-right {
+    animation: slideInRight 0.8s ease-out;
   }
 }
