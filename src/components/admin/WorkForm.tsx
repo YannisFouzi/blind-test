@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Universe, Work } from "@/types";
-import { YouTubeService } from "../../services/youtubeService";
+import { YouTubeService } from "@/services/youtubeService";
 import { Button } from "../ui/Button";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 

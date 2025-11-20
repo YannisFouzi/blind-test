@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { FirebaseService } from "@/services/firebaseService";
+import { getActiveUniverses as fetchActiveUniverses } from "@/services/firebase";
 import { Universe } from "@/types";
 
 /**
@@ -23,7 +23,7 @@ export const universesKeys = {
  * Gère les erreurs de manière professionnelle
  */
 export const getActiveUniverses = async (): Promise<Universe[]> => {
-  const result = await FirebaseService.getActiveUniverses();
+  const result = await fetchActiveUniverses();
 
   if (!result.success) {
     throw new Error(result.error || "Erreur lors du chargement des univers");

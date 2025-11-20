@@ -2,8 +2,23 @@ import { User } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Song, Universe, Work } from "@/types";
-import { FirebaseService } from "../services/firebaseService";
-import { YouTubeService } from "../services/youtubeService";
+import {
+  addSong as createSong,
+  addUniverse as createUniverse,
+  addWork as createWork,
+  deleteSong as removeSong,
+  deleteUniverse as removeUniverse,
+  deleteWork as removeWork,
+  getSongsByWork,
+  getUniverses,
+  getWorksByUniverse,
+  importSongsFromPlaylist as importSongsIntoFirestore,
+  reorderWorks as reorderWorksMutation,
+  updateSong as patchSong,
+  updateUniverse as patchUniverse,
+  updateWork as patchWork,
+} from "@/services/firebase";
+import { YouTubeService } from "@/services/youtubeService";
 
 interface AdminState {
   universes: Universe[];
@@ -57,7 +72,7 @@ export const useAdmin = (user: User | null) => {
     setLoading(true);
     clearMessages();
 
-    const result = await FirebaseService.getUniverses();
+    const result = await getUniverses();
     if (result.success && result.data) {
       setState((prev) => ({ ...prev, universes: result.data! }));
     } else {
@@ -80,7 +95,7 @@ export const useAdmin = (user: User | null) => {
     setLoading(true);
     clearMessages();
 
-    const result = await FirebaseService.addUniverse(universeData);
+    const result = await createUniverse(universeData);
     if (result.success) {
       setSuccess("Univers créé avec succès !");
       loadUniverses(); // Rechargement des données
@@ -96,7 +111,7 @@ export const useAdmin = (user: User | null) => {
     setLoading(true);
     clearMessages();
 
-    const result = await FirebaseService.updateUniverse(id, updates);
+    const result = await patchUniverse(id, updates);
     if (result.success) {
       setSuccess("Univers mis à jour avec succès !");
       loadUniverses(); // Rechargement des données
@@ -112,7 +127,7 @@ export const useAdmin = (user: User | null) => {
     setLoading(true);
     clearMessages();
 
-    const result = await FirebaseService.deleteUniverse(id);
+    const result = await removeUniverse(id);
     if (result.success) {
       setSuccess("Univers supprimé avec succès !");
       loadUniverses(); // Rechargement des données
@@ -129,7 +144,7 @@ export const useAdmin = (user: User | null) => {
     setLoading(true);
     clearMessages();
 
-    const result = await FirebaseService.getWorksByUniverse(universeId);
+    const result = await getWorksByUniverse(universeId);
     if (result.success && result.data) {
       setState((prev) => ({ ...prev, works: result.data! }));
     } else {
@@ -155,7 +170,7 @@ export const useAdmin = (user: User | null) => {
       }
     }
 
-    const result = await FirebaseService.addWork(workData);
+    const result = await createWork(workData);
     if (result.success) {
       setSuccess("Œuvre créée avec succès !");
       loadWorks(workData.universeId); // Rechargement des données
@@ -171,7 +186,7 @@ export const useAdmin = (user: User | null) => {
     setLoading(true);
     clearMessages();
 
-    const result = await FirebaseService.updateWork(id, updates);
+    const result = await patchWork(id, updates);
     if (result.success) {
       setSuccess("Œuvre mise à jour avec succès !");
       // Rechargement des œuvres pour l'univers concerné
@@ -191,7 +206,7 @@ export const useAdmin = (user: User | null) => {
     setLoading(true);
     clearMessages();
 
-    const result = await FirebaseService.deleteWork(id);
+    const result = await removeWork(id);
     if (result.success) {
       setSuccess("Œuvre supprimée avec succès !");
       // Rechargement des œuvres pour l'univers concerné
@@ -211,7 +226,7 @@ export const useAdmin = (user: User | null) => {
     setLoading(true);
     clearMessages();
 
-    const result = await FirebaseService.reorderWorks(works);
+    const result = await reorderWorksMutation(works);
     if (result.success) {
       setSuccess("Ordre des œuvres mis à jour avec succès !");
       // Rechargement des œuvres
@@ -232,7 +247,7 @@ export const useAdmin = (user: User | null) => {
     setLoading(true);
     clearMessages();
 
-    const result = await FirebaseService.getSongsByWork(workId);
+    const result = await getSongsByWork(workId);
     if (result.success && result.data) {
       setState((prev) => ({ ...prev, songs: result.data! }));
     } else {
@@ -256,7 +271,7 @@ export const useAdmin = (user: User | null) => {
       return { success: false, error: validation.error };
     }
 
-    const result = await FirebaseService.addSong(songData);
+    const result = await createSong(songData);
     if (result.success) {
       setSuccess("Chanson ajoutée avec succès !");
       loadSongs(songData.workId); // Rechargement des données
@@ -272,7 +287,7 @@ export const useAdmin = (user: User | null) => {
     setLoading(true);
     clearMessages();
 
-    const result = await FirebaseService.updateSong(id, updates);
+    const result = await patchSong(id, updates);
     if (result.success) {
       setSuccess("Chanson mise à jour avec succès !");
       // Rechargement des chansons pour l'œuvre concernée
@@ -292,7 +307,7 @@ export const useAdmin = (user: User | null) => {
     setLoading(true);
     clearMessages();
 
-    const result = await FirebaseService.deleteSong(id);
+    const result = await removeSong(id);
     if (result.success) {
       setSuccess("Chanson supprimée avec succès !");
       // Rechargement des chansons pour l'œuvre concernée
@@ -352,30 +367,26 @@ export const useAdmin = (user: User | null) => {
       }
 
       // 2. Importer les chansons dans Firebase
-      const importResult = await FirebaseService.importSongsFromPlaylist(
-        workId,
-        playlistResult.songs
-      );
+      const importResult = await importSongsIntoFirestore(workId, playlistResult.songs);
 
       if (importResult.success) {
+        const stats = importResult.data;
         const message = `Import terminé ! ${
-          importResult.imported || 0
+          stats?.imported ?? 0
         } chanson(s) ajoutée(s)${
-          importResult.skipped
-            ? `, ${importResult.skipped} ignorée(s) (déjà existante(s))`
+          stats?.skipped
+            ? `, ${stats.skipped} ignorée(s) (déjà existante(s))`
             : ""
         }.`;
 
         setSuccess(message);
-
-        // Recharger les chansons
         loadSongs(workId);
 
         return {
           success: true,
-          imported: importResult.imported,
-          skipped: importResult.skipped,
-          errors: importResult.errors,
+          imported: stats?.imported,
+          skipped: stats?.skipped,
+          errors: stats?.errors,
         };
       } else {
         setError("Erreur lors de l'import : " + importResult.error);
