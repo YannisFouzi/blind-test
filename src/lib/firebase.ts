@@ -1,12 +1,20 @@
-// Import the functions you need from the SDKs you need
 import { getAnalytics } from "firebase/analytics";
-import { initializeApp } from "firebase/app";
+import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { z } from "zod";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
+const firebaseEnvSchema = z.object({
+  apiKey: z.string().min(1),
+  authDomain: z.string().min(1),
+  projectId: z.string().min(1),
+  storageBucket: z.string().optional(),
+  messagingSenderId: z.string().optional(),
+  appId: z.string().min(1),
+  measurementId: z.string().optional(),
+});
+
+const firebaseConfig = firebaseEnvSchema.parse({
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -14,40 +22,30 @@ const firebaseConfig = {
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-};
+});
 
-// Vérification des variables d'environnement
-if (
-  !firebaseConfig.apiKey ||
-  !firebaseConfig.authDomain ||
-  !firebaseConfig.projectId
-) {
-  throw new Error(
-    "Configuration Firebase manquante. Vérifiez vos variables d'environnement."
-  );
-}
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-
-// Initialize services
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Configuration Google Provider
-googleProvider.setCustomParameters({
-  prompt: "select_account",
-});
+googleProvider.setCustomParameters({ prompt: "select_account" });
 
-// Analytics (only on client side)
-let analytics: ReturnType<typeof getAnalytics> | null = null;
-if (typeof window !== "undefined" && firebaseConfig.measurementId) {
-  analytics = getAnalytics(app);
-}
-export { analytics };
+let analyticsInstance: ReturnType<typeof getAnalytics> | null = null;
 
-// Configuration admin
+export const initAnalytics = () => {
+  if (typeof window === "undefined" || !firebaseConfig.measurementId) {
+    return null;
+  }
+
+  if (!analyticsInstance) {
+    analyticsInstance = getAnalytics(app);
+  }
+
+  return analyticsInstance;
+};
+
 export const ADMIN_EMAIL =
   process.env.NEXT_PUBLIC_ADMIN_EMAIL || "yfouzi.dev@gmail.com";
 
