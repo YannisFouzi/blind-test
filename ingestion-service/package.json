@@ -1,13 +1,14 @@
 {
   "name": "blind-test-ingestion-service",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "node scripts/install-yt-dlp.js && tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "postinstall": "node scripts/install-yt-dlp.js"
+    "postinstall": "node scripts/install-yt-dlp.js",
+    "prepare": "node scripts/install-yt-dlp.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.675.0",

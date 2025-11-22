@@ -1,0 +1,11 @@
+{
+  "install": {
+    "command": "npm ci && node scripts/install-yt-dlp.js"
+  },
+  "build": {
+    "command": "npm run build"
+  },
+  "deploy": {
+    "command": "npm run start"
+  }
+}
