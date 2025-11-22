@@ -78,7 +78,11 @@ export const WorkForm = ({
   const submitOnly = handleSubmit(submitWork);
 
   const handlePlaylistValidation = async () => {
+    console.log("🔍 [WorkForm] handlePlaylistValidation appelé");
+    console.log("📋 [WorkForm] playlistUrl:", playlistUrl);
+
     if (!playlistUrl.trim()) {
+      console.error("❌ [WorkForm] URL vide");
       setError("playlistUrl", {
         message: "L'URL de la playlist est requise",
         type: "manual",
@@ -90,8 +94,12 @@ export const WorkForm = ({
     clearErrors("playlistUrl");
 
     try {
+      console.log("🔧 [WorkForm] Extraction ID...");
       const extractedId = YouTubeService.extractPlaylistId(playlistUrl);
+      console.log("📋 [WorkForm] ID extrait:", extractedId);
+
       if (!extractedId) {
+        console.error("❌ [WorkForm] Extraction échouée");
         setError("playlistUrl", {
           message: "URL de playlist YouTube invalide",
           type: "manual",
@@ -99,20 +107,25 @@ export const WorkForm = ({
         return;
       }
 
+      console.log("🔄 [WorkForm] Validation YouTube API...");
       const validation = await YouTubeService.validatePlaylist(playlistUrl);
+      console.log("📦 [WorkForm] Résultat validation:", validation);
 
       if (validation.isValid && validation.playlistId) {
+        console.log("✅ [WorkForm] Playlist valide, setValue playlistId:", validation.playlistId);
         setValue("playlistId", validation.playlistId, {
           shouldValidate: true,
           shouldDirty: true,
         });
       } else {
+        console.error("❌ [WorkForm] Validation échouée:", validation.error);
         setError("playlistUrl", {
           message: validation.error || "Playlist invalide",
           type: "manual",
         });
       }
-    } catch {
+    } catch (error) {
+      console.error("❌ [WorkForm] Exception validation:", error);
       setError("playlistUrl", {
         message: "Erreur lors de la validation",
         type: "manual",
@@ -144,12 +157,18 @@ export const WorkForm = ({
   };
 
   const handleCreateAndImport = handleSubmit(async (values) => {
+    console.log("🎬 [WorkForm] handleCreateAndImport appelé");
+    console.log("📋 [WorkForm] values:", values);
+    console.log("🔧 [WorkForm] onImportSongs:", !!onImportSongs);
+
     if (!onImportSongs) {
+      console.log("⚠️ [WorkForm] onImportSongs non défini, création simple");
       await submitWork(values);
       return;
     }
 
     if (!values.playlistId) {
+      console.error("❌ [WorkForm] Pas de playlistId");
       setError("playlistId", {
         message: "Validez une playlist avant d'importer",
         type: "manual",
@@ -157,13 +176,23 @@ export const WorkForm = ({
       return;
     }
 
+    console.log("🚀 [WorkForm] Début création + import");
     setImporting(true);
     try {
+      console.log("📝 [WorkForm] Appel submitWork...");
       const result = await submitWork(values);
+      console.log("📦 [WorkForm] Résultat submitWork:", result);
 
       if (result.success && result.id) {
+        console.log("✅ [WorkForm] Œuvre créée, ID:", result.id);
+        console.log("🔄 [WorkForm] Appel onImportSongs...");
         await onImportSongs(result.id, values.playlistId);
+        console.log("✅ [WorkForm] Import terminé");
+      } else {
+        console.error("❌ [WorkForm] Échec création œuvre:", result.error);
       }
+    } catch (error) {
+      console.error("❌ [WorkForm] Exception:", error);
     } finally {
       setImporting(false);
     }
@@ -233,14 +262,14 @@ export const WorkForm = ({
         </label>
         <div className="flex gap-2">
           <input
-            type="url"
+            type="text"
             {...register("playlistUrl")}
             className={`
               flex-1 px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
               ${errors.playlistUrl ? "border-red-500" : "border-gray-600"}
               focus:outline-none focus:border-blue-500 transition-colors
             `}
-            placeholder="https://www.youtube.com/playlist?list=..."
+            placeholder="URL complète ou ID (ex: PLsYgm6hOXgDToCj9jZ80rUUXVH93EDyHM)"
           />
           <Button
             type="button"
@@ -256,9 +285,14 @@ export const WorkForm = ({
             {errors.playlistUrl.message}
           </p>
         )}
+        {!errors.playlistUrl && !playlistId && playlistUrl && (
+          <p className="text-gray-400 text-xs mt-1">
+            Accepte : URL complète (https://youtube.com/playlist?list=...) ou ID seul (PLxxxxx)
+          </p>
+        )}
         {playlistId && (
           <div className="mt-2 space-y-2">
-            <p className="text-green-400 text-sm">? Playlist validée: {playlistId}</p>
+            <p className="text-green-400 text-sm">✓ Playlist validée: {playlistId}</p>
             {work?.id && onImportSongs && (
               <div className="flex items-center space-x-2">
                 <Button

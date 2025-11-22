@@ -213,14 +213,16 @@ export default function AdminDashboard() {
       handleCloseModal();
     }
 
+    // Pour addWork : { success: true, data: { id: "xxx" } }
+    // Pour updateWork : { success: true }
     return {
       success: result.success,
       error: result.error,
-      id: ("id" in result
-        ? result.id
-        : editingItem
-        ? editingItem.id
-        : undefined) as string | undefined,
+      id: editingItem
+        ? editingItem.id  // Si modification, retourne l'ID de l'item édité
+        : result.success && "data" in result && result.data && "id" in result.data
+        ? result.data.id  // Si création, retourne result.data.id
+        : undefined,
     };
   };
 

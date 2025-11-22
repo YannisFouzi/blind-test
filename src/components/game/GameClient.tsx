@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type MouseEvent } from "react";
 import YouTube from "react-youtube";
 import {
   Home as HomeIcon,
@@ -13,12 +13,14 @@ import {
   VolumeX,
 } from "lucide-react";
 import type { YouTubePlayerOptions } from "@/types/youtube";
+import { Song } from "@/types";
 
 import { PreloadPlayer } from "@/components/game/PreloadPlayer";
 import { WorkSelector } from "@/components/game/WorkSelector";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useGame } from "@/hooks/useGame";
+import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { useYouTube } from "@/hooks/useYouTube";
 
 interface GameClientProps {
@@ -29,23 +31,51 @@ export function GameClient({ universeId }: GameClientProps) {
   const router = useRouter();
 
   const {
-    isPlaying,
-    currentTime,
-    duration,
-    volume,
-    isMuted,
+    isPlaying: audioIsPlaying,
+    volume: audioVolume,
+    currentTime: audioCurrentTime,
+    duration: audioDuration,
+    isMuted: audioIsMuted,
+    audioError,
+    handlePlayPause: handleAudioPlayPause,
+    handleVolumeChange: handleAudioVolumeChange,
+    toggleMute: toggleAudioMute,
+    handleProgressClick: handleAudioProgressClick,
+    resetPlayer: resetAudioPlayer,
+    preloadTrack,
+    prepareTrack,
+    formatTime: formatAudioTime,
+  } = useAudioPlayer();
+
+  const {
+    isPlaying: youtubeIsPlaying,
+    currentTime: youtubeCurrentTime,
+    duration: youtubeDuration,
+    volume: youtubeVolume,
+    isMuted: youtubeIsMuted,
     youtubeError,
-    handlePlayPause,
-    handleVolumeChange,
-    toggleMute,
-    handleProgressClick,
+    handlePlayPause: handleYoutubePlayPause,
+    handleVolumeChange: handleYoutubeVolumeChange,
+    toggleMute: toggleYoutubeMute,
+    handleProgressClick: handleYoutubeProgressClick,
     handleYoutubeError,
     handleYoutubeReady,
     handleYoutubeStateChange,
     preloadNextVideo,
     preloadSystem,
-    formatTime,
+    formatTime: formatYoutubeTime,
   } = useYouTube();
+
+  const preloadNextMedia = useCallback(
+    (song: Song) => {
+      if (song.audioUrl) {
+        preloadTrack(song.audioUrl);
+      } else if (song.youtubeId) {
+        preloadNextVideo(song.youtubeId);
+      }
+    },
+    [preloadTrack, preloadNextVideo]
+  );
 
   const {
     gameSession,
@@ -60,7 +90,63 @@ export function GameClient({ universeId }: GameClientProps) {
     canGoNext,
     canGoPrev,
     isCurrentSongAnswered,
-  } = useGame(universeId, preloadNextVideo);
+  } = useGame(universeId, preloadNextMedia);
+
+  const shouldUseAudio = Boolean(currentSong?.audioUrl);
+  const playbackIsPlaying = shouldUseAudio ? audioIsPlaying : youtubeIsPlaying;
+  const playbackCurrentTime = shouldUseAudio ? audioCurrentTime : youtubeCurrentTime;
+  const playbackDuration = shouldUseAudio ? audioDuration : youtubeDuration;
+  const playbackVolume = shouldUseAudio ? audioVolume : youtubeVolume;
+  const playbackMuted = shouldUseAudio ? audioIsMuted : youtubeIsMuted;
+  const playerError = shouldUseAudio ? audioError : youtubeError;
+  const formatTimeFn = shouldUseAudio ? formatAudioTime : formatYoutubeTime;
+  const playbackUnavailable = !shouldUseAudio && !currentSong?.youtubeId;
+
+  useEffect(() => {
+    if (shouldUseAudio && currentSong?.audioUrl) {
+      void prepareTrack(currentSong.audioUrl);
+    } else {
+      resetAudioPlayer();
+    }
+  }, [shouldUseAudio, currentSong?.audioUrl, prepareTrack, resetAudioPlayer]);
+
+  const handlePlayToggle = () => {
+    if (playbackUnavailable) {
+      return;
+    }
+
+    if (shouldUseAudio) {
+      if (currentSong?.audioUrl) {
+        handleAudioPlayPause(currentSong.audioUrl);
+      }
+    } else {
+      handleYoutubePlayPause(currentSong?.youtubeId);
+    }
+  };
+
+  const handleVolumeChangeValue = (value: number) => {
+    if (shouldUseAudio) {
+      handleAudioVolumeChange(value);
+    } else {
+      handleYoutubeVolumeChange(value);
+    }
+  };
+
+  const handleMuteToggle = () => {
+    if (shouldUseAudio) {
+      toggleAudioMute();
+    } else {
+      toggleYoutubeMute();
+    }
+  };
+
+  const handleTimelineClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (shouldUseAudio) {
+      handleAudioProgressClick(event);
+    } else {
+      handleYoutubeProgressClick(event);
+    }
+  };
 
   const [isLoaded, setIsLoaded] = useState(false);
   const hiddenPlayerOptions: YouTubePlayerOptions = {
@@ -237,12 +323,15 @@ export function GameClient({ universeId }: GameClientProps) {
                 {/* Bouton play/pause principal - Version compacte */}
                 <div className="relative">
                   <button
-                    onClick={() => handlePlayPause(currentSong?.youtubeId)}
-                    className="relative p-3 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 rounded-full text-white shadow-xl hover:shadow-yellow-500/50 transition-all duration-300 transform hover:scale-105"
+                    onClick={handlePlayToggle}
+                    disabled={playbackUnavailable}
+                    className={`relative p-3 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 rounded-full text-white shadow-xl hover:shadow-yellow-500/50 transition-all duration-300 transform hover:scale-105 ${
+                      playbackUnavailable ? "opacity-60 cursor-not-allowed" : ""
+                    }`}
                   >
                     <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 blur-md opacity-50" />
                     <div className="relative z-10">
-                      {isPlaying ? (
+                      {playbackIsPlaying ? (
                         <Pause className="w-5 h-5" />
                       ) : (
                         <PlayIcon className="w-5 h-5" />
@@ -285,17 +374,19 @@ export function GameClient({ universeId }: GameClientProps) {
             {/* Barre de progression centrale avec indicateur de morceau */}
             <div className="flex-1 max-w-md mx-4">
               <div className="flex items-center justify-between text-white text-xs mb-1">
-                <span>{formatTime(currentTime)}</span>
-                <span>{formatTime(duration)}</span>
+                <span>{formatTimeFn(playbackCurrentTime)}</span>
+                <span>{formatTimeFn(playbackDuration)}</span>
               </div>
               <div
                 className="magic-progress-bar h-2 cursor-pointer hover:h-3 transition-all duration-300"
-                onClick={handleProgressClick}
+                onClick={handleTimelineClick}
               >
                 <div
                   className="magic-progress-fill h-full"
                   style={{
-                    width: `${duration ? (currentTime / duration) * 100 : 0}%`,
+                    width: `${
+                      playbackDuration ? (playbackCurrentTime / playbackDuration) * 100 : 0
+                    }%`,
                   }}
                 />
               </div>
@@ -311,10 +402,10 @@ export function GameClient({ universeId }: GameClientProps) {
             {/* Contrôle du volume - Masqué sur mobile */}
             <div className="hidden md:flex items-center gap-3">
               <button
-                onClick={toggleMute}
+                onClick={handleMuteToggle}
                 className="p-2 rounded-full bg-slate-800/50 text-white hover:bg-slate-700/50 transition-all duration-300 hover:scale-110"
               >
-                {isMuted ? (
+                {playbackMuted ? (
                   <VolumeX className="w-4 h-4" />
                 ) : (
                   <Volume2 className="w-4 h-4" />
@@ -329,46 +420,55 @@ export function GameClient({ universeId }: GameClientProps) {
                     const clickX = e.clientX - rect.left;
                     const percentage = (clickX / rect.width) * 100;
                     const newVolume = Math.max(0, Math.min(100, percentage));
-                    handleVolumeChange(newVolume);
+                    handleVolumeChangeValue(newVolume);
                   }}
                 >
                   <div
                     className="magic-progress-fill h-full"
-                    style={{ width: `${volume}%` }}
+                    style={{ width: `${playbackVolume}%` }}
                   />
                 </div>
                 <span className="text-white text-xs w-8 text-center">
-                  {Math.round(volume)}%
+                  {Math.round(playbackVolume)}%
                 </span>
               </div>
             </div>
           </div>
         </div>
       </div>
-      {youtubeError && (
+      {playerError && (
         <div className="mt-4 text-center text-sm text-yellow-300">
-          {youtubeError}
+          {playerError}
+        </div>
+      )}
+      {playbackUnavailable && (
+        <div className="mt-4 text-center text-sm text-yellow-300">
+          Aucun extrait audio n&apos;est disponible pour ce morceau. Ajoutez un MP3 Cloudflare
+          pour activer la lecture.
         </div>
       )}
 
-      {/* Lecteur de préchargement invisible */}
-      <div className="hidden">
-        <YouTube
-          videoId={currentSong.youtubeId}
-          opts={hiddenPlayerOptions}
-          onReady={handleYoutubeReady}
-          onStateChange={handleYoutubeStateChange}
-          onError={handleYoutubeError}
-        />
-      </div>
-      <PreloadPlayer
-        onReady={preloadSystem.handlePreloadPlayerReady}
-        onError={(error) => {
-          if (process.env.NODE_ENV === "development") {
-            console.warn("Erreur lecteur de préchargement:", error);
-          }
-        }}
-      />
+      {!shouldUseAudio && currentSong.youtubeId && (
+        <>
+          <div className="hidden">
+            <YouTube
+              videoId={currentSong.youtubeId}
+              opts={hiddenPlayerOptions}
+              onReady={handleYoutubeReady}
+              onStateChange={handleYoutubeStateChange}
+              onError={handleYoutubeError}
+            />
+          </div>
+          <PreloadPlayer
+            onReady={preloadSystem.handlePreloadPlayerReady}
+            onError={(error) => {
+              if (process.env.NODE_ENV === "development") {
+                console.warn("Erreur lecteur de préchargement:", error);
+              }
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -75,8 +75,10 @@ export const importSongsFromPlaylist = async (
   playlistSongs: Array<{
     id: string;
     title: string;
-    description: string;
+    description?: string;
     duration: number;
+    artist?: string;
+    audioUrl?: string;
   }>
 ): Promise<
   ServiceResponse<{
@@ -103,8 +105,9 @@ export const importSongsFromPlaylist = async (
       try {
         const songData: Omit<Song, "id" | "createdAt"> = {
           title: playlistSong.title,
-          artist: "Artiste YouTube",
+          artist: playlistSong.artist || "Artiste YouTube",
           youtubeId: playlistSong.id,
+          audioUrl: playlistSong.audioUrl,
           duration: playlistSong.duration,
           workId,
         };

@@ -20,6 +20,25 @@ const songColumns = [
   { key: "artist" as keyof Song, label: "Artiste" },
   { key: "youtubeId" as keyof Song, label: "YouTube ID" },
   {
+    key: "audioUrl" as keyof Song,
+    label: "Audio",
+    render: (value: unknown) => {
+      const url = typeof value === "string" ? value : "";
+      return url ? (
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-blue-400 hover:text-blue-300 underline"
+        >
+          Ouvrir
+        </a>
+      ) : (
+        <span className="text-gray-400">Aucun</span>
+      );
+    },
+  },
+  {
     key: "duration" as keyof Song,
     label: "Durée",
     render: (value: unknown) => {

@@ -21,6 +21,11 @@
 # production
 /build
 
+# ingestion service
+/ingestion-service/node_modules
+/ingestion-service/dist
+/ingestion-service/.env
+
 # misc
 .DS_Store
 *.pem

@@ -42,6 +42,7 @@ export const SongForm = ({
       artist: song?.artist || "",
       workId: song?.workId || "",
       youtubeId: song?.youtubeId || "",
+      audioUrl: song?.audioUrl || "",
       youtubeUrl: "",
       duration: song?.duration || 0,
     },
@@ -53,6 +54,7 @@ export const SongForm = ({
       artist: song?.artist || "",
       workId: song?.workId || "",
       youtubeId: song?.youtubeId || "",
+      audioUrl: song?.audioUrl || "",
       youtubeUrl: "",
       duration: song?.duration || 0,
     });
@@ -149,6 +151,31 @@ export const SongForm = ({
         />
         {errors.title && (
           <p className="text-red-400 text-sm mt-1">{errors.title.message}</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          URL audio (Cloudflare) *
+        </label>
+        <input
+          type="url"
+          {...register("audioUrl")}
+          className={`
+            w-full px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
+            ${errors.audioUrl ? "border-red-500" : "border-gray-600"}
+            focus:outline-none focus:border-blue-500 transition-colors
+          `}
+          placeholder="https://cdn.mon-cloud.com/musiques/track.mp3"
+        />
+        {errors.audioUrl ? (
+          <p className="text-red-400 text-sm mt-1">
+            {errors.audioUrl.message}
+          </p>
+        ) : (
+          <p className="text-gray-400 text-sm mt-1">
+            URL signée ou publique pointant vers votre MP3 Cloudflare/S3.
+          </p>
         )}
       </div>
 

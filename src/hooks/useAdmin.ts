@@ -20,6 +20,7 @@ import {
   updateWork as patchWork,
 } from "@/services/firebase";
 import { YouTubeService } from "@/services/youtubeService";
+import { AudioIngestionService } from "@/services/audioIngestion";
 
 interface AdminState {
   universes: Universe[];
@@ -349,26 +350,38 @@ export const useAdmin = (user: User | null) => {
     workId: string,
     playlistId: string
   ) => {
+    console.log("🎬 [useAdmin] importSongsFromPlaylist appelé");
+    console.log("📋 [useAdmin] workId:", workId, "playlistId:", playlistId);
+
     setLoading(true);
     clearMessages();
 
     try {
-      // 1. Récupérer les chansons de la playlist YouTube
-      const playlistResult = await YouTubeService.importPlaylistSongs(
+      console.log("🔄 [useAdmin] Appel AudioIngestionService.importPlaylist");
+      const ingestionResult = await AudioIngestionService.importPlaylist(
+        workId,
         playlistId
       );
 
-      if (!playlistResult.success || !playlistResult.songs) {
+      console.log("📦 [useAdmin] Résultat ingestion:", ingestionResult);
+
+      if (!ingestionResult.success || !ingestionResult.songs) {
+        console.error("❌ [useAdmin] Échec de l'ingestion:", ingestionResult.error);
         setError(
-          "Erreur lors de la récupération de la playlist : " +
-            playlistResult.error
+          ingestionResult.error ||
+            "Erreur lors du traitement audio de la playlist"
         );
         setLoading(false);
-        return { success: false, error: playlistResult.error };
+        return { success: false, error: ingestionResult.error };
       }
 
-      // 2. Importer les chansons dans Firebase
-      const importResult = await importSongsIntoFirestore(workId, playlistResult.songs);
+      console.log("🔄 [useAdmin] Import dans Firestore...");
+      const importResult = await importSongsIntoFirestore(
+        workId,
+        ingestionResult.songs
+      );
+
+      console.log("📦 [useAdmin] Résultat Firestore:", importResult);
 
       if (importResult.success) {
         const stats = importResult.data;
@@ -380,6 +393,7 @@ export const useAdmin = (user: User | null) => {
             : ""
         }.`;
 
+        console.log("✅ [useAdmin] Import réussi:", message);
         setSuccess(message);
         loadSongs(workId);
 
@@ -390,12 +404,14 @@ export const useAdmin = (user: User | null) => {
           errors: stats?.errors,
         };
       } else {
+        console.error("❌ [useAdmin] Échec import Firestore:", importResult.error);
         setError("Erreur lors de l'import : " + importResult.error);
         return { success: false, error: importResult.error };
       }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Erreur inconnue";
+      console.error("❌ [useAdmin] Exception:", error);
       setError("Erreur lors de l'import des chansons : " + errorMessage);
       return { success: false, error: errorMessage };
     } finally {

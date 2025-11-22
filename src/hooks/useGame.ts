@@ -8,7 +8,7 @@ import { generateId, shuffleArray } from "../utils/formatters";
 
 export const useGame = (
   universeId: string,
-  preloadNextVideo?: (videoId: string) => void
+  preloadNextTrack?: (song: Song) => void
 ) => {
   const [gameSession, setGameSession] = useState<GameSession | null>(null);
   const [works, setWorks] = useState<Work[]>([]);
@@ -182,16 +182,16 @@ export const useGame = (
   }, [gameSession, currentSong, resetGameState]);
 
   useEffect(() => {
-    if (gameSession && currentSong && preloadNextVideo) {
+    if (gameSession && currentSong && preloadNextTrack) {
       const nextIndex = gameSession.currentSongIndex + 1;
       if (nextIndex < gameSession.songs.length) {
         const nextSong = gameSession.songs[nextIndex];
         setTimeout(() => {
-          preloadNextVideo(nextSong.youtubeId);
+          preloadNextTrack(nextSong);
         }, 1000);
       }
     }
-  }, [gameSession, currentSong, preloadNextVideo]);
+  }, [gameSession, currentSong, preloadNextTrack]);
 
   return {
     gameSession,

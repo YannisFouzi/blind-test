@@ -20,6 +20,17 @@ const timestampSchema = z.preprocess((value) => {
   return value;
 }, z.date());
 
+const audioUrlSchema = z.preprocess(
+  (value) => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed.length === 0 ? undefined : trimmed;
+    }
+    return value;
+  },
+  z.string().url().optional()
+);
+
 export const GameAnswerSchema = z.object({
   songId: z.string().min(1),
   workId: z.string().min(1),
@@ -39,6 +50,7 @@ export const SongSchema = z.object({
   artist: z.string().min(1),
   workId: z.string().min(1),
   youtubeId: z.string().min(1),
+  audioUrl: audioUrlSchema,
   duration: z.number().int().min(0),
   createdAt: timestampSchema,
 });

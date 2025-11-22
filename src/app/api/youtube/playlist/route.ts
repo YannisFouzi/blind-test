@@ -13,14 +13,48 @@ interface YouTubeVideo {
   };
 }
 
+/**
+ * Extrait l'ID de playlist depuis une URL YouTube ou retourne l'ID tel quel
+ * Supporte les formats :
+ * - URL complète : https://www.youtube.com/playlist?list=PLxxxxx
+ * - URL courte : youtube.com/playlist?list=PLxxxxx
+ * - ID pur : PLxxxxx
+ */
+const extractPlaylistId = (input: string): string => {
+  if (!input) return "";
+
+  const trimmed = input.trim();
+
+  // Patterns pour extraire l'ID depuis une URL
+  const urlPatterns = [
+    /[?&]list=([a-zA-Z0-9_-]+)/,
+    /youtube\.com\/playlist\?list=([a-zA-Z0-9_-]+)/,
+  ];
+
+  for (const pattern of urlPatterns) {
+    const match = trimmed.match(pattern);
+    if (match) return match[1];
+  }
+
+  // Si ce n'est pas une URL, on retourne l'input (probablement déjà un ID)
+  return trimmed;
+};
+
+/**
+ * Schema Zod pour valider et transformer une playlist ID
+ * Accepte à la fois les URLs complètes et les IDs purs
+ */
 const playlistIdField = (message: string) =>
-  z.preprocess(
-    (value) => (typeof value === "string" ? value : ""),
-    z
-      .string()
-      .min(1, message)
-      .regex(/^[a-zA-Z0-9_-]+$/, "Format d'ID de playlist invalide")
-  );
+  z
+    .string()
+    .min(1, message)
+    .transform(extractPlaylistId)
+    .pipe(
+      z
+        .string()
+        .min(1, "L'ID de playlist extrait est vide")
+        .regex(/^[a-zA-Z0-9_-]+$/, "Format d'ID de playlist invalide")
+    );
 
 const playlistIdSchema = z.object({
   playlistId: playlistIdField("ID de playlist requis"),
@@ -148,23 +182,8 @@ export async function POST(request: Request) {
     );
   }
 
-  let { playlistId } = parseResult.data;
-
-  const urlMatch =
-    playlistId.match(/[?&]list=([a-zA-Z0-9_-]+)/) ||
-    playlistId.match(/youtube\.com\/playlist\?list=([a-zA-Z0-9_-]+)/);
-
-  if (urlMatch) {
-    playlistId = urlMatch[1];
-  }
-
-  const idValidation = playlistIdSchema.safeParse({ playlistId });
-  if (!idValidation.success) {
-    return NextResponse.json(
-      { error: idValidation.error.issues[0].message },
-      { status: 400 }
-    );
-  }
+  // L'ID est déjà extrait et validé par le schema Zod
+  const { playlistId } = parseResult.data;
 
   try {
     const response = await fetchFromYouTube(

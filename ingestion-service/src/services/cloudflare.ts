@@ -1,0 +1,67 @@
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { createReadStream } from "fs";
+import path from "path";
+
+const accountId = process.env.R2_ACCOUNT_ID;
+const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+const bucket = process.env.R2_BUCKET_NAME;
+const publicBaseUrl = process.env.R2_PUBLIC_BASE_URL;
+
+if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
+  console.warn(
+    "[ingestion] Cloudflare R2 n'est pas totalement configuré. Vérifiez les variables d'environnement."
+  );
+}
+
+const s3Client =
+  accountId && accessKeyId && secretAccessKey
+    ? new S3Client({
+        region: "auto",
+        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
+        },
+      })
+    : null;
+
+export const uploadToR2 = async (
+  filePath: string,
+  key: string,
+  metadata: Record<string, string> = {}
+) => {
+  if (!s3Client || !bucket) {
+    throw new Error("Cloudflare R2 est mal configuré.");
+  }
+
+  const command = new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: createReadStream(filePath),
+    ContentType: "audio/mpeg",
+    Metadata: metadata,
+  });
+
+  await s3Client.send(command);
+
+  const baseUrl =
+    (publicBaseUrl && publicBaseUrl.replace(/\/$/, "")) ||
+    `https://${bucket}.${accountId}.r2.cloudflarestorage.com`;
+
+  return {
+    key,
+    url: `${baseUrl}/${key}`,
+  };
+};
+
+export const buildObjectKey = (workId: string, videoId: string, title: string) => {
+  const safeTitle = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/(^-|-$)+/g, "")
+    .slice(0, 60);
+
+  const fileName = `${safeTitle || videoId}.mp3`;
+  return path.posix.join(workId, fileName);
+};
