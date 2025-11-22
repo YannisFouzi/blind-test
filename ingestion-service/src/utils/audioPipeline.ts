@@ -7,7 +7,8 @@ import pLimit from "p-limit";
 import { uploadToR2, buildObjectKey } from "../services/cloudflare.js";
 import { fetchPlaylistVideos } from "../services/youtube.js";
 
-const ytdlpPath = process.env.YT_DLP_PATH || "yt-dlp";
+// Railway: /app/bin/yt-dlp | Local: yt-dlp in PATH
+const ytdlpPath = process.env.YT_DLP_PATH || (fs.existsSync("/app/bin/yt-dlp") ? "/app/bin/yt-dlp" : "yt-dlp");
 const youtubedl = create(ytdlpPath);
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
