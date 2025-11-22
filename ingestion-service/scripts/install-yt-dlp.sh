@@ -19,7 +19,8 @@ trap cleanup EXIT
 # Create bin directory if it doesn't exist
 mkdir -p "$BIN_DIR"
 
-curl -L "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp" -o "$TMP_FILE"
+# Download standalone binary (no Python required) instead of Python script
+curl -L "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux" -o "$TMP_FILE"
 install -m 0755 "$TMP_FILE" "$BIN_PATH"
 
 echo "yt-dlp installed at ${BIN_PATH}"
