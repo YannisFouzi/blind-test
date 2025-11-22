@@ -4,7 +4,7 @@ set -euo pipefail
 if [ "$(uname -s)" != "Linux" ]; then
   echo "Skipping yt-dlp install (unsupported OS for this script)."
   exit 0
-}
+fi
 
 BIN_PATH="/usr/local/bin/yt-dlp"
 TMP_FILE="$(mktemp)"
