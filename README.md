@@ -121,6 +121,11 @@ blind-test/
 - Vérifiez que Node.js est installé : `node --version`
 - Supprimez `node_modules` et `package-lock.json`, puis réinstallez : `npm install`
 
+## Notes de déploiement ingestion-service
+
+- Le service d'ingestion télécharge `yt-dlp` via le script `scripts/install-yt-dlp.sh`. Lors d'un déploiement Linux (Railway), ce script est exécuté au moment du `npm install`.
+- Si tu déploies via Railway, assure-toi que le fichier `/ingestion-service/.railway/railpack-plan.json` est bien pris en compte afin d'exécuter `npm ci`, `npm run build` et `npm run start` depuis le dossier `ingestion-service`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
