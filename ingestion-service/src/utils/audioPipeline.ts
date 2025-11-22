@@ -88,7 +88,8 @@ const downloadUploadAudio = async (
   artist: string,
   duration: number
 ) => {
-  const tmpInput = tmp.tmpNameSync({ postfix: ".opus" });
+  // Use .webm as YouTube's default audio format (no conversion by yt-dlp needed)
+  const tmpInput = tmp.tmpNameSync({ postfix: ".webm" });
   const tmpOutput = tmp.tmpNameSync({ postfix: ".mp3" });
 
   try {
@@ -113,10 +114,11 @@ const downloadAudioStream = async (videoId: string, destination: string) => {
   try {
     console.log(`[yt-dlp] Downloading: ${url}`);
 
+    // Download best audio WITHOUT conversion (no ffmpeg needed by yt-dlp)
+    // fluent-ffmpeg will handle the conversion to MP3 later
     await youtubedl(url, {
       format: "bestaudio",
-      extractAudio: true,
-      audioFormat: "opus",
+      // Removed: extractAudio and audioFormat (those require ffmpeg in yt-dlp's PATH)
       output: destination,
       noPlaylist: true,
       quiet: true,
