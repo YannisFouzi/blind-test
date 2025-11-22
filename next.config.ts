@@ -5,7 +5,7 @@ const isProd = process.env.NODE_ENV === "production";
 const appBaseUrl =
   process.env.APP_BASE_URL ??
   (isProd
-    ? "https://blindtest.vercel.app"
+    ? "https://blind-test-brown.vercel.app/"
     : "http://localhost:3000");
 
 const normalizedAppBaseUrl = appBaseUrl.replace(/\/$/, "");
@@ -40,10 +40,6 @@ const securityHeaders = [
   {
     key: "Cross-Origin-Opener-Policy",
     value: "same-origin-allow-popups",
-  },
-  {
-    key: "Cross-Origin-Embedder-Policy",
-    value: "credentialless",
   },
   {
     key: "X-Frame-Options",
