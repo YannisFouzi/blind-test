@@ -1,11 +1,11 @@
 {
   "install": {
-    "command": "npm ci"
+    "command": "cd ingestion-service && npm ci"
   },
   "build": {
-    "command": "npm run build"
+    "command": "cd ingestion-service && npm run build"
   },
   "deploy": {
-    "command": "npm run start"
+    "command": "cd ingestion-service && npm run start"
   }
 }
