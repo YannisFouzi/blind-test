@@ -1,6 +1,6 @@
 {
   "install": {
-    "command": "cd ingestion-service && npm ci"
+    "command": "cd ingestion-service && npm ci && node scripts/install-yt-dlp.js"
   },
   "build": {
     "command": "cd ingestion-service && npm run build"
