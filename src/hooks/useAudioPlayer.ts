@@ -63,6 +63,12 @@ export const useAudioPlayer = () => {
       audio.removeEventListener("ended", handleEnded);
       audio.removeEventListener("error", handleError);
     };
+  }, []);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume / 100;
+    }
   }, [volume]);
 
   const loadTrack = useCallback(
@@ -72,7 +78,7 @@ export const useAudioPlayer = () => {
 
       setAudioError(null);
 
-      const shouldReload = currentSrc !== src;
+      const shouldReload = !audio.src || currentSrc !== src;
       if (shouldReload) {
         audio.pause();
         setIsPlaying(false);
@@ -89,7 +95,7 @@ export const useAudioPlayer = () => {
           setIsPlaying(true);
         } catch (error) {
           setIsPlaying(false);
-          setAudioError("Impossible de démarrer la lecture audio.");
+          setAudioError("Impossible de demarrer la lecture audio.");
           if (process.env.NODE_ENV === "development") {
             console.warn("Audio playback error:", error);
           }
@@ -205,6 +211,15 @@ export const useAudioPlayer = () => {
     preloadAudio.src = src;
     preloadAudio.load();
     preloadedSrcRef.current = src;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (preloadRef.current) {
+        preloadRef.current.src = "";
+        preloadRef.current = null;
+      }
+    };
   }, []);
 
   return {
