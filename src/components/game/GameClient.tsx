@@ -131,8 +131,6 @@ export function GameClient({ universeId }: GameClientProps) {
     return soloGame.gameSession?.score ?? { correct: 0, incorrect: 0 };
   }, [isMultiActive, multiplayerGame.players, soloGame.gameSession?.score]);
 
-  const activeState = isMultiActive ? multiplayerGame.state : "playing";
-
   const playbackIsPlaying = audioIsPlaying;
   const playbackCurrentTime = audioCurrentTime;
   const playbackDuration = audioDuration;
@@ -359,13 +357,7 @@ export function GameClient({ universeId }: GameClientProps) {
           </div>
         )}
 
-        {mode === "multi" && roomId && (
-          <div className="flex justify-center mt-4">
-            <div className="px-5 py-2 rounded-xl bg-slate-900/70 border border-purple-500/30 text-center text-xs text-white">
-              Room {roomId} — {isHost ? "Host" : "Player"} — État: {activeState}
-            </div>
-          </div>
-        )}
+        {mode === "multi" && roomId && null}
       </div>
 
       {/* Effets de lumière */}
