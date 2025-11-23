@@ -65,6 +65,7 @@ export function GameClient({ universeId }: GameClientProps) {
     canGoNext,
     canGoPrev,
     isCurrentSongAnswered,
+    currentSongAnswer,
   } = useGame(universeId, preloadNextMedia);
 
   const playbackIsPlaying = audioIsPlaying;
@@ -238,6 +239,17 @@ export function GameClient({ universeId }: GameClientProps) {
             />
           </div>
         </div>
+
+        {/* Détails du morceau une fois la réponse validée (évite le flash au changement de morceau) */}
+        {showAnswer && currentSongAnswer && currentSong?.artist && currentSong?.title && (
+          <div className="flex justify-center mt-6">
+            <div className="px-5 py-3 rounded-2xl bg-slate-900/80 border border-purple-500/40 text-center shadow-lg backdrop-blur">
+              <p className="text-sm md:text-base text-white font-semibold tracking-wide">
+                {currentSong.artist} &mdash; <span className="text-yellow-300">{currentSong.title}</span>
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Effets de lumière d'ambiance */}
