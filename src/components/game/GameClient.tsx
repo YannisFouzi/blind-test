@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type MouseEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import {
   Home as HomeIcon,
   Pause,
@@ -18,13 +18,35 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useGame } from "@/hooks/useGame";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
+import { joinRoom } from "@/services/firebase/rooms";
+import { generateId } from "@/utils/formatters";
 
 interface GameClientProps {
   universeId: string;
 }
 
+type Mode = "solo" | "multi";
+
 export function GameClient({ universeId }: GameClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Player identity (persist per session)
+  const playerIdRef = useRef<string>(generateId());
+  const queryPlayer = searchParams?.get("player");
+  if (queryPlayer && playerIdRef.current !== queryPlayer) {
+    playerIdRef.current = queryPlayer;
+  }
+
+  const queryName = searchParams?.get("name") || "";
+  const [displayName, setDisplayName] = useState<string>(queryName || `Joueur-${playerIdRef.current.slice(0, 4)}`);
+
+  const queryMode = (searchParams?.get("mode") as Mode | null) || "solo";
+  const mode = queryMode;
+
+  const roomId = searchParams?.get("room") || "";
+  const isHost = searchParams?.get("host") === "1";
 
   const {
     isPlaying: audioIsPlaying,
@@ -52,21 +74,55 @@ export function GameClient({ universeId }: GameClientProps) {
     [preloadTrack]
   );
 
-  const {
-    gameSession,
-    works,
-    currentSong,
-    selectedWork,
-    showAnswer,
-    handleWorkSelection,
-    handleValidateAnswer,
-    handleNextSong,
-    handlePrevSong,
-    canGoNext,
-    canGoPrev,
-    isCurrentSongAnswered,
-    currentSongAnswer,
-  } = useGame(universeId, preloadNextMedia);
+  const soloGame = useGame(universeId, preloadNextMedia);
+
+  const multiplayerGame = useMultiplayerGame({
+    universeId,
+    roomId,
+    playerId: playerIdRef.current,
+    displayName: displayName.trim() || "Joueur",
+    preloadNextTrack: preloadNextMedia,
+  });
+
+  const isMultiActive = mode === "multi" && !!roomId;
+  const activeWorks = isMultiActive ? multiplayerGame.works : soloGame.works;
+  const activeCurrentSong = isMultiActive ? multiplayerGame.currentSong : soloGame.currentSong;
+  const activeShowAnswer = isMultiActive ? multiplayerGame.showAnswer : soloGame.showAnswer;
+  const activeSelectedWork = isMultiActive ? multiplayerGame.selectedWork : soloGame.selectedWork;
+  const activeIsCurrentSongAnswered = isMultiActive
+    ? multiplayerGame.isCurrentSongAnswered
+    : soloGame.isCurrentSongAnswered;
+  const activeCurrentSongAnswer = isMultiActive ? multiplayerGame.currentSongAnswer : soloGame.currentSongAnswer;
+  const activeSubmitError = isMultiActive ? multiplayerGame.submitError : null;
+
+  const activeHandleWorkSelection = isMultiActive
+    ? multiplayerGame.handleWorkSelection
+    : soloGame.handleWorkSelection;
+  const activeHandleValidateAnswer = isMultiActive
+    ? multiplayerGame.handleValidateAnswer
+    : soloGame.handleValidateAnswer;
+  const activeHandleNextSong = isMultiActive ? multiplayerGame.handleNextSong : soloGame.handleNextSong;
+  const activeHandlePrevSong = isMultiActive ? () => {} : soloGame.handlePrevSong;
+
+  const activeCanGoNext = isMultiActive ? multiplayerGame.isHost && multiplayerGame.canGoNext : soloGame.canGoNext;
+  const activeCanGoPrev = isMultiActive ? false : soloGame.canGoPrev;
+
+  const activeSongIndex = isMultiActive
+    ? multiplayerGame.currentSongIndex
+    : soloGame.gameSession?.currentSongIndex ?? 0;
+  const activeSongCount = isMultiActive
+    ? multiplayerGame.room?.songs.length ?? 0
+    : soloGame.gameSession?.songs.length ?? 0;
+
+  const activeScore = useMemo(() => {
+    if (isMultiActive) {
+      const me = multiplayerGame.players.find((p) => p.id === playerIdRef.current);
+      return { correct: me?.score ?? 0, incorrect: 0 };
+    }
+    return soloGame.gameSession?.score ?? { correct: 0, incorrect: 0 };
+  }, [isMultiActive, multiplayerGame.players, soloGame.gameSession?.score]);
+
+  const activeState = isMultiActive ? multiplayerGame.state : "playing";
 
   const playbackIsPlaying = audioIsPlaying;
   const playbackCurrentTime = audioCurrentTime;
@@ -75,23 +131,42 @@ export function GameClient({ universeId }: GameClientProps) {
   const playbackMuted = audioIsMuted;
   const playerError = audioError;
   const formatTimeFn = formatAudioTime;
-  const playbackUnavailable = !currentSong?.audioUrl;
+  const playbackUnavailable = !activeCurrentSong?.audioUrl;
+
+  // Rejoindre la room si joueur non-host
+  const joinRoomIfNeeded = useCallback(async () => {
+    if (mode !== "multi" || !roomId || isHost) return;
+    try {
+      await joinRoom({
+        roomId,
+        playerId: playerIdRef.current,
+        displayName: displayName.trim() || "Joueur",
+      });
+    } catch (error) {
+      console.error("[multi] joinRoom error", error);
+    }
+  }, [mode, roomId, isHost, displayName]);
 
   useEffect(() => {
-    if (currentSong?.audioUrl) {
-      void prepareTrack(currentSong.audioUrl);
+    if (mode === "multi") {
+      void joinRoomIfNeeded();
+    }
+  }, [mode, joinRoomIfNeeded]);
+
+  useEffect(() => {
+    if (activeCurrentSong?.audioUrl) {
+      void prepareTrack(activeCurrentSong.audioUrl);
     } else {
       resetAudioPlayer();
     }
-  }, [currentSong?.audioUrl, prepareTrack, resetAudioPlayer]);
+  }, [activeCurrentSong?.audioUrl, prepareTrack, resetAudioPlayer]);
 
   const handlePlayToggle = () => {
     if (playbackUnavailable) {
       return;
     }
-
-    if (currentSong?.audioUrl) {
-      handleAudioPlayPause(currentSong.audioUrl);
+    if (activeCurrentSong?.audioUrl) {
+      handleAudioPlayPause(activeCurrentSong.audioUrl);
     }
   };
 
@@ -110,31 +185,27 @@ export function GameClient({ universeId }: GameClientProps) {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // Animation d'entrée
-    const timer = setTimeout(() => {
-      setIsLoaded(true);
-    }, 100);
-
+    const timer = setTimeout(() => setIsLoaded(true), 100);
     return () => clearTimeout(timer);
   }, []);
 
   const handleNextSongWithReset = () => {
-    handleNextSong();
+    activeHandleNextSong();
   };
 
   const handlePrevSongWithReset = () => {
-    handlePrevSong();
+    activeHandlePrevSong();
   };
 
   const handleWorkSelectionWithSound = (workId: string) => {
-    handleWorkSelection(workId);
+    activeHandleWorkSelection(workId);
   };
 
   const handleValidateAnswerWithSound = () => {
-    handleValidateAnswer();
+    activeHandleValidateAnswer();
   };
 
-  if (!gameSession || !currentSong) {
+  if (!isMultiActive && (!soloGame.gameSession || !soloGame.currentSong)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900 flex items-center justify-center">
         <div className="text-center">
@@ -147,11 +218,32 @@ export function GameClient({ universeId }: GameClientProps) {
     );
   }
 
-  if (works.length === 0) {
+  if (mode === "multi" && !roomId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <ErrorMessage message={"Room introuvable ou non initialisée"} />
+        </div>
+      </div>
+    );
+  }
+
+  if (!isMultiActive && activeWorks.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900 flex items-center justify-center p-6">
         <div className="text-center">
-          <ErrorMessage message="Aucune œuvre trouvée pour cet univers" />
+          <ErrorMessage message="Aucune oeuvre trouvee pour cet univers" />
+        </div>
+      </div>
+    );
+  }
+
+  if (isMultiActive && !multiplayerGame.currentSong) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner />
+          <p className="text-white mt-4 font-medium">En attente de la playlist de la room...</p>
         </div>
       </div>
     );
@@ -159,7 +251,7 @@ export function GameClient({ universeId }: GameClientProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900 relative overflow-hidden">
-      {/* Particules flottantes d'arrière-plan */}
+      {/* Particules */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[
           { top: 15, left: 20 },
@@ -194,7 +286,7 @@ export function GameClient({ universeId }: GameClientProps) {
         ))}
       </div>
 
-      {/* Effet de brume magique */}
+      {/* Effet de brume */}
       <div className="absolute inset-0 bg-gradient-to-r from-purple-800/20 via-transparent to-blue-800/20 pointer-events-none" />
 
       {/* Navigation */}
@@ -209,16 +301,14 @@ export function GameClient({ universeId }: GameClientProps) {
           }}
           className="magic-button px-6 py-3 flex items-center gap-2 text-white font-semibold"
         >
-                  <HomeIcon className="text-lg" />
+          <HomeIcon className="text-lg" />
           <span className="hidden sm:inline">Accueil</span>
         </button>
       </div>
 
-      {/* Conteneur principal avec padding bottom pour la barre de lecteur */}
+      {/* Conteneur principal */}
       <div className="container mx-auto px-4 py-8 pb-24 relative z-10">
-        {/* Grille principale responsive */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-7xl mx-auto justify-items-center">
-          {/* Sélecteur d'œuvres - Cartes interactives */}
           <div
             className={`xl:col-span-2 w-full flex justify-center ${
               isLoaded ? "slide-in-right" : "opacity-0"
@@ -226,13 +316,13 @@ export function GameClient({ universeId }: GameClientProps) {
             style={{ animationDelay: "0.6s" }}
           >
             <WorkSelector
-              works={works}
-              currentSongWorkId={currentSong.workId}
-              selectedWork={selectedWork}
-              showAnswer={showAnswer}
-              canValidate={!!selectedWork && !showAnswer}
-              canGoNext={canGoNext}
-              isCurrentSongAnswered={isCurrentSongAnswered}
+              works={activeWorks}
+              currentSongWorkId={activeCurrentSong?.workId}
+              selectedWork={activeSelectedWork}
+              showAnswer={activeShowAnswer}
+              canValidate={!!activeSelectedWork && !activeShowAnswer}
+              canGoNext={activeCanGoNext}
+              isCurrentSongAnswered={activeIsCurrentSongAnswered}
               onWorkSelection={handleWorkSelectionWithSound}
               onValidateAnswer={handleValidateAnswerWithSound}
               onNextSong={handleNextSongWithReset}
@@ -240,35 +330,51 @@ export function GameClient({ universeId }: GameClientProps) {
           </div>
         </div>
 
-        {/* Détails du morceau une fois la réponse validée (évite le flash au changement de morceau) */}
-        {showAnswer && currentSongAnswer && currentSong?.artist && currentSong?.title && (
+        {/* Détails du morceau une fois la réponse validée */}
+        {activeShowAnswer && activeCurrentSongAnswer && activeCurrentSong?.artist && activeCurrentSong?.title && (
           <div className="flex justify-center mt-6">
             <div className="px-5 py-3 rounded-2xl bg-slate-900/80 border border-purple-500/40 text-center shadow-lg backdrop-blur">
               <p className="text-sm md:text-base text-white font-semibold tracking-wide">
-                {currentSong.artist} &mdash; <span className="text-yellow-300">{currentSong.title}</span>
+                {activeCurrentSong.artist} &mdash; <span className="text-yellow-300">{activeCurrentSong.title}</span>
               </p>
+            </div>
+          </div>
+        )}
+
+        {activeSubmitError && (
+          <div className="flex justify-center mt-3">
+            <div className="px-4 py-2 rounded-xl bg-red-900/60 border border-red-400/40 text-center text-xs text-red-100">
+              {activeSubmitError}
+            </div>
+          </div>
+        )}
+
+        {mode === "multi" && roomId && (
+          <div className="flex justify-center mt-4">
+            <div className="px-5 py-2 rounded-xl bg-slate-900/70 border border-purple-500/30 text-center text-xs text-white">
+              Room {roomId} — {isHost ? "Host" : "Player"} — État: {activeState}
             </div>
           </div>
         )}
       </div>
 
-      {/* Effets de lumière d'ambiance */}
+      {/* Effets de lumière */}
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl" />
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-yellow-500/10 rounded-full blur-3xl" />
       </div>
 
-      {/* Barre de lecteur fixe en bas - Style inspire Spotify */}
+      {/* Barre de lecteur */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 border-t border-purple-500/30 backdrop-blur-lg">
         <div className="container mx-auto px-4 py-4">
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center justify-center gap-5">
               <button
                 onClick={handlePrevSongWithReset}
-                disabled={!canGoPrev}
+                disabled={!activeCanGoPrev}
                 className={`p-2 rounded-full transition-all duration-300 ${
-                  canGoPrev
+                  activeCanGoPrev
                     ? "bg-slate-800/70 hover:bg-slate-700 text-white shadow-md hover:shadow-purple-500/30 hover:scale-105"
                     : "bg-slate-800/40 text-gray-500 cursor-not-allowed"
                 }`}
@@ -293,9 +399,9 @@ export function GameClient({ universeId }: GameClientProps) {
 
               <button
                 onClick={handleNextSongWithReset}
-                disabled={!canGoNext}
+                disabled={!activeCanGoNext}
                 className={`p-2 rounded-full transition-all duration-300 ${
-                  canGoNext
+                  activeCanGoNext
                     ? "bg-slate-800/70 hover:bg-slate-700 text-white shadow-md hover:shadow-blue-500/30 hover:scale-105"
                     : "bg-slate-800/40 text-gray-500 cursor-not-allowed"
                 }`}
@@ -324,14 +430,14 @@ export function GameClient({ universeId }: GameClientProps) {
               </div>
               <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center text-sm gap-3 pt-1">
                 <span className="text-yellow-400 font-semibold">
-                  Morceau {gameSession.currentSongIndex + 1} / {gameSession.songs.length}
+                  Morceau {activeSongIndex + 1} / {activeSongCount}
                 </span>
                 <div className="flex items-center justify-center gap-3 text-xs text-white">
                   <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-200 font-semibold">
-                    + {gameSession.score.correct}
+                    + {activeScore.correct}
                   </span>
                   <span className="px-3 py-1 rounded-full bg-red-500/20 text-red-200 font-semibold">
-                    - {gameSession.score.incorrect}
+                    - {activeScore.incorrect}
                   </span>
                 </div>
                 <div className="hidden md:flex items-center justify-end gap-3 text-white text-xs">
@@ -376,10 +482,8 @@ export function GameClient({ universeId }: GameClientProps) {
           pour activer la lecture.
         </div>
       )}
-
     </div>
   );
 }
 
 export default GameClient;
-

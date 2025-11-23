@@ -86,6 +86,41 @@ export const GameSessionSchema = z.object({
   createdAt: timestampSchema,
 });
 
+const RoomStateSchema = z.enum(["idle", "playing", "results"]);
+
+export const RoomPlayerSchema = z.object({
+  id: z.string().min(1),
+  displayName: z.string().min(1),
+  score: z.number().int().min(0).default(0),
+  connected: z.boolean().default(true),
+  lastSeen: timestampSchema.optional(),
+  isHost: z.boolean().optional(),
+});
+
+export const RoomResponseSchema = z.object({
+  id: z.string().min(1),
+  roomId: z.string().min(1),
+  songId: z.string().min(1),
+  playerId: z.string().min(1),
+  selectedWorkId: z.string().min(1).nullable(),
+  isCorrect: z.boolean(),
+  answeredAt: timestampSchema,
+  rank: z.number().int().min(1),
+  points: z.number().int().min(0),
+});
+
+export const RoomSchema = z.object({
+  id: z.string().min(1),
+  hostId: z.string().min(1),
+  universeId: z.string().min(1),
+  songs: z.array(SongSchema),
+  currentSongIndex: z.number().int().min(0),
+  state: RoomStateSchema,
+  startedAt: timestampSchema.nullable().optional(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema.optional(),
+});
+
 export const UserSchema = z.object({
   uid: z.string().min(1),
   email: z.string().email(),
@@ -100,3 +135,7 @@ export type Song = z.infer<typeof SongSchema>;
 export type GameSession = z.infer<typeof GameSessionSchema>;
 export type GameAnswer = z.infer<typeof GameAnswerSchema>;
 export type User = z.infer<typeof UserSchema>;
+export type Room = z.infer<typeof RoomSchema>;
+export type RoomPlayer = z.infer<typeof RoomPlayerSchema>;
+export type RoomResponse = z.infer<typeof RoomResponseSchema>;
+export type RoomState = z.infer<typeof RoomStateSchema>;
