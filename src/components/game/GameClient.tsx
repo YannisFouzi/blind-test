@@ -216,10 +216,10 @@ export function GameClient({ universeId }: GameClientProps) {
       {/* Conteneur principal avec padding bottom pour la barre de lecteur */}
       <div className="container mx-auto px-4 py-8 pb-24 relative z-10">
         {/* Grille principale responsive */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-7xl mx-auto justify-items-center">
           {/* Sélecteur d'œuvres - Cartes interactives */}
           <div
-            className={`xl:col-span-1 ${
+            className={`xl:col-span-2 w-full flex justify-center ${
               isLoaded ? "slide-in-right" : "opacity-0"
             }`}
             style={{ animationDelay: "0.6s" }}
