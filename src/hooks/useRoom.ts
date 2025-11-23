@@ -86,6 +86,27 @@ export const useRoom = ({ roomId, playerId }: UseRoomOptions) => {
     };
   }, [roomId, playerId]);
 
+  useEffect(() => {
+    console.info("[useRoom] players update", {
+      roomId,
+      playerId,
+      count: players.length,
+      ids: players.map((p) => p.id),
+    });
+  }, [players, roomId, playerId]);
+
+  useEffect(() => {
+    if (!currentSongId) return;
+    console.info("[useRoom] allPlayersAnswered recompute", {
+      roomId,
+      playerId,
+      currentSongId,
+      playersCount: players.length,
+      responsesCount: responses.length,
+      allPlayersAnswered,
+    });
+  }, [allPlayersAnswered, roomId, playerId, currentSongId, players.length, responses.length]);
+
   const startGame = useCallback(async () => {
     if (!roomId) return { success: false, error: "Room inconnue" };
     return serviceStartGame(roomId);

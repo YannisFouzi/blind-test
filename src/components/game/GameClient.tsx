@@ -116,6 +116,17 @@ export function GameClient({ universeId }: GameClientProps) {
   const activeCanGoNext = isMultiActive ? multiplayerGame.isHost && multiplayerGame.canGoNext : soloGame.canGoNext;
   const activeCanGoPrev = isMultiActive ? false : soloGame.canGoPrev;
 
+  useEffect(() => {
+    console.info("[GameClient] controls state", {
+      mode,
+      roomId,
+      isHost,
+      canGoNext: activeCanGoNext,
+      canGoPrev: activeCanGoPrev,
+      players: isMultiActive ? multiplayerGame.players.length : "solo",
+    });
+  }, [mode, roomId, isHost, activeCanGoNext, activeCanGoPrev, isMultiActive, multiplayerGame.players.length]);
+
   const activeSongIndex = isMultiActive
     ? multiplayerGame.currentSongIndex
     : soloGame.gameSession?.currentSongIndex ?? 0;
@@ -130,6 +141,15 @@ export function GameClient({ universeId }: GameClientProps) {
     }
     return soloGame.gameSession?.score ?? { correct: 0, incorrect: 0 };
   }, [isMultiActive, multiplayerGame.players, soloGame.gameSession?.score]);
+
+  useEffect(() => {
+    console.info("[GameClient] score snapshot", {
+      mode,
+      roomId,
+      isHost,
+      score: activeScore,
+    });
+  }, [mode, roomId, isHost, activeScore]);
 
   const playbackIsPlaying = audioIsPlaying;
   const playbackCurrentTime = audioCurrentTime;
