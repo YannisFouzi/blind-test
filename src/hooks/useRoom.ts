@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Room, RoomPlayer, RoomResponse, Song } from "@/types";
 import {
   heartbeatPlayer,
+  leaveRoom,
   nextSong as serviceNextSong,
   startGame as serviceStartGame,
   submitAnswer as serviceSubmitAnswer,
@@ -69,6 +70,19 @@ export const useRoom = ({ roomId, playerId }: UseRoomOptions) => {
       if (heartbeatRef.current) {
         clearInterval(heartbeatRef.current);
       }
+    };
+  }, [roomId, playerId]);
+
+  useEffect(() => {
+    if (!roomId || !playerId) return;
+    const handleUnload = () => {
+      void leaveRoom(roomId, playerId);
+    };
+    window.addEventListener("beforeunload", handleUnload);
+    window.addEventListener("pagehide", handleUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+      window.removeEventListener("pagehide", handleUnload);
     };
   }, [roomId, playerId]);
 

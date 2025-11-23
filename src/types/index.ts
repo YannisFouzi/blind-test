@@ -113,6 +113,7 @@ export const RoomResponseSchema = z.object({
 export const RoomSchema = z.object({
   id: z.string().min(1),
   hostId: z.string().min(1),
+  hostName: z.string().optional(),
   universeId: z.string().min(1),
   songs: z.array(SongSchema),
   currentSongIndex: z.number().int().min(0),

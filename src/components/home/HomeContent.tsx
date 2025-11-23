@@ -7,12 +7,20 @@ import { UniverseGrid } from "@/components/home/UniverseGrid";
 import { HomePageSkeleton } from "@/components/HomePage/HomePageSkeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useUniverses } from "@/hooks/useUniverses";
-import { configureRoomPlaylist, createRoom, subscribeRoom } from "@/services/firebase/rooms";
+import {
+  configureRoomPlaylist,
+  createRoom,
+  joinRoom,
+  subscribeIdleRooms,
+  subscribePlayers,
+  subscribeRoom,
+} from "@/services/firebase/rooms";
 import { getSongsByWork, getWorksByUniverse } from "@/services/firebase";
 import { generateId, shuffleArray } from "@/utils/formatters";
-import { Room, Song, Universe, Work } from "@/types";
+import { Room, RoomPlayer, Song, Universe, Work } from "@/types";
 
 type Mode = "solo" | "multi";
+type MultiTab = "create" | "join";
 
 export const HomeContent = () => {
   const router = useRouter();
@@ -20,12 +28,17 @@ export const HomeContent = () => {
   const { universes, loading: universesLoading, error: universesError } = useUniverses();
 
   const [mode, setMode] = useState<Mode>("solo");
+  const [multiTab, setMultiTab] = useState<MultiTab>("create");
   const playerIdRef = useRef<string>(generateId());
   const [displayName, setDisplayName] = useState<string>(`Joueur-${playerIdRef.current.slice(0, 4)}`);
-  const [roomIdInput, setRoomIdInput] = useState<string>("");
+
+  const [hostRoomId, setHostRoomId] = useState<string>("");
+  const [joinRoomId, setJoinRoomId] = useState<string>("");
+  const [roomsList, setRoomsList] = useState<Room[]>([]);
+  const [playersInRoom, setPlayersInRoom] = useState<RoomPlayer[]>([]);
+
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [homeError, setHomeError] = useState<string | null>(null);
-  const [hostRoomId, setHostRoomId] = useState<string>("");
   const [homeInfo, setHomeInfo] = useState<string | null>(null);
   const [remoteRoom, setRemoteRoom] = useState<Room | null>(null);
 
@@ -37,17 +50,14 @@ export const HomeContent = () => {
   const [customLoadingWorks, setCustomLoadingWorks] = useState(false);
 
   const currentRoomId = useMemo(() => {
-    const guestRoom = roomIdInput.trim();
-    if (guestRoom) return guestRoom;
+    if (mode !== "multi") return "";
     if (hostRoomId) return hostRoomId;
+    if (joinRoomId) return joinRoomId;
     return "";
-  }, [roomIdInput, hostRoomId]);
+  }, [mode, hostRoomId, joinRoomId]);
 
-  const isHost = useMemo(() => mode === "multi" && !!hostRoomId && currentRoomId === hostRoomId, [mode, hostRoomId, currentRoomId]);
-  const isGuest = useMemo(
-    () => mode === "multi" && !!roomIdInput.trim() && roomIdInput.trim() !== hostRoomId,
-    [mode, roomIdInput, hostRoomId]
-  );
+  const isHost = useMemo(() => mode === "multi" && Boolean(hostRoomId), [mode, hostRoomId]);
+  const isGuest = useMemo(() => mode === "multi" && !hostRoomId && Boolean(joinRoomId), [mode, hostRoomId, joinRoomId]);
 
   const isAdmin = useMemo(
     () => Boolean(user?.email) && user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL,
@@ -70,18 +80,77 @@ export const HomeContent = () => {
     return shuffleArray(songs);
   }, []);
 
+  const handleCreateRoom = useCallback(async () => {
+    if (hostRoomId) return;
+    console.info("[multi][host] create room start", { playerId: playerIdRef.current, displayName });
+    setIsCreatingRoom(true);
+    setHomeError(null);
+    setHomeInfo(null);
+    try {
+      const result = await createRoom({
+        universeId: "__pending__",
+        hostId: playerIdRef.current,
+        hostDisplayName: displayName.trim() || "Joueur",
+        songs: [],
+      });
+      console.info("[multi][host] create room result", result);
+      if (!result.success || !result.data) {
+        setHomeError(result.error || "Impossible de creer la room");
+        return;
+      }
+      setHostRoomId(result.data.id);
+      setJoinRoomId("");
+      setHomeInfo(`Room cree: ${result.data.id}. Selectionne un univers pour lancer la partie.`);
+    } catch (error) {
+      console.error("[multi][host] create room error", error);
+      setHomeError(error instanceof Error ? error.message : "Erreur inconnue");
+    } finally {
+      setIsCreatingRoom(false);
+    }
+  }, [hostRoomId, displayName]);
+
+
+  const handleJoinRoom = useCallback(
+    async (roomId: string) => {
+      if (!roomId) return;
+      setHomeError(null);
+      setHomeInfo(null);
+      try {
+        console.info("[multi][guest] join room request", { roomId, playerId: playerIdRef.current });
+        await joinRoom({
+          roomId,
+          playerId: playerIdRef.current,
+          displayName: displayName.trim() || "Joueur",
+        });
+        console.info("[multi][guest] join room success", { roomId });
+        setJoinRoomId(roomId);
+        setHostRoomId("");
+        setMultiTab("join");
+        setHomeInfo(`Rejoint la room ${roomId}. En attente de l'host.`);
+      } catch (error) {
+        console.error("[multi][guest] join room error", error);
+        setHomeError(error instanceof Error ? error.message : "Impossible de rejoindre la room");
+      }
+    },
+    [displayName]
+  );
+
   const handleUniverseClick = useCallback(
     async (universeId: string) => {
       setHomeError(null);
       setHomeInfo(null);
 
       if (mode === "multi" && !isHost) {
-        setHomeInfo("En attente que l'host lance l'univers…");
+        setHomeInfo("En attente que l'host lance l'univers...");
+        return;
+      }
+      if (mode === "solo") {
+        router.push(`/game/${universeId}`);
         return;
       }
 
-      if (mode === "solo") {
-        router.push(`/game/${universeId}`);
+      if (!hostRoomId) {
+        setHomeError("Clique sur \"Creer\" pour generer une room, puis selectionne l'univers.");
         return;
       }
 
@@ -92,101 +161,106 @@ export const HomeContent = () => {
         player: playerIdRef.current,
       });
 
-      const roomFromInput = roomIdInput.trim();
-      const roomToUse = roomFromInput || hostRoomId;
-
-      if (!roomToUse) {
-        setHomeError("Crée une room (switch Multi) ou saisis un room ID pour rejoindre");
-        return;
-      }
-
-      if (roomToUse === hostRoomId) {
-        setIsCreatingRoom(true);
-        try {
-          const songs = await fetchUniverseSongs(universeId, customAllowedWorks.length ? customAllowedWorks : undefined);
-          if (!songs.length) {
-            setHomeError("Aucun morceau disponible pour cet univers");
-            return;
-          }
-          const configured = await configureRoomPlaylist(
-            roomToUse,
-            universeId,
-            songs,
-            customAllowedWorks.length ? customAllowedWorks : undefined,
-            { noSeek: customNoSeek }
-          );
-          if (!configured.success) {
-            setHomeError(configured.error || "Impossible de préparer la room");
-            return;
-          }
-          if (customNoSeek) baseParams.set("noseek", "1");
-          if (customAllowedWorks.length && customAllowedWorks.length !== customWorks.length) {
-            baseParams.set("works", customAllowedWorks.join(","));
-          }
-          baseParams.set("room", roomToUse);
-          baseParams.set("host", "1");
-          router.push(`/game/${universeId}?${baseParams.toString()}`);
-        } catch (error) {
-          setHomeError(error instanceof Error ? error.message : "Erreur inconnue");
-        } finally {
-          setIsCreatingRoom(false);
+      setIsCreatingRoom(true);
+      try {
+        const songs = await fetchUniverseSongs(
+          universeId,
+          customAllowedWorks.length ? customAllowedWorks : undefined
+        );
+        if (!songs.length) {
+          setHomeError("Aucun morceau disponible pour cet univers");
+          return;
         }
-      } else {
-        baseParams.set("room", roomToUse);
+        const configured = await configureRoomPlaylist(
+          hostRoomId,
+          universeId,
+          songs,
+          customAllowedWorks.length ? customAllowedWorks : undefined,
+          { noSeek: customNoSeek }
+        );
+        if (!configured.success) {
+          setHomeError(configured.error || "Impossible de préparer la room");
+          return;
+        }
+        if (customNoSeek) baseParams.set("noseek", "1");
+        if (customAllowedWorks.length && customAllowedWorks.length !== customWorks.length) {
+          baseParams.set("works", customAllowedWorks.join(","));
+        }
+        baseParams.set("room", hostRoomId);
+        baseParams.set("host", "1");
         router.push(`/game/${universeId}?${baseParams.toString()}`);
+      } catch (error) {
+        setHomeError(error instanceof Error ? error.message : "Erreur inconnue");
+      } finally {
+        setIsCreatingRoom(false);
       }
     },
     [
       mode,
-      roomIdInput,
+      isHost,
+      hostRoomId,
       displayName,
       fetchUniverseSongs,
       router,
-      hostRoomId,
-      isHost,
       customAllowedWorks,
       customNoSeek,
       customWorks.length,
     ]
   );
 
-  const handleConfirmRoom = useCallback(() => {
-    const trimmed = roomIdInput.trim();
-    if (!trimmed) {
-      setHomeError("Room ID requis pour rejoindre");
-      setHomeInfo(null);
-      return;
-    }
-    setHomeError(null);
-    setHomeInfo(`Room prête: ${trimmed}. En attente que l'host lance l'univers.`);
-  }, [roomIdInput]);
-
   useEffect(() => {
     if (mode === "solo") {
       setHomeError(null);
       setHostRoomId("");
+      setJoinRoomId("");
       setHomeInfo(null);
       setCustomizingUniverse(null);
       setCustomAllowedWorks([]);
       setCustomNoSeek(false);
+      setPlayersInRoom([]);
     }
   }, [mode]);
 
+  // Subscribe to idle rooms list (join tab)
   useEffect(() => {
-    if (!isGuest || !currentRoomId) {
+    if (mode !== "multi" || multiTab !== "join") {
+      setRoomsList([]);
+      return;
+    }
+    const unsubscribe = subscribeIdleRooms((rooms) => {
+      console.info("[multi] idle rooms update", rooms.map((r) => ({ id: r.id, host: r.hostName || r.hostId })));
+      setRoomsList(rooms);
+    });
+    return () => unsubscribe?.();
+  }, [mode, multiTab]);
+
+  // Subscribe to chosen room (guest) to auto-enter when host starts
+  useEffect(() => {
+    if (!isGuest || !joinRoomId) {
       setRemoteRoom(null);
       return;
     }
-    const unsub = subscribeRoom(currentRoomId, setRemoteRoom);
+    const unsub = subscribeRoom(joinRoomId, setRemoteRoom);
     return () => unsub?.();
-  }, [isGuest, currentRoomId]);
+  }, [isGuest, joinRoomId]);
 
+  // Subscribe to players for the active room (host or guest)
+  useEffect(() => {
+    if (!currentRoomId) {
+      setPlayersInRoom([]);
+      return;
+    }
+    const unsub = subscribePlayers(currentRoomId, setPlayersInRoom);
+    return () => unsub?.();
+  }, [currentRoomId]);
+
+  // Guest navigation when host has configured and started playlist
   useEffect(() => {
     if (!isGuest || !remoteRoom) return;
     if (remoteRoom.universeId && remoteRoom.universeId !== "__pending__" && remoteRoom.songs.length) {
       const params = new URLSearchParams({
         mode: "multi",
-        room: currentRoomId,
+        room: joinRoomId,
         player: playerIdRef.current,
         name: displayName.trim() || "Joueur",
       });
@@ -196,35 +270,7 @@ export const HomeContent = () => {
       }
       router.push(`/game/${remoteRoom.universeId}?${params.toString()}`);
     }
-  }, [isGuest, remoteRoom, currentRoomId, displayName, router]);
-
-  useEffect(() => {
-    const createHostRoom = async () => {
-      if (mode !== "multi" || hostRoomId || roomIdInput.trim()) return;
-      setHomeError(null);
-      setHomeInfo(null);
-      setIsCreatingRoom(true);
-      try {
-        const result = await createRoom({
-          universeId: "__pending__",
-          hostId: playerIdRef.current,
-          hostDisplayName: displayName.trim() || "Joueur",
-          songs: [],
-        });
-        if (!result.success || !result.data) {
-          setHomeError(result.error || "Impossible de créer la room");
-          return;
-        }
-        setHostRoomId(result.data.id);
-        setHomeInfo(`Room prête: ${result.data.id}. Sélectionne l'univers pour lancer la partie.`);
-      } catch (error) {
-        setHomeError(error instanceof Error ? error.message : "Erreur inconnue");
-      } finally {
-        setIsCreatingRoom(false);
-      }
-    };
-    void createHostRoom();
-  }, [mode, hostRoomId, roomIdInput, displayName]);
+  }, [isGuest, remoteRoom, joinRoomId, displayName, router]);
 
   // Customization modal helpers
   const openCustomize = useCallback(async (universe: Universe) => {
@@ -325,7 +371,7 @@ export const HomeContent = () => {
     <div className="container mx-auto px-4 py-12 space-y-8">
       <HeroSection isAdmin={isAdmin} onAdminClick={() => router.push("/admin")} />
 
-      <div className="bg-slate-900/40 border border-purple-500/30 rounded-2xl p-4 backdrop-blur">
+      <div className="bg-slate-900/40 border border-purple-500/30 rounded-2xl p-4 backdrop-blur space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <button
@@ -354,29 +400,106 @@ export const HomeContent = () => {
                 placeholder="Votre pseudo"
                 className="bg-slate-800/60 text-white text-sm px-3 py-2 rounded-lg border border-slate-700 focus:outline-none focus:border-purple-400"
               />
-              <input
-                value={roomIdInput}
-                onChange={(e) => setRoomIdInput(e.target.value)}
-                placeholder="Room ID (si vous rejoignez)"
-                className="bg-slate-800/60 text-white text-sm px-3 py-2 rounded-lg border border-slate-700 focus:outline-none focus:border-purple-400"
-              />
-              <button
-                onClick={handleConfirmRoom}
-                className="px-3 py-2 rounded-lg text-sm font-semibold bg-slate-700 hover:bg-slate-600 text-white"
-              >
-                Valider room
-              </button>
-              {isCreatingRoom && <span className="text-xs text-slate-200">Préparation de la room...</span>}
-              {hostRoomId && (
-                <span className="text-xs text-green-300">
-                  Room ID (host) : <span className="font-semibold">{hostRoomId}</span>
-                </span>
-              )}
-              {homeError && <span className="text-xs text-red-300">{homeError}</span>}
-              {homeInfo && <span className="text-xs text-green-300">{homeInfo}</span>}
+
+              <div className="flex items-center gap-1 bg-slate-800/60 rounded-lg p-1">
+                <button
+                  onClick={() => setMultiTab("create")}
+                  className={`px-3 py-2 rounded-md text-sm font-semibold ${
+                    multiTab === "create" ? "bg-purple-600 text-white" : "text-slate-200"
+                  }`}
+                >
+                  Créer
+                </button>
+                <button
+                  onClick={() => setMultiTab("join")}
+                  className={`px-3 py-2 rounded-md text-sm font-semibold ${
+                    multiTab === "join" ? "bg-purple-600 text-white" : "text-slate-200"
+                  }`}
+                >
+                  Rejoindre
+                </button>
+              </div>
             </div>
           )}
         </div>
+
+        {mode === "multi" && (
+          <div className="space-y-3">
+            {multiTab === "create" && (
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={handleCreateRoom}
+                  disabled={isCreatingRoom || Boolean(hostRoomId)}
+                  className="px-3 py-2 rounded-lg text-sm font-semibold bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {hostRoomId ? "Room créée" : isCreatingRoom ? "Création..." : "Créer une room"}
+                </button>
+                {hostRoomId && (
+                  <span className="text-xs text-green-300">
+                    Room ID : <span className="font-semibold">{hostRoomId}</span>
+                  </span>
+                )}
+              </div>
+            )}
+
+            {multiTab === "join" && (
+              <div className="space-y-2">
+                {roomsList.length === 0 && (
+                  <div className="text-sm text-slate-200">Aucune room disponible pour le moment.</div>
+                )}
+                {roomsList.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {roomsList.map((room) => (
+                      <div
+                        key={room.id}
+                        className="flex items-center justify-between bg-slate-800/60 px-3 py-2 rounded-lg border border-slate-700"
+                      >
+                        <div className="text-sm text-white">
+                          <div className="font-semibold">Room {room.id}</div>
+                          <div className="text-xs text-slate-300">Hôte: {room.hostName || room.hostId}</div>
+                        </div>
+                        <button
+                          onClick={() => handleJoinRoom(room.id)}
+                          className="px-3 py-2 rounded-lg text-sm font-semibold bg-slate-700 hover:bg-slate-600 text-white"
+                        >
+                          Rejoindre
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {homeError && <div className="text-xs text-red-300">{homeError}</div>}
+            {homeInfo && <div className="text-xs text-green-300">{homeInfo}</div>}
+
+            {currentRoomId && (
+              <div className="bg-slate-800/60 border border-slate-700 rounded-lg p-3">
+                <div className="text-xs text-slate-200 mb-2">
+                  Room active : <span className="font-semibold text-white">{currentRoomId}</span>
+                </div>
+                <div className="text-sm text-white font-semibold mb-1">Joueurs connectés</div>
+                {playersInRoom.length === 0 ? (
+                  <div className="text-xs text-slate-300">En attente de joueurs...</div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {playersInRoom.map((p) => (
+                      <span
+                        key={p.id}
+                        className={`px-2 py-1 rounded-md text-xs ${
+                          p.isHost ? "bg-purple-700 text-white" : "bg-slate-700 text-slate-100"
+                        }`}
+                      >
+                        {p.displayName || "Joueur"} {p.isHost ? "(Hôte)" : ""}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <UniverseGrid
@@ -390,22 +513,15 @@ export const HomeContent = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur">
           <div className="w-full max-w-3xl bg-slate-900/90 border border-purple-500/40 rounded-2xl p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-white">Paramètres avancés — {customizingUniverse.name}</h3>
-              <button
-                onClick={() => setCustomizingUniverse(null)}
-                className="text-slate-300 hover:text-white text-sm"
-              >
+              <h3 className="text-xl font-semibold text-white">Paramètres avancés – {customizingUniverse.name}</h3>
+              <button onClick={() => setCustomizingUniverse(null)} className="text-slate-300 hover:text-white text-sm">
                 Fermer
               </button>
             </div>
 
             <div className="space-y-3">
               <label className="flex items-center gap-2 text-white text-sm">
-                <input
-                  type="checkbox"
-                  checked={customNoSeek}
-                  onChange={(e) => setCustomNoSeek(e.target.checked)}
-                />
+                <input type="checkbox" checked={customNoSeek} onChange={(e) => setCustomNoSeek(e.target.checked)} />
                 Activer le mode sans avance (timeline non cliquable)
               </label>
               <div className="text-white text-sm font-semibold">Oeuvres incluses</div>
@@ -432,10 +548,7 @@ export const HomeContent = () => {
             </div>
 
             <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setCustomizingUniverse(null)}
-                className="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm"
-              >
+              <button onClick={() => setCustomizingUniverse(null)} className="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm">
                 Annuler
               </button>
               <button
@@ -452,3 +565,9 @@ export const HomeContent = () => {
     </div>
   );
 };
+
+
+
+
+
+

@@ -1,11 +1,13 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
   onSnapshot,
   query,
+  orderBy,
   runTransaction,
   serverTimestamp,
   setDoc,
@@ -57,10 +59,74 @@ const computePoints = (rank: number, activePlayers: number) => {
   return Math.max(1, activePlayers - rank + 1);
 };
 
+const ACTIVE_PLAYER_THRESHOLD_MS = 120_000; // 2 minutes
+const ROOM_CREATION_GRACE_MS = 60_000; // 1 minute
+
+const cleanRoomIfEmpty = async (
+  roomId: string,
+  meta?: { state?: Room["state"]; createdAt?: Date | null }
+): Promise<void> => {
+  try {
+    console.info("[rooms] cleanRoomIfEmpty start", {
+      roomId,
+      metaState: meta?.state,
+      metaCreatedAt: meta?.createdAt,
+    });
+    if (meta?.state === "playing") {
+      console.info("[rooms] cleanRoomIfEmpty skip: playing state", { roomId });
+      return;
+    }
+
+    if (meta?.createdAt) {
+      const createdMs = meta.createdAt.getTime();
+      if (Date.now() - createdMs < ROOM_CREATION_GRACE_MS) {
+        console.info("[rooms] cleanRoomIfEmpty skip: grace period", { roomId });
+        return;
+      }
+    }
+
+    const playersSnap = await getDocs(collection(db, "rooms", roomId, "players"));
+    const now = Date.now();
+    const activePlayers = playersSnap.docs.filter((docSnap) => {
+      try {
+        const parsed = RoomPlayerSchema.parse({ id: docSnap.id, ...docSnap.data() });
+        const lastSeen =
+          parsed.lastSeen instanceof Date
+            ? parsed.lastSeen.getTime()
+            : parsed.lastSeen && typeof (parsed.lastSeen as { toDate?: () => Date }).toDate === "function"
+            ? (parsed.lastSeen as { toDate: () => Date }).toDate().getTime()
+            : 0;
+        return parsed.connected && lastSeen > now - ACTIVE_PLAYER_THRESHOLD_MS;
+      } catch {
+        return false;
+      }
+    }).length;
+
+    console.info("[rooms] cleanRoomIfEmpty counts", {
+      roomId,
+      playersTotal: playersSnap.size,
+      activePlayers,
+    });
+
+    if (activePlayers > 0) return;
+
+    const responsesSnap = await getDocs(collection(db, "rooms", roomId, "responses"));
+    await Promise.all(responsesSnap.docs.map((resp) => deleteDoc(resp.ref)));
+
+    await Promise.all(playersSnap.docs.map((p) => deleteDoc(p.ref)));
+
+    await deleteDoc(doc(db, "rooms", roomId));
+    console.info("[rooms] room cleaned up (no active players)", roomId);
+  } catch (error) {
+    console.error("[rooms] cleanRoomIfEmpty error", { roomId, error });
+  }
+};
+
 export const createRoom = async (payload: CreateRoomPayload): Promise<ServiceResponse<{ id: string }>> => {
   try {
     const roomData: Omit<Room, "id"> = {
       hostId: payload.hostId,
+      hostName: payload.hostDisplayName,
       universeId: payload.universeId || "__pending__",
       songs: payload.songs || [],
       currentSongIndex: 0,
@@ -114,6 +180,8 @@ export const leaveRoom = async (roomId: string, playerId: string): Promise<Servi
   try {
     const playerRef = doc(db, "rooms", roomId, "players", playerId);
     await updateDoc(playerRef, { connected: false, lastSeen: serverTimestamp() });
+    console.info("[rooms] leaveRoom", { roomId, playerId });
+    void cleanRoomIfEmpty(roomId);
     return { success: true };
   } catch (error) {
     return { success: false, error: formatError(error, "Erreur lors de la déconnexion de la room") };
@@ -307,6 +375,49 @@ export const subscribeRoom = (
   );
 };
 
+export const subscribeIdleRooms = (
+  onData: (rooms: Room[]) => void,
+  maxAgeMinutes = 60
+) => {
+  const cutoff = new Date(Date.now() - maxAgeMinutes * 60 * 1000);
+  const q = query(
+    roomsCollection,
+    where("state", "==", "idle"),
+    where("createdAt", ">=", cutoff),
+    orderBy("createdAt", "desc")
+  );
+
+  return onSnapshot(
+    q,
+    (snap) => {
+      const rooms: Room[] = [];
+      snap.forEach((docSnap) => {
+        try {
+          rooms.push(RoomSchema.parse({ id: docSnap.id, ...docSnap.data() }));
+        } catch {
+          // ignore invalid room
+        }
+      });
+      onData(rooms);
+      rooms.forEach((room) =>
+        void cleanRoomIfEmpty(room.id, {
+          state: room.state,
+          createdAt:
+            room.createdAt instanceof Date
+              ? room.createdAt
+              : room.createdAt && typeof (room.createdAt as { toDate?: () => Date }).toDate === "function"
+              ? (room.createdAt as { toDate: () => Date }).toDate()
+              : null,
+        })
+      );
+    },
+    (err) => {
+      console.error("[rooms] subscribeIdleRooms error", err);
+      onData([]);
+    }
+  );
+};
+
 export const subscribePlayers = (
   roomId: string,
   onData: (players: RoomPlayer[]) => void
@@ -352,3 +463,4 @@ export const subscribeResponsesForSong = (
     () => onData([])
   );
 };
+
