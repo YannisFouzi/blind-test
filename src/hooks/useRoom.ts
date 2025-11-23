@@ -125,6 +125,8 @@ export const useRoom = ({ roomId, playerId }: UseRoomOptions) => {
     goNextSong,
     submitAnswer,
     playerScore,
+    options: room?.options,
+    allowedWorks: room?.allowedWorks,
     allPlayersAnswered,
   };
 };

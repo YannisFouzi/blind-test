@@ -34,6 +34,8 @@ export type CreateRoomPayload = {
   hostId: string;
   hostDisplayName: string;
   songs?: Song[];
+  allowedWorks?: string[];
+  options?: { noSeek?: boolean };
 };
 
 export type JoinRoomPayload = {
@@ -171,7 +173,9 @@ export const nextSong = async (roomId: string): Promise<ServiceResponse> => {
 export const configureRoomPlaylist = async (
   roomId: string,
   universeId: string,
-  songs: Song[]
+  songs: Song[],
+  allowedWorks?: string[],
+  options?: { noSeek?: boolean }
 ): Promise<ServiceResponse> => {
   try {
     const roomRef = doc(db, "rooms", roomId);
@@ -182,6 +186,10 @@ export const configureRoomPlaylist = async (
       state: "idle",
       startedAt: null,
       updatedAt: serverTimestamp(),
+      allowedWorks: allowedWorks && allowedWorks.length ? allowedWorks : null,
+      options: {
+        noSeek: options?.noSeek ?? false,
+      },
     });
     return { success: true };
   } catch (error) {
@@ -228,7 +236,6 @@ export const submitAnswer = async (
     }
 
     // Rang / points
-    const responsesForSongSnap = await getDocs(query(responsesCol, where("songId", "==", parsed.songId)));
     const correctResponsesSnap = await getDocs(
       query(responsesCol, where("songId", "==", parsed.songId), where("isCorrect", "==", true))
     );

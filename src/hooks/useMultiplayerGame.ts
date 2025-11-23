@@ -7,7 +7,6 @@ type MultiplayerOptions = {
   universeId: string;
   roomId?: string;
   playerId?: string;
-  displayName?: string;
   preloadNextTrack?: (song: Song) => void;
 };
 
@@ -15,7 +14,6 @@ export const useMultiplayerGame = ({
   universeId,
   roomId,
   playerId,
-  displayName,
   preloadNextTrack,
 }: MultiplayerOptions) => {
   const {
@@ -29,6 +27,8 @@ export const useMultiplayerGame = ({
     goNextSong,
     submitAnswer,
     startGame,
+    options,
+    allowedWorks,
   } = useRoom({ roomId, playerId });
 
   const [works, setWorks] = useState<Work[]>([]);
@@ -55,12 +55,27 @@ export const useMultiplayerGame = ({
     void loadWorks();
   }, [loadWorks]);
 
+  // Filtrer les oeuvres si une liste autorisée est définie
+  const filteredWorks = useMemo(() => {
+    if (allowedWorks && allowedWorks.length) {
+      return works.filter((w) => allowedWorks.includes(w.id));
+    }
+    return works;
+  }, [works, allowedWorks]);
+
   useEffect(() => {
     // reset selection/answer on song change
     setSelectedWork(null);
     setGameAnswer(null);
     setShowAnswer(false);
   }, [currentSong?.id]);
+
+  useEffect(() => {
+    // si l'oeuvre sélectionnée n'est plus autorisée, on reset
+    if (selectedWork && allowedWorks && allowedWorks.length && !allowedWorks.includes(selectedWork)) {
+      setSelectedWork(null);
+    }
+  }, [allowedWorks, selectedWork]);
 
   useEffect(() => {
     if (currentSong && preloadNextTrack && room && room.songs[currentSongIndex + 1]) {
@@ -120,11 +135,13 @@ export const useMultiplayerGame = ({
     mode: "multiplayer" as const,
     room,
     players,
-    works,
+    works: filteredWorks,
     currentSong,
     currentSongIndex,
     selectedWork,
     showAnswer,
+    options,
+    allowedWorks,
     gameAnswer,
     handleWorkSelection,
     handleValidateAnswer,

@@ -1,14 +1,14 @@
+"use client";
+
 import { useCallback, useEffect, useState } from "react";
 import { GameAnswer, GameSession, Song, Work } from "@/types";
-import {
-  getSongsByWork,
-  getWorksByUniverse,
-} from "@/services/firebase";
+import { getSongsByWork, getWorksByUniverse } from "@/services/firebase";
 import { generateId, shuffleArray } from "../utils/formatters";
 
 export const useGame = (
   universeId: string,
-  preloadNextTrack?: (song: Song) => void
+  preloadNextTrack?: (song: Song) => void,
+  allowedWorks?: string[]
 ) => {
   const [gameSession, setGameSession] = useState<GameSession | null>(null);
   const [works, setWorks] = useState<Work[]>([]);
@@ -23,18 +23,25 @@ export const useGame = (
       const worksResult = await getWorksByUniverse(universeId);
       const fetchedWorks = worksResult.success && worksResult.data ? worksResult.data : [];
 
+      const filteredWorks =
+        allowedWorks && allowedWorks.length
+          ? fetchedWorks.filter((w) => allowedWorks.includes(w.id))
+          : fetchedWorks;
+
       if (!fetchedWorks.length && process.env.NODE_ENV === "development") {
         console.warn(
-          `Aucune œuvre trouvée pour l'univers "${universeId}". Créez des œuvres dans l'admin panel.`
+          `Aucune oeuvre trouvee pour l'univers "${universeId}". Creez des oeuvres dans l'admin panel.`
         );
       }
 
-      setWorks(fetchedWorks);
+      setWorks(filteredWorks);
 
-      const songs = fetchedWorks.length
+      const songsSource = filteredWorks.length ? filteredWorks : fetchedWorks;
+
+      const songs = songsSource.length
         ? (
             await Promise.all(
-              fetchedWorks.map(async (work) => {
+              songsSource.map(async (work) => {
                 const result = await getSongsByWork(work.id);
                 return result.success && result.data ? result.data : [];
               })
@@ -46,7 +53,7 @@ export const useGame = (
         setUsingDemoData(false);
         if (process.env.NODE_ENV === "development") {
           console.warn(
-            `Aucune chanson trouvée pour l'univers "${universeId}". Ajoutez des chansons dans l'admin panel.`
+            `Aucune chanson trouvee pour l'univers "${universeId}". Ajoutez des chansons dans l'admin panel.`
           );
         }
         return;
@@ -72,14 +79,12 @@ export const useGame = (
         console.error("Erreur lors de l'initialisation du jeu:", error);
       }
     }
-  }, [universeId]);
+  }, [universeId, allowedWorks]);
 
   const handleWorkSelection = (workId: string) => {
     if (showAnswer || !gameSession || !currentSong) return;
 
-    const existingAnswer = gameSession.answers.find(
-      (answer) => answer.songId === currentSong.id
-    );
+    const existingAnswer = gameSession.answers.find((answer) => answer.songId === currentSong.id);
     if (existingAnswer) {
       return;
     }
@@ -97,9 +102,7 @@ export const useGame = (
   const handleValidateAnswer = () => {
     if (!gameSession || !currentSong || !gameAnswer) return;
 
-    if (
-      gameSession.answers.some((answer) => answer.songId === currentSong.id)
-    ) {
+    if (gameSession.answers.some((answer) => answer.songId === currentSong.id)) {
       return;
     }
 
@@ -107,12 +110,8 @@ export const useGame = (
       ...gameSession,
       answers: [...gameSession.answers, gameAnswer],
       score: {
-        correct: gameAnswer.isCorrect
-          ? gameSession.score.correct + 1
-          : gameSession.score.correct,
-        incorrect: gameAnswer.isCorrect
-          ? gameSession.score.incorrect
-          : gameSession.score.incorrect + 1,
+        correct: gameAnswer.isCorrect ? gameSession.score.correct + 1 : gameSession.score.correct,
+        incorrect: gameAnswer.isCorrect ? gameSession.score.incorrect : gameSession.score.incorrect + 1,
       },
     };
 
@@ -128,9 +127,7 @@ export const useGame = (
       return;
     }
 
-    const existingAnswer = gameSession.answers.find(
-      (answer) => answer.songId === currentSong.id
-    );
+    const existingAnswer = gameSession.answers.find((answer) => answer.songId === currentSong.id);
 
     if (existingAnswer) {
       setSelectedWork(existingAnswer.selectedWorkId);
@@ -207,9 +204,7 @@ export const useGame = (
     handlePrevSong,
     resetGameState,
     correctWork: works.find((work) => work.id === currentSong?.workId),
-    canGoNext: gameSession
-      ? gameSession.currentSongIndex < gameSession.songs.length - 1
-      : false,
+    canGoNext: gameSession ? gameSession.currentSongIndex < gameSession.songs.length - 1 : false,
     canGoPrev: gameSession ? gameSession.currentSongIndex > 0 : false,
     isCurrentSongAnswered: Boolean(
       gameSession &&
@@ -218,9 +213,7 @@ export const useGame = (
     ),
     currentSongAnswer:
       gameSession && currentSong
-        ? gameSession.answers.find(
-            (answer) => answer.songId === currentSong.id
-          ) || null
+        ? gameSession.answers.find((answer) => answer.songId === currentSong.id) || null
         : null,
   };
 };

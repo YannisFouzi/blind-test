@@ -117,6 +117,12 @@ export const RoomSchema = z.object({
   songs: z.array(SongSchema),
   currentSongIndex: z.number().int().min(0),
   state: RoomStateSchema,
+  options: z
+    .object({
+      noSeek: z.boolean().default(false),
+    })
+    .optional(),
+  allowedWorks: z.array(z.string().min(1)).optional(),
   startedAt: timestampSchema.nullable().optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema.optional(),

@@ -12,6 +12,7 @@ interface UniverseGridProps {
   universes: Universe[];
   error?: string | null;
   onSelect: (id: string) => void;
+  onCustomize?: (universe: Universe) => void;
 }
 
 const ICON_COMPONENTS = AVAILABLE_ICONS.reduce<Record<string, LucideIcon>>(
@@ -43,6 +44,7 @@ const UniverseGridComponent = ({
   universes,
   error,
   onSelect,
+  onCustomize,
 }: UniverseGridProps) => {
   const styleCache = useMemo(() => {
     const cache = new Map<string, ReturnType<typeof buildUniverseStyles>>();
@@ -92,15 +94,19 @@ const UniverseGridComponent = ({
 
         return (
           <article key={universe.id}>
-            <button
+            <div
               className="group relative w-full overflow-hidden rounded-2xl md:rounded-3xl border border-white/10 bg-slate-900/40 p-5 md:p-8 text-left transition-transform duration-300 hover:-translate-y-1 hover:border-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
               style={{
                 background: styles.inlineStyles.background,
                 borderColor: styles.inlineStyles.borderColor,
                 boxShadow: styles.inlineStyles.boxShadow,
               }}
-              onClick={() => onSelect(universe.id)}
             >
+              <button
+                className="absolute inset-0 z-10"
+                onClick={() => onSelect(universe.id)}
+                aria-label={`Jouer ${universe.name}`}
+              ></button>
               <div
                 className="absolute inset-0 rounded-[22px] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                 style={{ background: styles.overlayStyles.background }}
@@ -125,11 +131,24 @@ const UniverseGridComponent = ({
                   </p>
                 )}
 
-                <div className="flex justify-center">
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-6 py-2 text-sm font-semibold text-white transition-transform duration-300 group-hover:scale-105">
+                <div className="flex justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onSelect(universe.id)}
+                    className="inline-flex items-center gap-2 rounded-full bg-white/15 px-6 py-2 text-sm font-semibold text-white transition-transform duration-300 hover:scale-105"
+                  >
                     <PlayIcon className="h-4 w-4" />
                     Jouer
-                  </span>
+                  </button>
+                  {onCustomize && (
+                    <button
+                      type="button"
+                      onClick={() => onCustomize(universe)}
+                      className="inline-flex items-center gap-2 rounded-full bg-slate-900/60 border border-white/25 px-6 py-2 text-sm font-semibold text-white transition-transform duration-300 hover:scale-105"
+                    >
+                      Parametres
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -138,7 +157,7 @@ const UniverseGridComponent = ({
                 style={{ backgroundColor: styles.accentColor }}
                 aria-hidden
               />
-            </button>
+            </div>
           </article>
         );
       })}

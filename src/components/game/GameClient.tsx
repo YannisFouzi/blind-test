@@ -44,6 +44,12 @@ export function GameClient({ universeId }: GameClientProps) {
     () => queryName || `Joueur-${playerIdRef.current.slice(0, 4)}`,
     [queryName]
   );
+  const queryNoSeek = searchParams?.get("noseek") === "1";
+  const queryWorks = searchParams?.get("works") || "";
+  const allowedWorksFromQuery = useMemo(
+    () => (queryWorks ? queryWorks.split(",").filter(Boolean) : undefined),
+    [queryWorks]
+  );
 
   const queryMode = (searchParams?.get("mode") as Mode | null) || "solo";
   const mode = queryMode;
@@ -77,13 +83,12 @@ export function GameClient({ universeId }: GameClientProps) {
     [preloadTrack]
   );
 
-  const soloGame = useGame(universeId, preloadNextMedia);
+  const soloGame = useGame(universeId, preloadNextMedia, allowedWorksFromQuery);
 
   const multiplayerGame = useMultiplayerGame({
     universeId,
     roomId,
     playerId: playerIdRef.current,
-    displayName: displayName.trim() || "Joueur",
     preloadNextTrack: preloadNextMedia,
   });
 
@@ -96,6 +101,7 @@ export function GameClient({ universeId }: GameClientProps) {
     ? multiplayerGame.isCurrentSongAnswered
     : soloGame.isCurrentSongAnswered;
   const activeCurrentSongAnswer = isMultiActive ? multiplayerGame.currentSongAnswer : soloGame.currentSongAnswer;
+  const activeOptions = isMultiActive ? multiplayerGame.options : { noSeek: queryNoSeek };
   const activeSubmitError = isMultiActive ? multiplayerGame.submitError : null;
 
   const activeHandleWorkSelection = isMultiActive
@@ -182,6 +188,7 @@ export function GameClient({ universeId }: GameClientProps) {
   };
 
   const handleTimelineClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (activeOptions?.noSeek) return;
     handleAudioProgressClick(event);
   };
 
