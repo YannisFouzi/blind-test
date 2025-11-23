@@ -92,7 +92,6 @@ export const useGame = (
       isCorrect: workId === currentSong.workId,
       answeredAt: new Date(),
     });
-    setShowAnswer(true);
   };
 
   const handleValidateAnswer = () => {
@@ -118,6 +117,7 @@ export const useGame = (
     };
 
     setGameSession(updatedSession);
+    setShowAnswer(true);
   };
 
   const resetGameState = useCallback(() => {
