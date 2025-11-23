@@ -27,6 +27,30 @@ interface ProcessPlaylistResult {
   }>;
 }
 
+type YtdlpMetadata = {
+  artist?: string;
+  artists?: string[];
+  track?: string;
+  title?: string;
+  uploader?: string;
+};
+
+const fetchVideoMetadata = async (videoId: string): Promise<YtdlpMetadata> => {
+  const url = `https://www.youtube.com/watch?v=${videoId}`;
+  try {
+    const info = (await youtubedl(url, {
+      dumpSingleJson: true,
+      skipDownload: true,
+      noWarnings: true,
+      quiet: true,
+    })) as YtdlpMetadata;
+    return info;
+  } catch (error) {
+    console.warn("[yt-dlp] Could not fetch metadata, using fallbacks:", error);
+    return {};
+  }
+};
+
 export const processPlaylist = async (
   workId: string,
   playlistId: string
@@ -46,19 +70,28 @@ export const processPlaylist = async (
     videos.map((video) =>
       limit(async () => {
         try {
+          const meta = await fetchVideoMetadata(video.id);
+          const artist =
+            (meta.artists && meta.artists.length
+              ? meta.artists.join(", ")
+              : meta.artist) ||
+            video.channelTitle ||
+            "Artiste YouTube";
+          const trackTitle = meta.track || meta.title || video.title;
+
           const processed = await downloadUploadAudio(
             workId,
             video.id,
-            video.title,
-            video.channelTitle,
+            trackTitle,
+            artist,
             video.duration
           );
           songs.push({
             id: video.id,
-            title: video.title,
+            title: trackTitle,
             description: video.description,
             duration: video.duration,
-            artist: video.channelTitle,
+            artist,
             audioUrl: processed.url,
           });
         } catch (error) {
