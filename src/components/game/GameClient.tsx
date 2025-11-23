@@ -247,86 +247,58 @@ export function GameClient({ universeId }: GameClientProps) {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-yellow-500/10 rounded-full blur-3xl" />
       </div>
 
-      {/* Barre de lecteur fixe en bas - Style Spotify */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-purple-500/30">
+      {/* Barre de lecteur fixe en bas - Style inspire Spotify */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 border-t border-purple-500/30 backdrop-blur-lg">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between gap-4">
-            {/* Section gauche - Contrôles et scores */}
-            <div className="flex flex-col items-center gap-3">
-              {/* Contrôles principaux - Version compacte */}
-              <div className="flex items-center gap-4">
-                {/* Bouton précédent */}
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center justify-center gap-5">
+              <button
+                onClick={handlePrevSongWithReset}
+                disabled={!canGoPrev}
+                className={`p-2 rounded-full transition-all duration-300 ${
+                  canGoPrev
+                    ? "bg-slate-800/70 hover:bg-slate-700 text-white shadow-md hover:shadow-purple-500/30 hover:scale-105"
+                    : "bg-slate-800/40 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                <SkipBack className="w-4 h-4" />
+              </button>
+
+              <div className="relative">
                 <button
-                  onClick={handlePrevSongWithReset}
-                  disabled={!canGoPrev}
-                  className={`p-2 rounded-full transition-all duration-300 ${
-                    canGoPrev
-                      ? "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg hover:shadow-purple-500/50 hover:scale-110"
-                      : "bg-gray-700 text-gray-400 cursor-not-allowed"
+                  onClick={handlePlayToggle}
+                  disabled={playbackUnavailable}
+                  className={`relative p-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 rounded-full text-white shadow-xl hover:shadow-yellow-500/50 transition-all duration-300 transform hover:scale-105 ${
+                    playbackUnavailable ? "opacity-60 cursor-not-allowed" : ""
                   }`}
                 >
-                  <SkipBack className="w-4 h-4" />
-                </button>
-
-                {/* Bouton play/pause principal - Version compacte */}
-                <div className="relative">
-                  <button
-                    onClick={handlePlayToggle}
-                    disabled={playbackUnavailable}
-                    className={`relative p-3 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 rounded-full text-white shadow-xl hover:shadow-yellow-500/50 transition-all duration-300 transform hover:scale-105 ${
-                      playbackUnavailable ? "opacity-60 cursor-not-allowed" : ""
-                    }`}
-                  >
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 blur-md opacity-50" />
-                    <div className="relative z-10">
-                      {playbackIsPlaying ? (
-                        <Pause className="w-5 h-5" />
-                      ) : (
-                        <PlayIcon className="w-5 h-5" />
-                      )}
-                    </div>
-                  </button>
-                </div>
-
-                {/* Bouton suivant */}
-                <button
-                  onClick={handleNextSongWithReset}
-                  disabled={!canGoNext}
-                  className={`p-2 rounded-full transition-all duration-300 ${
-                    canGoNext
-                      ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg hover:shadow-blue-500/50 hover:scale-110"
-                      : "bg-gray-700 text-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  <SkipForward className="w-4 h-4" />
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 blur-md opacity-50" />
+                  <div className="relative z-10">
+                    {playbackIsPlaying ? <Pause className="w-5 h-5" /> : <PlayIcon className="w-5 h-5" />}
+                  </div>
                 </button>
               </div>
 
-              {/* Scores compacts */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1">
-                  <span className="text-green-400 text-sm">✓</span>
-                  <span className="text-white text-sm font-semibold">
-                    {gameSession.score.correct}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-red-400 text-sm">✗</span>
-                  <span className="text-white text-sm font-semibold">
-                    {gameSession.score.incorrect}
-                  </span>
-                </div>
-              </div>
+              <button
+                onClick={handleNextSongWithReset}
+                disabled={!canGoNext}
+                className={`p-2 rounded-full transition-all duration-300 ${
+                  canGoNext
+                    ? "bg-slate-800/70 hover:bg-slate-700 text-white shadow-md hover:shadow-blue-500/30 hover:scale-105"
+                    : "bg-slate-800/40 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                <SkipForward className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* Barre de progression centrale avec indicateur de morceau */}
-            <div className="flex-1 max-w-md mx-4">
-              <div className="flex items-center justify-between text-white text-xs mb-1">
+            <div className="w-full max-w-4xl flex flex-col items-center gap-3">
+              <div className="flex items-center justify-between w-full text-white text-xs">
                 <span>{formatTimeFn(playbackCurrentTime)}</span>
                 <span>{formatTimeFn(playbackDuration)}</span>
               </div>
               <div
-                className="magic-progress-bar h-2 cursor-pointer hover:h-3 transition-all duration-300"
+                className="w-full magic-progress-bar h-2 cursor-pointer hover:h-3 transition-all duration-300"
                 onClick={handleTimelineClick}
               >
                 <div
@@ -338,47 +310,44 @@ export function GameClient({ universeId }: GameClientProps) {
                   }}
                 />
               </div>
-              {/* Indicateur de morceau */}
-              <div className="text-center mt-2">
-                <span className="text-yellow-400 text-sm font-semibold">
-                  Morceau {gameSession.currentSongIndex + 1} /{" "}
-                  {gameSession.songs.length}
+              <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center text-sm gap-3 pt-1">
+                <span className="text-yellow-400 font-semibold">
+                  Morceau {gameSession.currentSongIndex + 1} / {gameSession.songs.length}
                 </span>
-              </div>
-            </div>
-
-            {/* Contrôle du volume - Masqué sur mobile */}
-            <div className="hidden md:flex items-center gap-3">
-              <button
-                onClick={handleMuteToggle}
-                className="p-2 rounded-full bg-slate-800/50 text-white hover:bg-slate-700/50 transition-all duration-300 hover:scale-110"
-              >
-                {playbackMuted ? (
-                  <VolumeX className="w-4 h-4" />
-                ) : (
-                  <Volume2 className="w-4 h-4" />
-                )}
-              </button>
-
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-20 magic-progress-bar h-2 cursor-pointer hover:h-3 transition-all duration-300"
-                  onClick={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const clickX = e.clientX - rect.left;
-                    const percentage = (clickX / rect.width) * 100;
-                    const newVolume = Math.max(0, Math.min(100, percentage));
-                    handleVolumeChangeValue(newVolume);
-                  }}
-                >
-                  <div
-                    className="magic-progress-fill h-full"
-                    style={{ width: `${playbackVolume}%` }}
-                  />
+                <div className="flex items-center justify-center gap-3 text-xs text-white">
+                  <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-200 font-semibold">
+                    + {gameSession.score.correct}
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-red-500/20 text-red-200 font-semibold">
+                    - {gameSession.score.incorrect}
+                  </span>
                 </div>
-                <span className="text-white text-xs w-8 text-center">
-                  {Math.round(playbackVolume)}%
-                </span>
+                <div className="hidden md:flex items-center justify-end gap-3 text-white text-xs">
+                  <button
+                    onClick={handleMuteToggle}
+                    className="p-2 rounded-full bg-slate-800/60 hover:bg-slate-700/60 transition-all duration-300 hover:scale-105"
+                  >
+                    {playbackMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-28 magic-progress-bar h-2 cursor-pointer hover:h-3 transition-all duration-300"
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const clickX = e.clientX - rect.left;
+                        const percentage = (clickX / rect.width) * 100;
+                        const newVolume = Math.max(0, Math.min(100, percentage));
+                        handleVolumeChangeValue(newVolume);
+                      }}
+                    >
+                      <div
+                        className="magic-progress-fill h-full"
+                        style={{ width: `${playbackVolume}%` }}
+                      />
+                    </div>
+                    <span className="text-white text-xs w-10 text-center">{Math.round(playbackVolume)}%</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
