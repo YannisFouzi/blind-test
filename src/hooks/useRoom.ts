@@ -13,10 +13,9 @@ import {
 type UseRoomOptions = {
   roomId?: string;
   playerId?: string;
-  displayName?: string;
 };
 
-export const useRoom = ({ roomId, playerId, displayName }: UseRoomOptions) => {
+export const useRoom = ({ roomId, playerId }: UseRoomOptions) => {
   const [room, setRoom] = useState<Room | null>(null);
   const [players, setPlayers] = useState<RoomPlayer[]>([]);
   const [responses, setResponses] = useState<RoomResponse[]>([]);
@@ -108,7 +107,10 @@ export const useRoom = ({ roomId, playerId, displayName }: UseRoomOptions) => {
 
   const playerScore = useMemo(() => {
     const me = players.find((p) => p.id === playerId);
-    return me?.score ?? 0;
+    return {
+      correct: me?.score ?? 0,
+      incorrect: me?.incorrect ?? 0,
+    };
   }, [players, playerId]);
 
   return {

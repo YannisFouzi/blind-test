@@ -40,7 +40,10 @@ export function GameClient({ universeId }: GameClientProps) {
   }
 
   const queryName = searchParams?.get("name") || "";
-  const [displayName, setDisplayName] = useState<string>(queryName || `Joueur-${playerIdRef.current.slice(0, 4)}`);
+  const displayName = useMemo(
+    () => queryName || `Joueur-${playerIdRef.current.slice(0, 4)}`,
+    [queryName]
+  );
 
   const queryMode = (searchParams?.get("mode") as Mode | null) || "solo";
   const mode = queryMode;
@@ -117,7 +120,7 @@ export function GameClient({ universeId }: GameClientProps) {
   const activeScore = useMemo(() => {
     if (isMultiActive) {
       const me = multiplayerGame.players.find((p) => p.id === playerIdRef.current);
-      return { correct: me?.score ?? 0, incorrect: 0 };
+      return { correct: me?.score ?? 0, incorrect: me?.incorrect ?? 0 };
     }
     return soloGame.gameSession?.score ?? { correct: 0, incorrect: 0 };
   }, [isMultiActive, multiplayerGame.players, soloGame.gameSession?.score]);

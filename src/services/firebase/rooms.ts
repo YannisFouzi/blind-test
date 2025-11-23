@@ -78,6 +78,7 @@ export const createRoom = async (payload: CreateRoomPayload): Promise<ServiceRes
       id: payload.hostId,
       displayName: payload.hostDisplayName,
       score: 0,
+      incorrect: 0,
       connected: true,
       lastSeen: serverTimestamp(),
       isHost: true,
@@ -96,10 +97,11 @@ export const joinRoom = async (payload: JoinRoomPayload): Promise<ServiceRespons
       id: payload.playerId,
       displayName: payload.displayName,
       score: 0,
+      incorrect: 0,
       connected: true,
       lastSeen: serverTimestamp(),
       isHost: false,
-    } satisfies RoomPlayer);
+    });
     return { success: true };
   } catch (error) {
     return { success: false, error: formatError(error, "Erreur lors de la connexion à la room") };
@@ -227,7 +229,10 @@ export const submitAnswer = async (
 
     // Rang / points
     const responsesForSongSnap = await getDocs(query(responsesCol, where("songId", "==", parsed.songId)));
-    const rank = responsesForSongSnap.size + 1;
+    const correctResponsesSnap = await getDocs(
+      query(responsesCol, where("songId", "==", parsed.songId), where("isCorrect", "==", true))
+    );
+    const rank = correctResponsesSnap.size + 1;
 
     const playersSnap = await getDocs(query(playersCol, where("connected", "==", true)));
     const activePlayers = playersSnap.size > 0 ? playersSnap.size : 1;
@@ -244,17 +249,19 @@ export const submitAnswer = async (
       answeredAt: serverTimestamp(),
       rank,
       points,
-    } satisfies Omit<RoomResponse, "id" | "answeredAt">);
+    });
 
     // Mettre à jour le score du joueur (merge)
     const playerRef = doc(playersCol, parsed.playerId);
     const playerSnapshot = await getDoc(playerRef);
     const currentScore = playerSnapshot.exists() ? (playerSnapshot.data()?.score as number) || 0 : 0;
+    const currentIncorrect = playerSnapshot.exists() ? (playerSnapshot.data()?.incorrect as number) || 0 : 0;
     await setDoc(
       playerRef,
       {
         id: parsed.playerId,
         score: currentScore + points,
+        incorrect: parsed.isCorrect ? currentIncorrect : currentIncorrect + 1,
         connected: true,
         lastSeen: serverTimestamp(),
       },

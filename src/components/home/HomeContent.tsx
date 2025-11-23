@@ -122,7 +122,7 @@ export const HomeContent = () => {
         router.push(`/game/${universeId}?${baseParams.toString()}`);
       }
     },
-    [mode, roomIdInput, displayName, fetchUniverseSongs, router, hostRoomId]
+    [mode, roomIdInput, displayName, fetchUniverseSongs, router, hostRoomId, isHost]
   );
 
   const handleConfirmRoom = useCallback(() => {

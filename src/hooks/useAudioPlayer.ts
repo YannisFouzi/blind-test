@@ -26,6 +26,7 @@ export const useAudioPlayer = () => {
   const previousVolumeRef = useRef(volume);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const audio = createAudioElement();
     audio.volume = volume / 100;
     audioRef.current = audio;

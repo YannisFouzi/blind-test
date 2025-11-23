@@ -92,6 +92,7 @@ export const RoomPlayerSchema = z.object({
   id: z.string().min(1),
   displayName: z.string().min(1),
   score: z.number().int().min(0).default(0),
+  incorrect: z.number().int().min(0).default(0),
   connected: z.boolean().default(true),
   lastSeen: timestampSchema.optional(),
   isHost: z.boolean().optional(),

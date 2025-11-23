@@ -29,7 +29,7 @@ export const useMultiplayerGame = ({
     goNextSong,
     submitAnswer,
     startGame,
-  } = useRoom({ roomId, playerId, displayName });
+  } = useRoom({ roomId, playerId });
 
   const [works, setWorks] = useState<Work[]>([]);
   const [selectedWork, setSelectedWork] = useState<string | null>(null);
