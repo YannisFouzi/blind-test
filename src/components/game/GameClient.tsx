@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type MouseEvent } from "react";
-import YouTube from "react-youtube";
 import {
   Home as HomeIcon,
   Pause,
@@ -12,16 +11,13 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import type { YouTubePlayerOptions } from "@/types/youtube";
 import { Song } from "@/types";
 
-import { PreloadPlayer } from "@/components/game/PreloadPlayer";
 import { WorkSelector } from "@/components/game/WorkSelector";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useGame } from "@/hooks/useGame";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
-import { useYouTube } from "@/hooks/useYouTube";
 
 interface GameClientProps {
   universeId: string;
@@ -47,34 +43,13 @@ export function GameClient({ universeId }: GameClientProps) {
     formatTime: formatAudioTime,
   } = useAudioPlayer();
 
-  const {
-    isPlaying: youtubeIsPlaying,
-    currentTime: youtubeCurrentTime,
-    duration: youtubeDuration,
-    volume: youtubeVolume,
-    isMuted: youtubeIsMuted,
-    youtubeError,
-    handlePlayPause: handleYoutubePlayPause,
-    handleVolumeChange: handleYoutubeVolumeChange,
-    toggleMute: toggleYoutubeMute,
-    handleProgressClick: handleYoutubeProgressClick,
-    handleYoutubeError,
-    handleYoutubeReady,
-    handleYoutubeStateChange,
-    preloadNextVideo,
-    preloadSystem,
-    formatTime: formatYoutubeTime,
-  } = useYouTube();
-
   const preloadNextMedia = useCallback(
     (song: Song) => {
       if (song.audioUrl) {
         preloadTrack(song.audioUrl);
-      } else if (song.youtubeId) {
-        preloadNextVideo(song.youtubeId);
       }
     },
-    [preloadTrack, preloadNextVideo]
+    [preloadTrack]
   );
 
   const {
@@ -92,73 +67,46 @@ export function GameClient({ universeId }: GameClientProps) {
     isCurrentSongAnswered,
   } = useGame(universeId, preloadNextMedia);
 
-  const shouldUseAudio = Boolean(currentSong?.audioUrl);
-  const playbackIsPlaying = shouldUseAudio ? audioIsPlaying : youtubeIsPlaying;
-  const playbackCurrentTime = shouldUseAudio ? audioCurrentTime : youtubeCurrentTime;
-  const playbackDuration = shouldUseAudio ? audioDuration : youtubeDuration;
-  const playbackVolume = shouldUseAudio ? audioVolume : youtubeVolume;
-  const playbackMuted = shouldUseAudio ? audioIsMuted : youtubeIsMuted;
-  const playerError = shouldUseAudio ? audioError : youtubeError;
-  const formatTimeFn = shouldUseAudio ? formatAudioTime : formatYoutubeTime;
-  const playbackUnavailable = !shouldUseAudio && !currentSong?.youtubeId;
+  const playbackIsPlaying = audioIsPlaying;
+  const playbackCurrentTime = audioCurrentTime;
+  const playbackDuration = audioDuration;
+  const playbackVolume = audioVolume;
+  const playbackMuted = audioIsMuted;
+  const playerError = audioError;
+  const formatTimeFn = formatAudioTime;
+  const playbackUnavailable = !currentSong?.audioUrl;
 
   useEffect(() => {
-    if (shouldUseAudio && currentSong?.audioUrl) {
+    if (currentSong?.audioUrl) {
       void prepareTrack(currentSong.audioUrl);
     } else {
       resetAudioPlayer();
     }
-  }, [shouldUseAudio, currentSong?.audioUrl, prepareTrack, resetAudioPlayer]);
+  }, [currentSong?.audioUrl, prepareTrack, resetAudioPlayer]);
 
   const handlePlayToggle = () => {
     if (playbackUnavailable) {
       return;
     }
 
-    if (shouldUseAudio) {
-      if (currentSong?.audioUrl) {
-        handleAudioPlayPause(currentSong.audioUrl);
-      }
-    } else {
-      handleYoutubePlayPause(currentSong?.youtubeId);
+    if (currentSong?.audioUrl) {
+      handleAudioPlayPause(currentSong.audioUrl);
     }
   };
 
   const handleVolumeChangeValue = (value: number) => {
-    if (shouldUseAudio) {
-      handleAudioVolumeChange(value);
-    } else {
-      handleYoutubeVolumeChange(value);
-    }
+    handleAudioVolumeChange(value);
   };
 
   const handleMuteToggle = () => {
-    if (shouldUseAudio) {
-      toggleAudioMute();
-    } else {
-      toggleYoutubeMute();
-    }
+    toggleAudioMute();
   };
 
   const handleTimelineClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (shouldUseAudio) {
-      handleAudioProgressClick(event);
-    } else {
-      handleYoutubeProgressClick(event);
-    }
+    handleAudioProgressClick(event);
   };
 
   const [isLoaded, setIsLoaded] = useState(false);
-  const hiddenPlayerOptions: YouTubePlayerOptions = {
-    height: "0",
-    width: "0",
-    playerVars: {
-      autoplay: 0,
-      controls: 0,
-      playsinline: 1,
-      enablejsapi: 1,
-    },
-  };
 
   useEffect(() => {
     // Animation d'entrée
@@ -448,29 +396,9 @@ export function GameClient({ universeId }: GameClientProps) {
         </div>
       )}
 
-      {!shouldUseAudio && currentSong.youtubeId && (
-        <>
-          <div className="hidden">
-            <YouTube
-              videoId={currentSong.youtubeId}
-              opts={hiddenPlayerOptions}
-              onReady={handleYoutubeReady}
-              onStateChange={handleYoutubeStateChange}
-              onError={handleYoutubeError}
-            />
-          </div>
-          <PreloadPlayer
-            onReady={preloadSystem.handlePreloadPlayerReady}
-            onError={(error) => {
-              if (process.env.NODE_ENV === "development") {
-                console.warn("Erreur lecteur de préchargement:", error);
-              }
-            }}
-          />
-        </>
-      )}
     </div>
   );
 }
 
 export default GameClient;
+
