@@ -21,6 +21,7 @@ export const useRoom = ({ roomId, playerId }: UseRoomOptions) => {
   const [players, setPlayers] = useState<RoomPlayer[]>([]);
   const [responses, setResponses] = useState<RoomResponse[]>([]);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatImmediateRef = useRef(false);
 
   const currentSong = useMemo<Song | null>(() => {
     if (!room) return null;
@@ -29,14 +30,15 @@ export const useRoom = ({ roomId, playerId }: UseRoomOptions) => {
 
   const currentSongId = currentSong?.id;
   const allPlayersAnswered = useMemo(() => {
-    if (!currentSongId || players.length === 0) return false;
+    const activePlayers = players.filter((p) => p.connected !== false);
+    if (!currentSongId || activePlayers.length === 0) return false;
     const answeredPlayers = responses.reduce((set, r) => {
       if (r.songId === currentSongId) {
         set.add(r.playerId);
       }
       return set;
     }, new Set<string>());
-    return answeredPlayers.size >= players.length;
+    return answeredPlayers.size >= activePlayers.length;
   }, [currentSongId, players, responses]);
 
   useEffect(() => {
@@ -63,6 +65,10 @@ export const useRoom = ({ roomId, playerId }: UseRoomOptions) => {
   useEffect(() => {
     if (!roomId || !playerId) return;
     // heartbeat pour garder le joueur marqué comme connecté
+    if (!heartbeatImmediateRef.current) {
+      heartbeatImmediateRef.current = true;
+      void heartbeatPlayer(roomId, playerId);
+    }
     heartbeatRef.current = setInterval(() => {
       void heartbeatPlayer(roomId, playerId);
     }, 15000);
@@ -151,7 +157,7 @@ export const useRoom = ({ roomId, playerId }: UseRoomOptions) => {
   const currentSongResponses = useMemo(() => responses, [responses]);
 
   const playerScore = useMemo(() => {
-    const me = players.find((p) => p.id === playerId);
+    const me = players.find((p) => p.id === playerId && p.connected !== false);
     return {
       correct: me?.score ?? 0,
       incorrect: me?.incorrect ?? 0,

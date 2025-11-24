@@ -347,9 +347,15 @@ export const subscribePlayers = (
   onData: (players: RoomPlayer[]) => void
 ) => {
   const playersRef = collection(db, "rooms", roomId, "players");
+  let lastPlayers: RoomPlayer[] = [];
   return onSnapshot(
     playersRef,
     (snap) => {
+      // Ignore snapshots provenant uniquement du cache sans écritures en attente
+      if (snap.metadata.fromCache && !snap.metadata.hasPendingWrites) {
+        return;
+      }
+
       const players: RoomPlayer[] = [];
       snap.forEach((docSnap) => {
         try {
@@ -358,14 +364,19 @@ export const subscribePlayers = (
           // ignore invalid
         }
       });
+      const activePlayers = players.filter((p) => p.connected !== false);
+      // Ne pas propager un snapshot vide transitoire si on a déjà une liste connue
+      const toEmit = activePlayers.length === 0 && lastPlayers.length > 0 ? lastPlayers : activePlayers;
+      lastPlayers = toEmit;
+
       console.info("[rooms] subscribePlayers snapshot", {
         roomId,
-        count: players.length,
-        ids: players.map((p) => p.id),
+        count: toEmit.length,
+        ids: toEmit.map((p) => p.id),
       });
-      onData(players);
+      onData(toEmit);
     },
-    () => onData([])
+    () => onData(lastPlayers)
   );
 };
 
