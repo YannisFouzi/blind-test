@@ -36,6 +36,7 @@ export const HomeContent = () => {
   const [joinRoomId, setJoinRoomId] = useState<string>("");
   const [roomsList, setRoomsList] = useState<Room[]>([]);
   const [playersInRoom, setPlayersInRoom] = useState<RoomPlayer[]>([]);
+  const [modeConfirmed, setModeConfirmed] = useState(false);
   const hasUsedRoomRef = useRef(false);
   const [hasUsedRoom, setHasUsedRoom] = useState(false);
 
@@ -60,6 +61,22 @@ export const HomeContent = () => {
 
   const isHost = useMemo(() => mode === "multi" && Boolean(hostRoomId), [mode, hostRoomId]);
   const isGuest = useMemo(() => mode === "multi" && !hostRoomId && Boolean(joinRoomId), [mode, hostRoomId, joinRoomId]);
+  const canContinueMulti = isHost && Boolean(hostRoomId);
+
+  const resetModeChoice = useCallback(() => {
+    setModeConfirmed(false);
+    setHomeError(null);
+    setHomeInfo(null);
+    setHostRoomId("");
+    setJoinRoomId("");
+    setRoomsList([]);
+    setPlayersInRoom([]);
+    setCustomizingUniverse(null);
+    setCustomAllowedWorks([]);
+    setCustomNoSeek(false);
+    setHasUsedRoom(false);
+    hasUsedRoomRef.current = false;
+  }, []);
 
   const isAdmin = useMemo(
     () => Boolean(user?.email) && user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL,
@@ -105,6 +122,7 @@ export const HomeContent = () => {
       setHostRoomId(result.data.id);
       setJoinRoomId("");
       setHomeInfo(`Room cree: ${result.data.id}. Selectionne un univers pour lancer la partie.`);
+      setModeConfirmed(true);
     } catch (error) {
       console.error("[multi][host] create room error", error);
       setHomeError(error instanceof Error ? error.message : "Erreur inconnue");
@@ -112,7 +130,6 @@ export const HomeContent = () => {
       setIsCreatingRoom(false);
     }
   }, [hostRoomId, displayName]);
-
 
   const handleJoinRoom = useCallback(
     async (roomId: string) => {
@@ -154,7 +171,7 @@ export const HomeContent = () => {
       }
 
       if (!hostRoomId) {
-        setHomeError("Clique sur \"Creer\" pour generer une room, puis selectionne l'univers.");
+        setHomeError('Clique sur "Creer" pour generer une room, puis selectionne l\'univers.');
         return;
       }
 
@@ -183,7 +200,7 @@ export const HomeContent = () => {
           { noSeek: customNoSeek }
         );
         if (!configured.success) {
-          setHomeError(configured.error || "Impossible de préparer la room");
+          setHomeError(configured.error || "Impossible de prǸparer la room");
           return;
         }
         if (customNoSeek) baseParams.set("noseek", "1");
@@ -227,6 +244,7 @@ export const HomeContent = () => {
       setHasUsedRoom(false);
       hasUsedRoomRef.current = false;
     }
+    setModeConfirmed(false);
   }, [mode]);
 
   // Subscribe to idle rooms list (join tab)
@@ -359,7 +377,7 @@ export const HomeContent = () => {
         noSeek: customNoSeek,
       });
       if (!configured.success) {
-        setHomeError(configured.error || "Impossible de préparer la room");
+        setHomeError(configured.error || "Impossible de prǸparer la room");
         return;
       }
       const params = new URLSearchParams({
@@ -399,103 +417,134 @@ export const HomeContent = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-12 space-y-8">
+    <div className="max-w-6xl mx-auto px-4 py-12 space-y-10">
       <HeroSection isAdmin={isAdmin} onAdminClick={() => router.push("/admin")} />
 
-      <div className="bg-slate-900/40 border border-purple-500/30 rounded-2xl p-4 backdrop-blur space-y-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
+      <div className="bg-slate-900/60 border border-purple-500/30 rounded-3xl p-6 md:p-8 backdrop-blur space-y-6 shadow-2xl shadow-purple-900/20">
+        {!modeConfirmed && (
+          <div className="flex justify-center">
+            <div className="inline-flex rounded-3xl bg-slate-800/80 p-1.5 shadow-inner shadow-black/30">
+              <button
+                onClick={() => setMode("solo")}
+                className={`px-8 py-3 rounded-2xl text-base font-bold tracking-wide transition-all ${
+                  mode === "solo"
+                    ? "bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 text-white shadow-xl shadow-purple-500/50"
+                    : "text-slate-200 hover:text-white hover:bg-slate-700/60"
+                }`}
+              >
+                Solo
+              </button>
+              <button
+                onClick={() => setMode("multi")}
+                className={`px-8 py-3 rounded-2xl text-base font-bold tracking-wide transition-all ${
+                  mode === "multi"
+                    ? "bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 text-white shadow-xl shadow-purple-500/50"
+                    : "text-slate-200 hover:text-white hover:bg-slate-700/60"
+                }`}
+              >
+                Multi
+              </button>
+            </div>
+          </div>
+        )}
+
+        {modeConfirmed && (
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+            <div>
+              <p className="text-sm text-slate-200">
+                Mode actuel : <span className="font-semibold text-white">{mode === "solo" ? "Solo" : "Multi"}</span>
+              </p>
+            </div>
             <button
-              onClick={() => setMode("solo")}
-              className={`px-3 py-2 rounded-lg text-sm font-semibold ${
-                mode === "solo" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-300"
-              }`}
+              onClick={resetModeChoice}
+              className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-sm font-semibold bg-slate-800/80 text-white hover:bg-slate-700 shadow-inner shadow-black/30"
             >
-              Solo
-            </button>
-            <button
-              onClick={() => setMode("multi")}
-              className={`px-3 py-2 rounded-lg text-sm font-semibold ${
-                mode === "multi" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-300"
-              }`}
-            >
-              Multi
+              Changer de mode de jeu
             </button>
           </div>
+        )}
 
-          {mode === "multi" && (
-            <div className="flex flex-wrap items-center gap-3 flex-1">
-              <input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Votre pseudo"
-                className="bg-slate-800/60 text-white text-sm px-3 py-2 rounded-lg border border-slate-700 focus:outline-none focus:border-purple-400"
-              />
+        {mode === "solo" && !modeConfirmed && (
+          <div className="flex justify-center">
+            <button
+              onClick={() => setModeConfirmed(true)}
+              className="inline-flex items-center justify-center px-8 py-3 rounded-2xl text-base font-bold tracking-wide bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 text-white shadow-xl shadow-purple-500/40 hover:shadow-purple-500/60 transition-all"
+            >
+              Continuer
+            </button>
+          </div>
+        )}
 
-              <div className="flex items-center gap-1 bg-slate-800/60 rounded-lg p-1">
+        {mode === "multi" && !modeConfirmed && (
+          <div className="space-y-5">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs uppercase tracking-[0.25em] text-purple-200/80">Pseudo</label>
+                <input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Votre pseudo"
+                  className="bg-slate-800/80 text-white text-sm px-4 py-3 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-400 shadow-inner shadow-black/30"
+                />
+              </div>
+              <div className="inline-flex rounded-3xl bg-slate-800/80 p-1 shadow-inner shadow-black/30 self-center">
                 <button
                   onClick={() => setMultiTab("create")}
-                  className={`px-3 py-2 rounded-md text-sm font-semibold ${
-                    multiTab === "create" ? "bg-purple-600 text-white" : "text-slate-200"
+                  className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all ${
+                    multiTab === "create"
+                      ? "bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 text-white shadow-lg shadow-purple-500/40"
+                      : "text-slate-200 hover:text-white hover:bg-slate-700/60"
                   }`}
                 >
                   Créer
                 </button>
                 <button
                   onClick={() => setMultiTab("join")}
-                  className={`px-3 py-2 rounded-md text-sm font-semibold ${
-                    multiTab === "join" ? "bg-purple-600 text-white" : "text-slate-200"
+                  className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all ${
+                    multiTab === "join"
+                      ? "bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 text-white shadow-lg shadow-purple-500/40"
+                      : "text-slate-200 hover:text-white hover:bg-slate-700/60"
                   }`}
                 >
                   Rejoindre
                 </button>
               </div>
             </div>
-          )}
-        </div>
 
-        {mode === "multi" && (
-          <div className="space-y-3">
             {multiTab === "create" && (
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 shadow-lg shadow-purple-900/20">
                 <button
                   onClick={handleCreateRoom}
                   disabled={isCreatingRoom || Boolean(hostRoomId)}
-                  className="px-3 py-2 rounded-lg text-sm font-semibold bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/40 hover:shadow-purple-500/50 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {hostRoomId ? "Room créée" : isCreatingRoom ? "Création..." : "Créer une room"}
                 </button>
-                {hostRoomId && (
-                  <span className="text-xs text-green-300">
-                    Room ID : <span className="font-semibold">{hostRoomId}</span>
-                  </span>
-                )}
               </div>
             )}
 
             {multiTab === "join" && (
-              <div className="space-y-2">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-3 shadow-lg shadow-purple-900/20">
+                <div className="text-xs uppercase tracking-[0.25em] text-slate-300">Rooms disponibles</div>
                 {roomsList.length === 0 && (
                   <div className="text-sm text-slate-200">Aucune room disponible pour le moment.</div>
                 )}
                 {roomsList.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2">
                     {roomsList.map((room) => (
-                      <div
+                      <button
                         key={room.id}
-                        className="flex items-center justify-between bg-slate-800/60 px-3 py-2 rounded-lg border border-slate-700"
+                        onClick={() => handleJoinRoom(room.id)}
+                        className="w-full text-left rounded-xl border border-slate-800 bg-slate-800/70 hover:bg-slate-800/90 transition-all px-4 py-3 shadow-inner shadow-black/30"
                       >
-                        <div className="text-sm text-white">
-                          <div className="font-semibold">Room {room.id}</div>
-                          <div className="text-xs text-slate-300">Hôte: {room.hostName || room.hostId}</div>
+                        <div className="flex items-center justify-between text-sm text-white">
+                          <div>
+                            <div className="font-semibold">Room {room.id}</div>
+                            <div className="text-xs text-slate-300">Hôte: {room.hostName || room.hostId}</div>
+                          </div>
+                          <span className="text-xs text-purple-200">Rejoindre</span>
                         </div>
-                        <button
-                          onClick={() => handleJoinRoom(room.id)}
-                          className="px-3 py-2 rounded-lg text-sm font-semibold bg-slate-700 hover:bg-slate-600 text-white"
-                        >
-                          Rejoindre
-                        </button>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -504,41 +553,18 @@ export const HomeContent = () => {
 
             {homeError && <div className="text-xs text-red-300">{homeError}</div>}
             {homeInfo && <div className="text-xs text-green-300">{homeInfo}</div>}
-
-            {currentRoomId && (
-              <div className="bg-slate-800/60 border border-slate-700 rounded-lg p-3">
-                <div className="text-xs text-slate-200 mb-2">
-                  Room active : <span className="font-semibold text-white">{currentRoomId}</span>
-                </div>
-                <div className="text-sm text-white font-semibold mb-1">Joueurs connectés</div>
-                {playersInRoom.length === 0 ? (
-                  <div className="text-xs text-slate-300">En attente de joueurs...</div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {playersInRoom.map((p) => (
-                      <span
-                        key={p.id}
-                        className={`px-2 py-1 rounded-md text-xs ${
-                          p.isHost ? "bg-purple-700 text-white" : "bg-slate-700 text-slate-100"
-                        }`}
-                      >
-                        {p.displayName || "Joueur"} {p.isHost ? "(Hôte)" : ""}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )}
       </div>
 
-      <UniverseGrid
-        universes={universes}
-        error={universesError}
-        onSelect={handleUniverseClick}
-        onCustomize={openCustomize}
-      />
+      {((mode === "solo" && modeConfirmed) || (mode === "multi" && modeConfirmed && canContinueMulti)) && (
+        <UniverseGrid
+          universes={universes}
+          error={universesError}
+          onSelect={handleUniverseClick}
+          onCustomize={openCustomize}
+        />
+      )}
 
       {customizingUniverse && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur">
@@ -596,9 +622,3 @@ export const HomeContent = () => {
     </div>
   );
 };
-
-
-
-
-
-
