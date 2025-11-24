@@ -77,12 +77,22 @@ export const useRoom = ({ roomId, playerId }: UseRoomOptions) => {
     if (!roomId || !playerId) return;
     const handleUnload = () => {
       void leaveRoom(roomId, playerId);
+      void fetch("/api/cleanup-room", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId }),
+      }).catch(() => {});
     };
     window.addEventListener("beforeunload", handleUnload);
     window.addEventListener("pagehide", handleUnload);
     return () => {
       window.removeEventListener("beforeunload", handleUnload);
       window.removeEventListener("pagehide", handleUnload);
+      void fetch("/api/cleanup-room", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId }),
+      }).catch(() => {});
     };
   }, [roomId, playerId]);
 
