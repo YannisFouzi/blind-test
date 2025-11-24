@@ -14,6 +14,7 @@ import {
 import { Song } from "@/types";
 
 import { WorkSelector } from "@/components/game/WorkSelector";
+import { PointsCelebration } from "@/components/game/PointsCelebration";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useGame } from "@/hooks/useGame";
@@ -142,6 +143,8 @@ export function GameClient({ universeId }: GameClientProps) {
     return soloGame.gameSession?.score ?? { correct: 0, incorrect: 0 };
   }, [isMultiActive, multiplayerGame.players, soloGame.gameSession?.score]);
 
+  const activeLastGain = isMultiActive ? multiplayerGame.lastGain : soloGame.lastGain;
+
   useEffect(() => {
     console.info("[GameClient] score snapshot", {
       mode,
@@ -150,6 +153,17 @@ export function GameClient({ universeId }: GameClientProps) {
       score: activeScore,
     });
   }, [mode, roomId, isHost, activeScore]);
+
+  useEffect(() => {
+    if (!activeLastGain) {
+      setPointsFlash(null);
+      return;
+    }
+
+    setPointsFlash(activeLastGain);
+    const timer = setTimeout(() => setPointsFlash(null), 1500);
+    return () => clearTimeout(timer);
+  }, [activeLastGain]);
 
   const playbackIsPlaying = audioIsPlaying;
   const playbackCurrentTime = audioCurrentTime;
@@ -211,6 +225,7 @@ export function GameClient({ universeId }: GameClientProps) {
   };
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const [pointsFlash, setPointsFlash] = useState<{ points: number; key: number } | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoaded(true), 100);
@@ -279,6 +294,7 @@ export function GameClient({ universeId }: GameClientProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900 relative overflow-hidden">
+      <PointsCelebration points={pointsFlash?.points ?? null} triggerKey={pointsFlash?.key} />
       {/* Particules */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[

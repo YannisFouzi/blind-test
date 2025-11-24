@@ -17,6 +17,7 @@ export const useGame = (
   const [gameAnswer, setGameAnswer] = useState<GameAnswer | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [usingDemoData, setUsingDemoData] = useState(false);
+  const [lastGain, setLastGain] = useState<{ points: number; key: number } | null>(null);
 
   const initializeGame = useCallback(async () => {
     try {
@@ -115,6 +116,8 @@ export const useGame = (
       },
     };
 
+    const timestamp = typeof performance !== "undefined" ? performance.now() : Date.now();
+    setLastGain({ points: gameAnswer.isCorrect ? 1 : 0, key: timestamp });
     setGameSession(updatedSession);
     setShowAnswer(true);
   };
@@ -179,6 +182,10 @@ export const useGame = (
   }, [gameSession, currentSong, resetGameState]);
 
   useEffect(() => {
+    setLastGain(null);
+  }, [currentSong?.id]);
+
+  useEffect(() => {
     if (gameSession && currentSong && preloadNextTrack) {
       const nextIndex = gameSession.currentSongIndex + 1;
       if (nextIndex < gameSession.songs.length) {
@@ -215,5 +222,6 @@ export const useGame = (
       gameSession && currentSong
         ? gameSession.answers.find((answer) => answer.songId === currentSong.id) || null
         : null,
+    lastGain,
   };
 };

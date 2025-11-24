@@ -36,6 +36,7 @@ export const useMultiplayerGame = ({
   const [showAnswer, setShowAnswer] = useState(false);
   const [gameAnswer, setGameAnswer] = useState<GameAnswer | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [lastGain, setLastGain] = useState<{ points: number; key: number } | null>(null);
 
   const currentSongAnswer = useMemo(() => {
     if (!currentSong || !playerId) return null;
@@ -68,6 +69,7 @@ export const useMultiplayerGame = ({
     setSelectedWork(null);
     setGameAnswer(null);
     setShowAnswer(false);
+    setLastGain(null);
   }, [currentSong?.id]);
 
   useEffect(() => {
@@ -102,6 +104,9 @@ export const useMultiplayerGame = ({
       });
       const result = await submitAnswer(selectedWork, isCorrect);
       if (result.success) {
+        const pointsEarned = result.data?.points ?? 0;
+        const timestamp = typeof performance !== "undefined" ? performance.now() : Date.now();
+        setLastGain({ points: pointsEarned, key: timestamp });
         setSubmitError(null);
         setGameAnswer({
           songId: currentSong.id,
@@ -154,5 +159,6 @@ export const useMultiplayerGame = ({
     state,
     isHost,
     submitError,
+    lastGain,
   };
 };
