@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import admin from "firebase-admin";
 
@@ -27,7 +28,7 @@ app.use(express.json());
 
 app.post("/cleanup-room", async (req, res) => {
   try {
-    const { roomId, secret } = req.body ?? {};
+    const { roomId, secret, force } = req.body ?? {};
     if (!roomId || typeof roomId !== "string") {
       return res.status(400).json({ error: "roomId required" });
     }
@@ -44,7 +45,7 @@ app.post("/cleanup-room", async (req, res) => {
       return data.connected === true && lastSeenMs > now - ACTIVE_PLAYER_THRESHOLD_MS;
     });
 
-    if (activePlayers.length > 0) {
+    if (!force && activePlayers.length > 0) {
       return res.status(200).json({ message: "room has active players", activePlayers: activePlayers.length });
     }
 

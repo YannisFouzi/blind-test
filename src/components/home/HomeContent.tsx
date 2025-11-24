@@ -36,6 +36,7 @@ export const HomeContent = () => {
   const [joinRoomId, setJoinRoomId] = useState<string>("");
   const [roomsList, setRoomsList] = useState<Room[]>([]);
   const [playersInRoom, setPlayersInRoom] = useState<RoomPlayer[]>([]);
+  const [hasUsedRoom, setHasUsedRoom] = useState(false);
 
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [homeError, setHomeError] = useState<string | null>(null);
@@ -188,6 +189,7 @@ export const HomeContent = () => {
         }
         baseParams.set("room", hostRoomId);
         baseParams.set("host", "1");
+        setHasUsedRoom(true);
         router.push(`/game/${universeId}?${baseParams.toString()}`);
       } catch (error) {
         setHomeError(error instanceof Error ? error.message : "Erreur inconnue");
@@ -218,6 +220,7 @@ export const HomeContent = () => {
       setCustomAllowedWorks([]);
       setCustomNoSeek(false);
       setPlayersInRoom([]);
+      setHasUsedRoom(false);
     }
   }, [mode]);
 
@@ -243,6 +246,27 @@ export const HomeContent = () => {
     const unsub = subscribeRoom(joinRoomId, setRemoteRoom);
     return () => unsub?.();
   }, [isGuest, joinRoomId]);
+
+  // Cleanup d'une room idle si l'hôte quitte l'accueil sans l'utiliser
+  useEffect(() => {
+    const cleanupIdleRoom = () => {
+      if (mode !== "multi" || !hostRoomId || hasUsedRoom) return;
+      console.info("[home][cleanupIdleRoom] trigger", { mode, hostRoomId, hasUsedRoom });
+      void fetch("/api/cleanup-room", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId: hostRoomId, force: true }),
+      }).catch(() => {});
+    };
+
+    window.addEventListener("beforeunload", cleanupIdleRoom);
+    window.addEventListener("pagehide", cleanupIdleRoom);
+    return () => {
+      window.removeEventListener("beforeunload", cleanupIdleRoom);
+      window.removeEventListener("pagehide", cleanupIdleRoom);
+      cleanupIdleRoom();
+    };
+  }, [mode, hostRoomId, hasUsedRoom]);
 
   // Subscribe to players for the active room (host or guest)
   useEffect(() => {
@@ -344,6 +368,7 @@ export const HomeContent = () => {
       if (customAllowedWorks.length && customAllowedWorks.length !== customWorks.length) {
         params.set("works", customAllowedWorks.join(","));
       }
+      setHasUsedRoom(true);
       router.push(`/game/${universeId}?${params.toString()}`);
     } catch (error) {
       setHomeError(error instanceof Error ? error.message : "Erreur inconnue");
