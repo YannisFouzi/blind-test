@@ -7,16 +7,18 @@ import { fadeInUp, slideInLeft } from "@/lib/animations/variants";
 interface HeroSectionProps {
   isAdmin: boolean;
   onAdminClick: () => void;
+  showSubtitle?: boolean;
 }
 
 export const HeroSection = ({
   isAdmin,
   onAdminClick,
+  showSubtitle = true,
 }: HeroSectionProps) => {
   return (
     <>
       <motion.div
-        className="flex justify-between items-center mb-12"
+        className="flex justify-between items-center mb-6"
         initial="hidden"
         animate="visible"
         variants={slideInLeft}
@@ -34,23 +36,25 @@ export const HeroSection = ({
       </motion.div>
 
       <motion.div
-        className="text-center mb-16"
+        className="text-center mb-10"
         initial="hidden"
         animate="visible"
         variants={fadeInUp}
       >
-        <h1 className="fantasy-text text-6xl md:text-8xl font-bold mb-6">
+        <h1 className="fantasy-text text-5xl md:text-7xl font-bold mb-4">
           BLIND TEST
         </h1>
-        <div className="flex items-center justify-center gap-4 mb-8">
-          <div className="w-16 h-1 bg-gradient-to-r from-yellow-400 to-purple-500 rounded-full" />
-          <StarIcon className="text-yellow-400 w-6 h-6" />
-          <div className="w-16 h-1 bg-gradient-to-r from-purple-500 to-yellow-400 rounded-full" />
+        <div className="flex items-center justify-center gap-3 mb-5">
+          <div className="w-12 h-1 bg-gradient-to-r from-yellow-400 to-purple-500 rounded-full" />
+          <StarIcon className="text-yellow-400 w-5 h-5" />
+          <div className="w-12 h-1 bg-gradient-to-r from-purple-500 to-yellow-400 rounded-full" />
         </div>
-        <p className="text-xl md:text-2xl text-purple-200 max-w-3xl mx-auto leading-relaxed">
-          Plongez dans vos univers favoris et testez vos connaissances
-          musicales !
-        </p>
+        {showSubtitle && (
+          <p className="text-lg md:text-xl text-purple-200 max-w-3xl mx-auto leading-relaxed">
+            Plongez dans vos univers favoris et testez vos connaissances
+            musicales !
+          </p>
+        )}
       </motion.div>
     </>
   );

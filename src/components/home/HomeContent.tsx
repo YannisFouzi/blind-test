@@ -7,6 +7,9 @@ import { UniverseGrid } from "@/components/home/UniverseGrid";
 import { HomePageSkeleton } from "@/components/HomePage/HomePageSkeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useUniverses } from "@/hooks/useUniverses";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   configureRoomPlaylist,
   createRoom,
@@ -22,6 +25,14 @@ import { Room, RoomPlayer, Song, Universe, Work } from "@/types";
 type Mode = "solo" | "multi";
 type MultiTab = "create" | "join";
 
+const displayNameSchema = z.object({
+  displayName: z
+    .string()
+    .trim()
+    .min(1, "Choisis un pseudo avant de continuer")
+    .max(50, "Pseudo trop long"),
+});
+
 export const HomeContent = () => {
   const router = useRouter();
   const { user } = useAuth();
@@ -30,7 +41,6 @@ export const HomeContent = () => {
   const [mode, setMode] = useState<Mode>("solo");
   const [multiTab, setMultiTab] = useState<MultiTab>("create");
   const playerIdRef = useRef<string>(generateId());
-  const [displayName, setDisplayName] = useState<string>(`Joueur-${playerIdRef.current.slice(0, 4)}`);
 
   const [hostRoomId, setHostRoomId] = useState<string>("");
   const [joinRoomId, setJoinRoomId] = useState<string>("");
@@ -63,6 +73,24 @@ export const HomeContent = () => {
   const isGuest = useMemo(() => mode === "multi" && !hostRoomId && Boolean(joinRoomId), [mode, hostRoomId, joinRoomId]);
   const canContinueMulti = isHost && Boolean(hostRoomId);
 
+  const form = useForm<z.infer<typeof displayNameSchema>>({
+    resolver: zodResolver(displayNameSchema),
+    defaultValues: { displayName: "" },
+    mode: "onSubmit",
+    reValidateMode: "onChange",
+  });
+
+  const displayName = form.watch("displayName");
+
+  const ensureDisplayName = useCallback(async () => {
+    const valid = await form.trigger("displayName");
+    if (!valid) {
+      form.setFocus("displayName");
+      return null;
+    }
+    return form.getValues("displayName").trim();
+  }, [form]);
+
   const resetModeChoice = useCallback(() => {
     setModeConfirmed(false);
     setHomeError(null);
@@ -76,7 +104,8 @@ export const HomeContent = () => {
     setCustomNoSeek(false);
     setHasUsedRoom(false);
     hasUsedRoomRef.current = false;
-  }, []);
+    form.reset({ displayName: "" });
+  }, [form]);
 
   const isAdmin = useMemo(
     () => Boolean(user?.email) && user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL,
@@ -101,7 +130,9 @@ export const HomeContent = () => {
 
   const handleCreateRoom = useCallback(async () => {
     if (hostRoomId) return;
-    console.info("[multi][host] create room start", { playerId: playerIdRef.current, displayName });
+    const name = await ensureDisplayName();
+    if (!name) return;
+    console.info("[multi][host] create room start", { playerId: playerIdRef.current, displayName: name });
     hasUsedRoomRef.current = false;
     setHasUsedRoom(false);
     setIsCreatingRoom(true);
@@ -111,7 +142,7 @@ export const HomeContent = () => {
       const result = await createRoom({
         universeId: "__pending__",
         hostId: playerIdRef.current,
-        hostDisplayName: displayName.trim() || "Joueur",
+        hostDisplayName: name,
         songs: [],
       });
       console.info("[multi][host] create room result", result);
@@ -129,11 +160,13 @@ export const HomeContent = () => {
     } finally {
       setIsCreatingRoom(false);
     }
-  }, [hostRoomId, displayName]);
+  }, [hostRoomId, ensureDisplayName]);
 
   const handleJoinRoom = useCallback(
     async (roomId: string) => {
       if (!roomId) return;
+      const name = await ensureDisplayName();
+      if (!name) return;
       setHomeError(null);
       setHomeInfo(null);
       try {
@@ -141,7 +174,7 @@ export const HomeContent = () => {
         await joinRoom({
           roomId,
           playerId: playerIdRef.current,
-          displayName: displayName.trim() || "Joueur",
+          displayName: name,
         });
         console.info("[multi][guest] join room success", { roomId });
         setJoinRoomId(roomId);
@@ -418,7 +451,11 @@ export const HomeContent = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12 space-y-10">
-      <HeroSection isAdmin={isAdmin} onAdminClick={() => router.push("/admin")} />
+      <HeroSection
+        isAdmin={isAdmin}
+        onAdminClick={() => router.push("/admin")}
+        showSubtitle={!modeConfirmed}
+      />
 
       <div className="bg-slate-900/60 border border-purple-500/30 rounded-3xl p-6 md:p-8 backdrop-blur space-y-6 shadow-2xl shadow-purple-900/20">
         {!modeConfirmed && (
@@ -449,15 +486,13 @@ export const HomeContent = () => {
         )}
 
         {modeConfirmed && (
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
-            <div>
-              <p className="text-sm text-slate-200">
-                Mode actuel : <span className="font-semibold text-white">{mode === "solo" ? "Solo" : "Multi"}</span>
-              </p>
-            </div>
+          <div>
+            <p className="text-sm text-slate-200 m-0">
+              Mode actuel : <span className="font-semibold text-white">{mode === "solo" ? "Solo" : "Multi"}</span>
+            </p>
             <button
               onClick={resetModeChoice}
-              className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-sm font-semibold bg-slate-800/80 text-white hover:bg-slate-700 shadow-inner shadow-black/30"
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 text-white shadow-lg shadow-purple-500/40 hover:shadow-purple-500/50 transition-all"
             >
               Changer de mode de jeu
             </button>
@@ -478,14 +513,17 @@ export const HomeContent = () => {
         {mode === "multi" && !modeConfirmed && (
           <div className="space-y-5">
             <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs uppercase tracking-[0.25em] text-purple-200/80">Pseudo</label>
-                <input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Votre pseudo"
-                  className="bg-slate-800/80 text-white text-sm px-4 py-3 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-400 shadow-inner shadow-black/30"
-                />
+              <div className="flex flex-col gap-2 items-center text-center">
+                <div className="w-full flex justify-center">
+                  <input
+                    {...form.register("displayName")}
+                    placeholder="Votre pseudo"
+                    className="w-full max-w-md bg-slate-800/80 text-white text-sm px-4 py-3 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-400 shadow-inner shadow-black/30"
+                  />
+                </div>
+                {form.formState.errors.displayName && (
+                  <p className="text-xs text-red-300">{form.formState.errors.displayName.message}</p>
+                )}
               </div>
               <div className="inline-flex rounded-3xl bg-slate-800/80 p-1 shadow-inner shadow-black/30 self-center">
                 <button
@@ -512,11 +550,11 @@ export const HomeContent = () => {
             </div>
 
             {multiTab === "create" && (
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 shadow-lg shadow-purple-900/20">
+              <div className="flex justify-center">
                 <button
                   onClick={handleCreateRoom}
                   disabled={isCreatingRoom || Boolean(hostRoomId)}
-                  className="w-full px-4 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/40 hover:shadow-purple-500/50 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full max-w-md px-4 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/40 hover:shadow-purple-500/50 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {hostRoomId ? "Room créée" : isCreatingRoom ? "Création..." : "Créer une room"}
                 </button>
