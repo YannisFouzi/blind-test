@@ -92,6 +92,7 @@ export const HomeContent = () => {
   }, [form]);
 
   const resetModeChoice = useCallback(() => {
+    setMode((prev) => (prev === "solo" ? "multi" : "solo"));
     setModeConfirmed(false);
     setHomeError(null);
     setHomeInfo(null);
@@ -104,6 +105,7 @@ export const HomeContent = () => {
     setCustomNoSeek(false);
     setHasUsedRoom(false);
     hasUsedRoomRef.current = false;
+    setMultiTab("create");
     form.reset({ displayName: "" });
   }, [form]);
 
@@ -449,6 +451,10 @@ export const HomeContent = () => {
     return <HomePageSkeleton />;
   }
 
+  const containerClass = modeConfirmed
+    ? "space-y-6"
+    : "bg-slate-900/60 border border-purple-500/30 rounded-3xl p-6 md:p-8 backdrop-blur space-y-6 shadow-2xl shadow-purple-900/20";
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-12 space-y-10">
       <HeroSection
@@ -457,7 +463,7 @@ export const HomeContent = () => {
         showSubtitle={!modeConfirmed}
       />
 
-      <div className="bg-slate-900/60 border border-purple-500/30 rounded-3xl p-6 md:p-8 backdrop-blur space-y-6 shadow-2xl shadow-purple-900/20">
+      <div className={containerClass}>
         {!modeConfirmed && (
           <div className="flex justify-center">
             <div className="inline-flex rounded-3xl bg-slate-800/80 p-1.5 shadow-inner shadow-black/30">
@@ -486,13 +492,13 @@ export const HomeContent = () => {
         )}
 
         {modeConfirmed && (
-          <div>
+          <div className="max-w-md mx-auto flex flex-col items-center gap-3 text-center">
             <p className="text-sm text-slate-200 m-0">
               Mode actuel : <span className="font-semibold text-white">{mode === "solo" ? "Solo" : "Multi"}</span>
             </p>
             <button
               onClick={resetModeChoice}
-              className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 text-white shadow-lg shadow-purple-500/40 hover:shadow-purple-500/50 transition-all"
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold bg-slate-800/80 text-white hover:bg-slate-700 transition-all"
             >
               Changer de mode de jeu
             </button>
