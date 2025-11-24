@@ -26,6 +26,11 @@
 /ingestion-service/dist
 /ingestion-service/.env
 
+# cleanup service
+/cleanup-service/node_modules
+/cleanup-service/dist
+/cleanup-service/.env
+
 # misc
 .DS_Store
 *.pem
