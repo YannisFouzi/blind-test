@@ -9,7 +9,18 @@
       "Bash(awk:*)",
       "Bash(npx tsx:*)",
       "Bash(curl:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(findstr:*)",
+      "Bash(npm run dev:partykit:*)",
+      "Bash(timeout:*)",
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:docs.partykit.io)",
+      "Bash(npm run build:*)",
+      "Bash(ping:*)",
+      "Bash(if not exist \"docs\" mkdir docs)",
+      "Bash(move partymachinesgameMachine.ts docsgameMachine.ts.example)",
+      "Bash(move partyINTEGRATION_XSTATE.md docsINTEGRATION_XSTATE.md)",
+      "Bash(if not exist \"docs\\archive\" mkdir docsarchive)"
     ],
     "deny": [],
     "ask": []

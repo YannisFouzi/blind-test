@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { GameAnswer, Song, Work } from "@/types";
-import { useRoom } from "@/hooks/useRoom";
-import { getWorksByUniverse } from "@/services/firebase";
+import { useEffect, useMemo, useState } from "react";
+import { GameAnswer, Song } from "@/types";
+import { usePartyKitRoom } from "@/hooks/usePartyKitRoom";
+import { useWorksQuery } from "@/hooks/queries";
 
 type MultiplayerOptions = {
   universeId: string;
   roomId?: string;
   playerId?: string;
+  displayName?: string;
   preloadNextTrack?: (song: Song) => void;
 };
 
@@ -14,6 +15,7 @@ export const useMultiplayerGame = ({
   universeId,
   roomId,
   playerId,
+  displayName,
   preloadNextTrack,
 }: MultiplayerOptions) => {
   const {
@@ -29,9 +31,14 @@ export const useMultiplayerGame = ({
     startGame,
     options,
     allowedWorks,
-  } = useRoom({ roomId, playerId });
+    configureRoom,
+    isConnected,
+    isHost: isHostFromRoom,
+  } = usePartyKitRoom({ roomId, playerId, displayName });
 
-  const [works, setWorks] = useState<Work[]>([]);
+  // ✅ Phase 5: Utiliser TanStack Query pour le cache automatique
+  const { data: works = [], isLoading: isLoadingWorks } = useWorksQuery(universeId);
+
   const [selectedWork, setSelectedWork] = useState<string | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [gameAnswer, setGameAnswer] = useState<GameAnswer | null>(null);
@@ -44,17 +51,6 @@ export const useMultiplayerGame = ({
   }, [responses, playerId, currentSong]);
 
   const isCurrentSongAnswered = Boolean(currentSongAnswer);
-
-  const loadWorks = useCallback(async () => {
-    const result = await getWorksByUniverse(universeId);
-    if (result.success && result.data) {
-      setWorks(result.data);
-    }
-  }, [universeId]);
-
-  useEffect(() => {
-    void loadWorks();
-  }, [loadWorks]);
 
   // Filtrer les oeuvres si une liste autorisée est définie
   const filteredWorks = useMemo(() => {
@@ -132,15 +128,16 @@ export const useMultiplayerGame = ({
   };
 
   const isHost = useMemo(() => {
-    if (!playerId) return false;
-    return players.some((p) => p.id === playerId && p.isHost);
-  }, [players, playerId]);
+    // Utiliser la valeur directe de usePartyKitRoom (plus fiable)
+    return isHostFromRoom;
+  }, [isHostFromRoom]);
 
   return {
     mode: "multiplayer" as const,
     room,
     players,
     works: filteredWorks,
+    isLoadingWorks, // ✅ Phase 5: Exposer le loading state
     currentSong,
     currentSongIndex,
     selectedWork,
@@ -160,5 +157,7 @@ export const useMultiplayerGame = ({
     isHost,
     submitError,
     lastGain,
+    isConnected,
+    configureRoom,
   };
 };

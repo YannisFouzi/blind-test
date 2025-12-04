@@ -1,0 +1,426 @@
+import { setup, assign, assertEvent } from "xstate";
+
+/**
+ * STATE MACHINE POUR LE JEU BLIND TEST
+ *
+ * États : idle → configured → playing → results
+ *
+ * Transitions validées automatiquement par XState
+ * Actions invalides = rejetées avant traitement
+ */
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+/**
+ * Structure d'un joueur
+ */
+export interface Player {
+  id: string;
+  displayName: string;
+  score: number;
+  incorrect: number;
+  isHost: boolean;
+  connected: boolean;
+  connectionId: string;
+}
+
+/**
+ * Structure d'une réponse
+ */
+export interface Response {
+  songId: string;
+  playerId: string;
+  workId: string | null;
+  isCorrect: boolean;
+  rank: number;
+  points: number;
+  timestamp: number;
+}
+
+/**
+ * Structure d'un morceau
+ */
+export interface Song {
+  id: string;
+  title: string;
+  artist: string;
+  workId: string;
+  youtubeId: string;
+  audioUrl?: string;
+  duration: number;
+}
+
+/**
+ * Contexte de la state machine (état global du jeu)
+ */
+export interface GameContext {
+  roomId: string;
+  hostId: string;
+  universeId: string;
+  songs: Song[];
+  currentSongIndex: number;
+  players: Map<string, Player>;
+  responses: Map<string, Response>; // key: `${songId}-${playerId}`
+  allowedWorks?: string[];
+  options: { noSeek: boolean };
+  createdAt: number;
+}
+
+/**
+ * Events que la machine peut recevoir
+ */
+export type GameEvent =
+  | { type: "PLAYER_JOIN"; playerId: string; displayName: string; connectionId: string }
+  | { type: "PLAYER_LEAVE"; playerId: string }
+  | { type: "CONFIGURE"; universeId: string; songs: Song[]; allowedWorks?: string[]; options?: { noSeek: boolean } }
+  | { type: "START"; hostId: string }
+  | { type: "ANSWER"; playerId: string; songId: string; workId: string | null }
+  | { type: "NEXT"; hostId: string };
+
+// ============================================================================
+// STATE MACHINE
+// ============================================================================
+
+/**
+ * State Machine pour le jeu Blind Test
+ *
+ * Gère automatiquement les transitions d'état et valide les actions
+ */
+export const gameStateMachine = setup({
+  types: {
+    context: {} as GameContext,
+    events: {} as GameEvent,
+  },
+
+  // ============================================================================
+  // GUARDS (conditions pour les transitions)
+  // ============================================================================
+  guards: {
+    /**
+     * Vérifie si l'event provient du host
+     */
+    isHost: ({ context, event }) => {
+      if (event.type === "START" || event.type === "NEXT") {
+        return event.hostId === context.hostId;
+      }
+      return false;
+    },
+
+    /**
+     * Vérifie s'il reste des morceaux après le morceau actuel
+     */
+    hasMoreSongs: ({ context }) => {
+      return context.currentSongIndex < context.songs.length - 1;
+    },
+
+    /**
+     * Vérifie si c'est le dernier morceau
+     */
+    isLastSong: ({ context }) => {
+      return context.currentSongIndex >= context.songs.length - 1;
+    },
+
+    /**
+     * Vérifie si au moins une chanson est configurée
+     */
+    hasSongs: ({ context }) => {
+      return context.songs.length > 0;
+    },
+  },
+
+  // ============================================================================
+  // ACTIONS (mutations du contexte)
+  // ============================================================================
+  actions: {
+    /**
+     * Ajouter un joueur
+     */
+    addPlayer: assign({
+      players: ({ context, event }) => {
+        assertEvent(event, "PLAYER_JOIN");
+        const players = new Map(context.players);
+
+        // Vérifier si le joueur existe déjà (reconnexion)
+        const existingPlayer = players.get(event.playerId);
+        if (existingPlayer) {
+          // Reconnexion : mettre à jour la connexion
+          existingPlayer.connected = true;
+          existingPlayer.connectionId = event.connectionId;
+          players.set(event.playerId, existingPlayer);
+        } else {
+          // Nouveau joueur
+          const isFirstPlayer = players.size === 0;
+          players.set(event.playerId, {
+            id: event.playerId,
+            displayName: event.displayName,
+            score: 0,
+            incorrect: 0,
+            isHost: isFirstPlayer,
+            connected: true,
+            connectionId: event.connectionId,
+          });
+        }
+
+        return players;
+      },
+      // Définir le host si c'est le premier joueur
+      hostId: ({ context, event }) => {
+        assertEvent(event, "PLAYER_JOIN");
+        if (context.hostId === "") {
+          return event.playerId;
+        }
+        return context.hostId;
+      },
+    }),
+
+    /**
+     * Retirer un joueur (déconnexion)
+     */
+    removePlayer: assign({
+      players: ({ context, event }) => {
+        assertEvent(event, "PLAYER_LEAVE");
+        const players = new Map(context.players);
+        const player = players.get(event.playerId);
+
+        if (player) {
+          player.connected = false;
+          players.set(event.playerId, player);
+        }
+
+        return players;
+      },
+    }),
+
+    /**
+     * Configurer les songs et l'univers
+     */
+    configureSongs: assign({
+      universeId: ({ event }) => {
+        assertEvent(event, "CONFIGURE");
+        return event.universeId;
+      },
+      songs: ({ event }) => {
+        assertEvent(event, "CONFIGURE");
+        return event.songs;
+      },
+      allowedWorks: ({ event }) => {
+        assertEvent(event, "CONFIGURE");
+        return event.allowedWorks;
+      },
+      options: ({ event }) => {
+        assertEvent(event, "CONFIGURE");
+        return event.options || { noSeek: false };
+      },
+      currentSongIndex: 0,
+    }),
+
+    /**
+     * Reset l'index du morceau à 0
+     */
+    resetSongIndex: assign({
+      currentSongIndex: 0,
+    }),
+
+    /**
+     * Incrémenter l'index du morceau
+     */
+    incrementSong: assign({
+      currentSongIndex: ({ context }) => context.currentSongIndex + 1,
+    }),
+
+    /**
+     * Enregistrer une réponse
+     */
+    recordAnswer: assign({
+      responses: ({ context, event }) => {
+        assertEvent(event, "ANSWER");
+        const responses = new Map(context.responses);
+        const { playerId, songId, workId } = event;
+
+        // Vérifier si la réponse existe déjà (déduplication)
+        const responseKey = `${songId}-${playerId}`;
+        if (responses.has(responseKey)) {
+          return responses; // Pas de modification si déjà répondu
+        }
+
+        // Trouver la bonne réponse
+        const song = context.songs.find((s) => s.id === songId);
+        if (!song) {
+          return responses; // Song non trouvée, pas de modification
+        }
+
+        const isCorrect = workId === song.workId;
+
+        // Calculer le rang (nombre de bonnes réponses déjà enregistrées + 1)
+        let rank = 1;
+        for (const response of responses.values()) {
+          if (response.songId === songId && response.isCorrect) {
+            rank++;
+          }
+        }
+
+        // Calculer les points
+        const connectedPlayers = Array.from(context.players.values()).filter((p) => p.connected);
+        const activePlayers = connectedPlayers.length;
+        const points = isCorrect ? Math.max(1, activePlayers - rank + 1) : 0;
+
+        // Enregistrer la réponse
+        responses.set(responseKey, {
+          songId,
+          playerId,
+          workId,
+          isCorrect,
+          rank: isCorrect ? rank : 0,
+          points,
+          timestamp: Date.now(),
+        });
+
+        return responses;
+      },
+      // Mettre à jour le score du joueur
+      players: ({ context, event }) => {
+        assertEvent(event, "ANSWER");
+        const players = new Map(context.players);
+        const player = players.get(event.playerId);
+
+        if (!player) return players;
+
+        // Recalculer le score basé sur la nouvelle réponse
+        const responseKey = `${event.songId}-${event.playerId}`;
+        const responses = new Map(context.responses);
+
+        // Vérifier si déjà répondu
+        if (responses.has(responseKey)) {
+          return players; // Pas de modification
+        }
+
+        // Trouver la chanson
+        const song = context.songs.find((s) => s.id === event.songId);
+        if (!song) return players;
+
+        const isCorrect = event.workId === song.workId;
+
+        // Calculer le rang
+        let rank = 1;
+        for (const response of responses.values()) {
+          if (response.songId === event.songId && response.isCorrect) {
+            rank++;
+          }
+        }
+
+        // Calculer les points
+        const connectedPlayers = Array.from(players.values()).filter((p) => p.connected);
+        const activePlayers = connectedPlayers.length;
+        const points = isCorrect ? Math.max(1, activePlayers - rank + 1) : 0;
+
+        // Mettre à jour le joueur
+        player.score += points;
+        if (!isCorrect) {
+          player.incorrect += 1;
+        }
+
+        players.set(event.playerId, player);
+        return players;
+      },
+    }),
+  },
+}).createMachine({
+  id: "blindTestGame",
+  initial: "idle",
+
+  context: ({ input }: { input?: Partial<GameContext> }) => ({
+    roomId: input?.roomId || "",
+    hostId: input?.hostId || "",
+    universeId: input?.universeId || "",
+    songs: input?.songs || [],
+    currentSongIndex: input?.currentSongIndex || 0,
+    players: input?.players || new Map(),
+    responses: input?.responses || new Map(),
+    allowedWorks: input?.allowedWorks,
+    options: input?.options || { noSeek: false },
+    createdAt: input?.createdAt || Date.now(),
+  }),
+
+  states: {
+    /**
+     * État IDLE : Room créée, en attente de configuration
+     */
+    idle: {
+      on: {
+        PLAYER_JOIN: {
+          actions: "addPlayer",
+        },
+        CONFIGURE: {
+          target: "configured",
+          actions: "configureSongs",
+        },
+      },
+    },
+
+    /**
+     * État CONFIGURED : Songs chargées, prêt à démarrer
+     */
+    configured: {
+      on: {
+        PLAYER_JOIN: {
+          actions: "addPlayer",
+        },
+        CONFIGURE: {
+          target: "configured",
+          actions: "configureSongs",
+        },
+        START: {
+          target: "playing",
+          guard: "isHost",
+          actions: "resetSongIndex",
+        },
+      },
+    },
+
+    /**
+     * État PLAYING : Jeu en cours
+     */
+    playing: {
+      on: {
+        PLAYER_JOIN: {
+          actions: "addPlayer",
+        },
+        PLAYER_LEAVE: {
+          actions: "removePlayer",
+        },
+        ANSWER: {
+          actions: "recordAnswer",
+        },
+        NEXT: [
+          {
+            target: "playing",
+            guard: { type: "and", guards: ["isHost", "hasMoreSongs"] },
+            actions: "incrementSong",
+            reenter: true,
+          },
+          {
+            target: "results",
+            guard: { type: "and", guards: ["isHost", "isLastSong"] },
+          },
+        ],
+      },
+    },
+
+    /**
+     * État RESULTS : Jeu terminé
+     */
+    results: {
+      type: "final",
+      on: {
+        PLAYER_JOIN: {
+          actions: "addPlayer",
+        },
+        PLAYER_LEAVE: {
+          actions: "removePlayer",
+        },
+      },
+    },
+  },
+});

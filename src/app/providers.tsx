@@ -1,6 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ReactNode, useEffect, useState } from "react";
 import { signInAnonymously, onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -16,7 +17,7 @@ export function Providers({ children }: { children: ReactNode }) {
             // Configurations par défaut professionnelles
             staleTime: 60 * 1000, // Les données sont considérées fraîches pendant 1 minute
             gcTime: 5 * 60 * 1000, // Garbage collection après 5 minutes (anciennement cacheTime)
-            retry: 3, // Retry 3 fois en cas d'échec
+            retry: 1, // Retry 1 fois en cas d'échec (ajusté pour éviter trop de retries)
             retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
             refetchOnWindowFocus: false, // Pas de refetch automatique au focus (configurable par query)
             refetchOnReconnect: true, // Refetch quand la connexion est rétablie
@@ -29,7 +30,13 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      {children}
+      {/* DevTools uniquement en développement */}
+      {process.env.NODE_ENV === "development" && (
+        <ReactQueryDevtools initialIsOpen={false} />
+      )}
+    </QueryClientProvider>
   );
 }
 

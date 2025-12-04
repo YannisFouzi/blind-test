@@ -21,7 +21,8 @@ import { useGame } from "@/hooks/useGame";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
 import { joinRoom } from "@/services/firebase/rooms";
-import { generateId } from "@/utils/formatters";
+import { getSongsByWork, getWorksByUniverse } from "@/services/firebase";
+import { generateId, shuffleArray } from "@/utils/formatters";
 
 interface GameClientProps {
   universeId: string;
@@ -90,6 +91,7 @@ export function GameClient({ universeId }: GameClientProps) {
     universeId,
     roomId,
     playerId: playerIdRef.current,
+    displayName,
     preloadNextTrack: preloadNextMedia,
   });
 
@@ -193,6 +195,108 @@ export function GameClient({ universeId }: GameClientProps) {
       void joinRoomIfNeeded();
     }
   }, [mode, joinRoomIfNeeded]);
+
+  // Configurer la room automatiquement si on est HOST et que la room n'a pas de songs (PartyKit)
+  const [hasConfiguredRoom, setHasConfiguredRoom] = useState(false);
+
+  useEffect(() => {
+    if (
+      mode !== "multi" ||
+      !isHost ||
+      !multiplayerGame.isConnected ||
+      !multiplayerGame.configureRoom ||
+      hasConfiguredRoom
+    ) {
+      return;
+    }
+
+    // Si la room a déjà des songs, pas besoin de configurer
+    if (multiplayerGame.room?.songs && multiplayerGame.room.songs.length > 0) {
+      setHasConfiguredRoom(true);
+      return;
+    }
+
+    // Le HOST doit configurer la room avec les songs de l'univers
+    const configureRoomWithSongs = async () => {
+      try {
+        console.log("[GameClient] HOST: Configuring room with songs from universe:", universeId);
+
+        // 1. Charger les works de l'univers
+        const worksResult = await getWorksByUniverse(universeId);
+        if (!worksResult.success || !worksResult.data || worksResult.data.length === 0) {
+          console.error("[GameClient] No works found for universe", universeId);
+          return;
+        }
+
+        const works = worksResult.data;
+        const worksToUse = allowedWorksFromQuery && allowedWorksFromQuery.length > 0
+          ? works.filter(w => allowedWorksFromQuery.includes(w.id))
+          : works;
+
+        if (worksToUse.length === 0) {
+          console.error("[GameClient] No works to use after filtering");
+          return;
+        }
+
+        // 2. Charger les songs pour chaque work
+        const songPromises = worksToUse.map(work => getSongsByWork(work.id));
+        const songsResults = await Promise.all(songPromises);
+
+        const allSongs: Song[] = [];
+        for (const result of songsResults) {
+          if (result.success && result.data) {
+            allSongs.push(...result.data);
+          }
+        }
+
+        if (allSongs.length === 0) {
+          console.error("[GameClient] No songs found");
+          return;
+        }
+
+        // 3. Mélanger et limiter à 10 morceaux
+        const shuffled = shuffleArray([...allSongs]);
+        const selectedSongs = shuffled.slice(0, 10);
+
+        console.log(`[GameClient] Configuring room with ${selectedSongs.length} songs`);
+
+        // 4. Configurer la room via PartyKit
+        const result = await multiplayerGame.configureRoom(
+          universeId,
+          selectedSongs,
+          allowedWorksFromQuery,
+          { noSeek: queryNoSeek }
+        );
+
+        if (result.success) {
+          console.log("[GameClient] Room configured successfully");
+          setHasConfiguredRoom(true);
+
+          // ✅ Auto-start le jeu après configuration
+          if (multiplayerGame.startGame) {
+            console.log("[GameClient] AUTO-START: Starting game after configuration");
+            await multiplayerGame.startGame();
+          }
+        } else {
+          console.error("[GameClient] Failed to configure room:", result.error);
+        }
+      } catch (error) {
+        console.error("[GameClient] Error configuring room:", error);
+      }
+    };
+
+    void configureRoomWithSongs();
+  }, [
+    mode,
+    isHost,
+    multiplayerGame.isConnected,
+    multiplayerGame.configureRoom,
+    multiplayerGame.room?.songs,
+    universeId,
+    allowedWorksFromQuery,
+    queryNoSeek,
+    hasConfiguredRoom,
+  ]);
 
   useEffect(() => {
     if (activeCurrentSong?.audioUrl) {
