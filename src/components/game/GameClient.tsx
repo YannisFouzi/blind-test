@@ -37,6 +37,12 @@ export function GameClient({ universeId }: GameClientProps) {
   const { playerId, displayName: storedDisplayName, ready: identityReady, setIdentity } = useIdentity();
   const queryPlayer = searchParams?.get("player");
   const queryName = searchParams?.get("name") || "";
+  const queryNoSeek = searchParams?.get("noseek") === "1";
+  const queryWorks = searchParams?.get("works") || "";
+  const queryMode = (searchParams?.get("mode") as Mode | null) || "solo";
+  const mode = queryMode;
+  const roomId = searchParams?.get("room") || "";
+  const isHostParam = searchParams?.get("host") === "1";
 
   useEffect(() => {
     if (queryPlayer) {
@@ -88,18 +94,10 @@ export function GameClient({ universeId }: GameClientProps) {
     if (playerId) return `Joueur-${playerId.slice(0, 4)}`;
     return "Joueur";
   }, [queryName, storedDisplayName, playerId]);
-  const queryNoSeek = searchParams?.get("noseek") === "1";
-  const queryWorks = searchParams?.get("works") || "";
   const allowedWorksFromQuery = useMemo(
     () => (queryWorks ? queryWorks.split(",").filter(Boolean) : undefined),
     [queryWorks]
   );
-
-  const queryMode = (searchParams?.get("mode") as Mode | null) || "solo";
-  const mode = queryMode;
-
-  const roomId = searchParams?.get("room") || "";
-  const isHostParam = searchParams?.get("host") === "1";
 
   // S'assurer que la ref contient l'ID stable avant d'initialiser les hooks multi
   if (identityReady && playerId && !playerIdRef.current) {
