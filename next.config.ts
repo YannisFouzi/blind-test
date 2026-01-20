@@ -10,13 +10,19 @@ const appBaseUrl =
 
 const normalizedAppBaseUrl = appBaseUrl.replace(/\/$/, "");
 
+const partyKitHost = process.env.NEXT_PUBLIC_PARTYKIT_HOST;
+const partyKitUrl = partyKitHost ? new URL(partyKitHost) : null;
+const partyKitConnectSrc = partyKitUrl
+  ? `${partyKitUrl.origin} ${partyKitUrl.origin.replace(/^http/, "ws")}`
+  : "";
+
 const csp = `
   default-src 'self';
   script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://s.ytimg.com https://apis.google.com https://accounts.google.com https://gstatic.com;
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   img-src 'self' data: https: blob:;
   font-src 'self' https://fonts.gstatic.com;
-  connect-src 'self' https://*.googleapis.com https://*.google-analytics.com https://firestore.googleapis.com https://firebase.googleapis.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://region1.google-analytics.com https://accounts.google.com https://oauth2.googleapis.com;
+  connect-src 'self' https://*.googleapis.com https://*.google-analytics.com https://firestore.googleapis.com https://firebase.googleapis.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://region1.google-analytics.com https://accounts.google.com https://oauth2.googleapis.com ${partyKitConnectSrc};
   media-src 'self' https://pub-2453cfd6fe3941d8bb0270e27655cf49.r2.dev;
   frame-src 'self' https://accounts.google.com https://blindtest-c1cdc.firebaseapp.com;
   frame-ancestors 'self' https://accounts.google.com https://blindtest-c1cdc.firebaseapp.com;
