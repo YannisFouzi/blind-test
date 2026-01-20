@@ -55,3 +55,7 @@ next-env.d.ts
 
 .md
 *.txt
+
+.claude/settings.local.json
+
+audit_ingestion_ytdlp.md
