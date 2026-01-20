@@ -65,18 +65,20 @@ export const PartyKitProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    const { current: sockets } = socketsRef;
+
     return () => {
       // Cleanup de tous les sockets si le provider est démonté
-      socketsRef.current.forEach((socket) => {
+      sockets.forEach((socket) => {
         try {
           socket.close();
         } catch {
           // ignore
         }
       });
-      socketsRef.current.clear();
+      sockets.clear();
     };
-  }, []);
+  }, [socketsRef]);
 
   return <PartyKitContext.Provider value={value}>{children}</PartyKitContext.Provider>;
 };

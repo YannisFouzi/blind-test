@@ -20,8 +20,6 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useGame } from "@/hooks/useGame";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
-import { getSongsByWork, getWorksByUniverse } from "@/services/firebase";
-import { shuffleArray } from "@/utils/formatters";
 import { useIdentity } from "@/hooks/useIdentity";
 
 interface GameClientProps {
@@ -53,7 +51,6 @@ export function GameClient({ universeId }: GameClientProps) {
   }, [queryName, setIdentity]);
 
   const playerIdRef = useRef<string>("");
-  const lastGateRef = useRef<string>("");
   const hasLoggedMountRef = useRef<boolean>(false);
 
   useEffect(() => {
@@ -73,7 +70,17 @@ export function GameClient({ universeId }: GameClientProps) {
     if (!playerIdRef.current) {
       playerIdRef.current = playerId;
     }
-  }, [identityReady, playerId]);
+  }, [
+    identityReady,
+    playerId,
+    roomId,
+    universeId,
+    mode,
+    queryPlayer,
+    queryName,
+    queryNoSeek,
+    queryWorks,
+  ]);
 
   const displayName = useMemo(() => {
     if (queryName) return queryName;

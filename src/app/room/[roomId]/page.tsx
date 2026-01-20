@@ -10,7 +10,7 @@ import { useUniverses } from "@/hooks/useUniverses";
 import { UniverseGrid } from "@/components/home/UniverseGrid";
 import { getSongsByWork, getWorksByUniverse } from "@/services/firebase";
 import { shuffleArray } from "@/utils/formatters";
-import type { Song, Universe, Work } from "@/types";
+import type { Song } from "@/types";
 
 export default function WaitingRoomPage() {
   console.log("[WaitingRoomPage] RENDER", { timestamp: Date.now() });

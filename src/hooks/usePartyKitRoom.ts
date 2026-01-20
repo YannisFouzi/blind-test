@@ -322,7 +322,7 @@ export const usePartyKitRoom = ({ roomId, playerId, displayName }: UsePartyKitRo
           console.warn("[usePartyKitRoom] Unknown message type:", (message as { type: string }).type);
       }
     },
-    [currentSongId, displayName, playerId, room.hostId, room.state, roomId]
+    [currentSongId, displayName, playerId, room.hostId, room.state, room.universeId, roomId]
   );
 
   // Garder le ref à jour avec la dernière version de handleMessage
@@ -462,7 +462,7 @@ export const usePartyKitRoom = ({ roomId, playerId, displayName }: UsePartyKitRo
       })
     );
     return { success: true };
-  }, [playerId]);
+  }, [playerId, roomId]);
 
   const configureRoom = useCallback(
     async (universeId: string, songs: Song[], allowedWorks?: string[], options?: { noSeek: boolean }) => {
@@ -488,10 +488,10 @@ export const usePartyKitRoom = ({ roomId, playerId, displayName }: UsePartyKitRo
         songs,
         allowedWorks: allowedWorks || [],
         options: options || { noSeek: false },
-      };
-      console.info("[usePartyKitRoom] send configure", {
-        roomId,
-        playerId,
+    };
+    console.info("[usePartyKitRoom] send configure", {
+      roomId,
+      playerId,
         universeId,
         songs: songs.length,
         allowedWorks: allowedWorks?.length ?? 0,
@@ -503,7 +503,7 @@ export const usePartyKitRoom = ({ roomId, playerId, displayName }: UsePartyKitRo
 
       return { success: true };
     },
-    [isHost]
+    [isHost, playerId, roomId]
   );
 
   const submitAnswer = useCallback(
@@ -535,7 +535,7 @@ export const usePartyKitRoom = ({ roomId, playerId, displayName }: UsePartyKitRo
         }, 5000);
       });
     },
-    [currentSong, playerId]
+    [currentSong, playerId, roomId]
   );
 
   // Reset des réponses locales quand on change de morceau

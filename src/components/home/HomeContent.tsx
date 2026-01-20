@@ -45,7 +45,6 @@ export const HomeContent = () => {
   const playerIdRef = useRef<string>("");
 
   const [hostRoomId, setHostRoomId] = useState<string>("");
-  const [joinRoomId, setJoinRoomId] = useState<string>("");
   const [modeConfirmed, setModeConfirmed] = useState(false);
   const hasUsedRoomRef = useRef(false);
 
@@ -132,7 +131,6 @@ export const HomeContent = () => {
     setHomeError(null);
     setHomeInfo(null);
     setHostRoomId("");
-    setJoinRoomId("");
     setCustomizingUniverse(null);
     setCustomAllowedWorks([]);
     setCustomNoSeek(false);
@@ -193,7 +191,6 @@ export const HomeContent = () => {
       setHomeInfo(null);
 
       // Connexion directe à la room via la page d'attente
-      setJoinRoomId(roomId);
       setHostRoomId("");
       setMultiTab("join");
       router.push(
@@ -268,7 +265,6 @@ export const HomeContent = () => {
     if (mode === "solo") {
       setHomeError(null);
       setHostRoomId("");
-      setJoinRoomId("");
       setHomeInfo(null);
       setCustomizingUniverse(null);
       setCustomAllowedWorks([]);
@@ -277,27 +273,6 @@ export const HomeContent = () => {
     }
     setModeConfirmed(false);
   }, [mode]);
-
-  // Cleanup d'une room idle si l'hôte quitte l'accueil sans l'utiliser
-  useEffect(() => {
-    const cleanupIdleRoom = () => {
-      if (mode !== "multi" || !hostRoomId || hasUsedRoomRef.current) return;
-      console.info("[home][cleanupIdleRoom] trigger", { mode, hostRoomId, hasUsedRoom: hasUsedRoomRef.current });
-      void fetch("/api/cleanup-room", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomId: hostRoomId, force: true }),
-      }).catch(() => {});
-    };
-
-    window.addEventListener("beforeunload", cleanupIdleRoom);
-    window.addEventListener("pagehide", cleanupIdleRoom);
-    return () => {
-      window.removeEventListener("beforeunload", cleanupIdleRoom);
-      window.removeEventListener("pagehide", cleanupIdleRoom);
-      cleanupIdleRoom();
-    };
-  }, [mode, hostRoomId]);
 
   // Customization modal helpers
   const openCustomize = useCallback(async (universe: Universe) => {
