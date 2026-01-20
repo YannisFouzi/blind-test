@@ -1,22 +1,22 @@
 "use client";
 
-import { useLobby } from "@/hooks/useLobby";
+import { usePartyKitLobby } from "@/hooks/usePartyKitLobby";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { generateId } from "@/utils/formatters";
 
 /**
- * Composant RoomsBrowser - Phase 9
+ * Composant RoomsBrowser
  *
- * Affiche la liste des rooms disponibles via le Lobby Party
- * Alternative simple à la gestion Firebase complexe de HomeContent
- *
- * Utilise le hook useLobby (Phase 8) pour recevoir la liste en temps réel
+ * Affiche la liste des rooms disponibles via le Lobby Party (PartyKit)
+ * Utilise usePartyKitLobby pour recevoir la liste en temps réel
  *
  * @example
  * <RoomsBrowser universeId="P3iE45PQXeqT5h2uUAzc" />
  */
 export function RoomsBrowser({ universeId }: { universeId: string }) {
-  const { rooms, isConnected } = useLobby();
+  const { rooms, isConnected } = usePartyKitLobby();
+  
   const router = useRouter();
   const [joiningRoomId, setJoiningRoomId] = useState<string | null>(null);
 
@@ -28,25 +28,42 @@ export function RoomsBrowser({ universeId }: { universeId: string }) {
 
     setJoiningRoomId(roomId);
 
-    // Rediriger vers la room
+    const playerId = generateId();
+
+    // Rediriger vers la page d'attente de la room (connexion WS immédiate)
     router.push(
-      `/game/${universeId}?mode=multi&room=${roomId}&name=${encodeURIComponent(
-        playerName.trim()
-      )}`
+      `/room/${roomId}?name=${encodeURIComponent(playerName.trim())}&player=${playerId}`
     );
   };
 
-  const handleCreateRoom = () => {
+  const handleCreateRoom = async () => {
     const playerName = prompt("Entrez votre pseudo :");
     if (!playerName || playerName.trim().length === 0) {
       return;
     }
 
-    // Générer un ID de room unique
+    // G?n?rer un ID de room unique
     const roomId = `room-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
+    // Notifier le Lobby imm?diatement pour afficher la room
+    const partyHost = process.env.NEXT_PUBLIC_PARTYKIT_HOST || "http://127.0.0.1:1999";
+    try {
+      await fetch(`${partyHost}/parties/lobby/main`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "room_created",
+          roomId,
+          hostName: playerName.trim(),
+          playersCount: 1,
+        }),
+      });
+    } catch (error) {
+      console.error("[RoomsBrowser] Failed to notify lobby", error);
+    }
+
     // Rediriger vers la nouvelle room
-    // PartyKit créera automatiquement la room au premier connect
+    // PartyKit cr?era automatiquement la room au premier connect
     router.push(
       `/game/${universeId}?mode=multi&room=${roomId}&name=${encodeURIComponent(
         playerName.trim()

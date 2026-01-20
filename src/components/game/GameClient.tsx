@@ -20,9 +20,9 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useGame } from "@/hooks/useGame";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
-import { joinRoom } from "@/services/firebase/rooms";
 import { getSongsByWork, getWorksByUniverse } from "@/services/firebase";
-import { generateId, shuffleArray } from "@/utils/formatters";
+import { shuffleArray } from "@/utils/formatters";
+import { useIdentity } from "@/hooks/useIdentity";
 
 interface GameClientProps {
   universeId: string;
@@ -31,21 +31,56 @@ interface GameClientProps {
 type Mode = "solo" | "multi";
 
 export function GameClient({ universeId }: GameClientProps) {
+  console.log("[GameClient] RENDER START", { universeId, timestamp: Date.now() });
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Player identity (persist per session)
-  const playerIdRef = useRef<string>(generateId());
+  // Player identity (persist per session) via useIdentity
+  const { playerId, displayName: storedDisplayName, ready: identityReady, setIdentity } = useIdentity();
   const queryPlayer = searchParams?.get("player");
-  if (queryPlayer && playerIdRef.current !== queryPlayer) {
-    playerIdRef.current = queryPlayer;
-  }
-
   const queryName = searchParams?.get("name") || "";
-  const displayName = useMemo(
-    () => queryName || `Joueur-${playerIdRef.current.slice(0, 4)}`,
-    [queryName]
-  );
+
+  useEffect(() => {
+    if (queryPlayer) {
+      setIdentity({ playerId: queryPlayer });
+    }
+  }, [queryPlayer, setIdentity]);
+
+  useEffect(() => {
+    if (queryName) {
+      setIdentity({ displayName: queryName });
+    }
+  }, [queryName, setIdentity]);
+
+  const playerIdRef = useRef<string>("");
+  const lastGateRef = useRef<string>("");
+  const hasLoggedMountRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (!hasLoggedMountRef.current) {
+      hasLoggedMountRef.current = true;
+      console.info("[GameClient] mount", {
+        roomId,
+        universeId,
+        mode,
+        queryPlayer,
+        queryName,
+        queryNoSeek,
+        queryWorks,
+      });
+    }
+    if (!identityReady || !playerId) return;
+    if (!playerIdRef.current) {
+      playerIdRef.current = playerId;
+    }
+  }, [identityReady, playerId]);
+
+  const displayName = useMemo(() => {
+    if (queryName) return queryName;
+    if (storedDisplayName) return storedDisplayName;
+    if (playerId) return `Joueur-${playerId.slice(0, 4)}`;
+    return "Joueur";
+  }, [queryName, storedDisplayName, playerId]);
   const queryNoSeek = searchParams?.get("noseek") === "1";
   const queryWorks = searchParams?.get("works") || "";
   const allowedWorksFromQuery = useMemo(
@@ -57,7 +92,15 @@ export function GameClient({ universeId }: GameClientProps) {
   const mode = queryMode;
 
   const roomId = searchParams?.get("room") || "";
-  const isHost = searchParams?.get("host") === "1";
+  const isHostParam = searchParams?.get("host") === "1";
+
+  // S'assurer que la ref contient l'ID stable avant d'initialiser les hooks multi
+  if (identityReady && playerId && !playerIdRef.current) {
+    playerIdRef.current = playerId;
+  }
+
+  const effectivePlayerId = identityReady ? (playerId ?? undefined) : undefined;
+  const effectiveDisplayName = identityReady ? displayName : storedDisplayName || "Joueur";
 
   const {
     isPlaying: audioIsPlaying,
@@ -90,12 +133,13 @@ export function GameClient({ universeId }: GameClientProps) {
   const multiplayerGame = useMultiplayerGame({
     universeId,
     roomId,
-    playerId: playerIdRef.current,
-    displayName,
+    playerId: effectivePlayerId,
+    displayName: effectiveDisplayName,
     preloadNextTrack: preloadNextMedia,
   });
 
   const isMultiActive = mode === "multi" && !!roomId;
+  const isHost = isMultiActive ? multiplayerGame.isHost : isHostParam;
   const activeWorks = isMultiActive ? multiplayerGame.works : soloGame.works;
   const activeCurrentSong = isMultiActive ? multiplayerGame.currentSong : soloGame.currentSong;
   const activeShowAnswer = isMultiActive ? multiplayerGame.showAnswer : soloGame.showAnswer;
@@ -118,16 +162,10 @@ export function GameClient({ universeId }: GameClientProps) {
 
   const activeCanGoNext = isMultiActive ? multiplayerGame.isHost && multiplayerGame.canGoNext : soloGame.canGoNext;
   const activeCanGoPrev = isMultiActive ? false : soloGame.canGoPrev;
+  const activeState = isMultiActive ? multiplayerGame.state : "playing";
 
   useEffect(() => {
-    console.info("[GameClient] controls state", {
-      mode,
-      roomId,
-      isHost,
-      canGoNext: activeCanGoNext,
-      canGoPrev: activeCanGoPrev,
-      players: isMultiActive ? multiplayerGame.players.length : "solo",
-    });
+    // Controls state tracking (logs retirés)
   }, [mode, roomId, isHost, activeCanGoNext, activeCanGoPrev, isMultiActive, multiplayerGame.players.length]);
 
   const activeSongIndex = isMultiActive
@@ -146,14 +184,11 @@ export function GameClient({ universeId }: GameClientProps) {
   }, [isMultiActive, multiplayerGame.players, soloGame.gameSession?.score]);
 
   const activeLastGain = isMultiActive ? multiplayerGame.lastGain : soloGame.lastGain;
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [pointsFlash, setPointsFlash] = useState<{ points: number; key: number } | null>(null);
 
   useEffect(() => {
-    console.info("[GameClient] score snapshot", {
-      mode,
-      roomId,
-      isHost,
-      score: activeScore,
-    });
+    // Score snapshot tracking (logs retirés)
   }, [mode, roomId, isHost, activeScore]);
 
   useEffect(() => {
@@ -176,127 +211,18 @@ export function GameClient({ universeId }: GameClientProps) {
   const formatTimeFn = formatAudioTime;
   const playbackUnavailable = !activeCurrentSong?.audioUrl;
 
-  // Rejoindre la room si joueur non-host
-  const joinRoomIfNeeded = useCallback(async () => {
-    if (mode !== "multi" || !roomId || isHost) return;
-    try {
-      await joinRoom({
-        roomId,
-        playerId: playerIdRef.current,
-        displayName: displayName.trim() || "Joueur",
-      });
-    } catch (error) {
-      console.error("[multi] joinRoom error", error);
-    }
-  }, [mode, roomId, isHost, displayName]);
+  // AUTO-CONFIG DÉSACTIVÉ : La configuration se fait maintenant dans /room/[roomId]
+  // où le HOST sélectionne l'univers avant d'arriver sur /game
+  // const [hasConfiguredRoom, setHasConfiguredRoom] = useState(false);
 
+  // AUTO-CONFIG EFFECT DÉSACTIVÉ
+  // La configuration de la room se fait maintenant dans /room/[roomId] par le HOST
+  // avant qu'il n'arrive sur /game
+  /*
   useEffect(() => {
-    if (mode === "multi") {
-      void joinRoomIfNeeded();
-    }
-  }, [mode, joinRoomIfNeeded]);
-
-  // Configurer la room automatiquement si on est HOST et que la room n'a pas de songs (PartyKit)
-  const [hasConfiguredRoom, setHasConfiguredRoom] = useState(false);
-
-  useEffect(() => {
-    if (
-      mode !== "multi" ||
-      !isHost ||
-      !multiplayerGame.isConnected ||
-      !multiplayerGame.configureRoom ||
-      hasConfiguredRoom
-    ) {
-      return;
-    }
-
-    // Si la room a déjà des songs, pas besoin de configurer
-    if (multiplayerGame.room?.songs && multiplayerGame.room.songs.length > 0) {
-      setHasConfiguredRoom(true);
-      return;
-    }
-
-    // Le HOST doit configurer la room avec les songs de l'univers
-    const configureRoomWithSongs = async () => {
-      try {
-        console.log("[GameClient] HOST: Configuring room with songs from universe:", universeId);
-
-        // 1. Charger les works de l'univers
-        const worksResult = await getWorksByUniverse(universeId);
-        if (!worksResult.success || !worksResult.data || worksResult.data.length === 0) {
-          console.error("[GameClient] No works found for universe", universeId);
-          return;
-        }
-
-        const works = worksResult.data;
-        const worksToUse = allowedWorksFromQuery && allowedWorksFromQuery.length > 0
-          ? works.filter(w => allowedWorksFromQuery.includes(w.id))
-          : works;
-
-        if (worksToUse.length === 0) {
-          console.error("[GameClient] No works to use after filtering");
-          return;
-        }
-
-        // 2. Charger les songs pour chaque work
-        const songPromises = worksToUse.map(work => getSongsByWork(work.id));
-        const songsResults = await Promise.all(songPromises);
-
-        const allSongs: Song[] = [];
-        for (const result of songsResults) {
-          if (result.success && result.data) {
-            allSongs.push(...result.data);
-          }
-        }
-
-        if (allSongs.length === 0) {
-          console.error("[GameClient] No songs found");
-          return;
-        }
-
-        // 3. Mélanger et limiter à 10 morceaux
-        const shuffled = shuffleArray([...allSongs]);
-        const selectedSongs = shuffled.slice(0, 10);
-
-        console.log(`[GameClient] Configuring room with ${selectedSongs.length} songs`);
-
-        // 4. Configurer la room via PartyKit
-        const result = await multiplayerGame.configureRoom(
-          universeId,
-          selectedSongs,
-          allowedWorksFromQuery,
-          { noSeek: queryNoSeek }
-        );
-
-        if (result.success) {
-          console.log("[GameClient] Room configured successfully");
-          setHasConfiguredRoom(true);
-
-          // ✅ Auto-start le jeu après configuration
-          if (multiplayerGame.startGame) {
-            console.log("[GameClient] AUTO-START: Starting game after configuration");
-            await multiplayerGame.startGame();
-          }
-        } else {
-          console.error("[GameClient] Failed to configure room:", result.error);
-        }
-      } catch (error) {
-        console.error("[GameClient] Error configuring room:", error);
-      }
-    };
-
-    void configureRoomWithSongs();
-  }, [
-    mode,
-    isHost,
-    multiplayerGame.isConnected,
-    multiplayerGame.configureRoom,
-    multiplayerGame.room?.songs,
-    universeId,
-    allowedWorksFromQuery,
-    queryNoSeek,
-    hasConfiguredRoom,
-  ]);
+    ... code commenté ...
+  }, [dependencies]);
+  */
 
   useEffect(() => {
     if (activeCurrentSong?.audioUrl) {
@@ -328,13 +254,34 @@ export function GameClient({ universeId }: GameClientProps) {
     handleAudioProgressClick(event);
   };
 
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [pointsFlash, setPointsFlash] = useState<{ points: number; key: number } | null>(null);
-
   useEffect(() => {
     const timer = setTimeout(() => setIsLoaded(true), 100);
     return () => clearTimeout(timer);
   }, []);
+
+  // Log multi snapshots only when key fields change to reduce spam
+  useEffect(() => {
+    if (!isMultiActive) return;
+    const snapshot = {
+      roomId,
+      state: multiplayerGame.state,
+      songs: multiplayerGame.room?.songs?.length ?? 0,
+      currentSongId: multiplayerGame.currentSong?.id,
+      players: multiplayerGame.players.length,
+      isHost,
+      isConnected: multiplayerGame.isConnected,
+    };
+    console.info("[GameClient] multi snapshot", snapshot);
+  }, [
+    isMultiActive,
+    roomId,
+    multiplayerGame.state,
+    multiplayerGame.room?.songs?.length,
+    multiplayerGame.currentSong?.id,
+    multiplayerGame.players.length,
+    multiplayerGame.isConnected,
+    isHost,
+  ]);
 
   const handleNextSongWithReset = () => {
     activeHandleNextSong();
@@ -351,6 +298,14 @@ export function GameClient({ universeId }: GameClientProps) {
   const handleValidateAnswerWithSound = () => {
     activeHandleValidateAnswer();
   };
+
+  if (!identityReady || !playerId || !playerIdRef.current) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   if (!isMultiActive && (!soloGame.gameSession || !soloGame.currentSong)) {
     return (
@@ -391,6 +346,11 @@ export function GameClient({ universeId }: GameClientProps) {
         <div className="text-center">
           <LoadingSpinner />
           <p className="text-white mt-4 font-medium">En attente de la playlist de la room...</p>
+          {multiplayerGame.room?.hostId && playerIdRef.current !== multiplayerGame.room.hostId && (
+            <p className="text-sm text-gray-400 mt-2">
+              L&apos;hôte actuel doit démarrer la partie. (Hôte: {multiplayerGame.room.hostId.slice(0, 8)})
+            </p>
+          )}
         </div>
       </div>
     );
@@ -468,7 +428,7 @@ export function GameClient({ universeId }: GameClientProps) {
               currentSongWorkId={activeCurrentSong?.workId}
               selectedWork={activeSelectedWork}
               showAnswer={activeShowAnswer}
-              canValidate={!!activeSelectedWork && !activeShowAnswer}
+              canValidate={!!activeSelectedWork && !activeShowAnswer && activeState === "playing"}
               canGoNext={activeCanGoNext}
               isCurrentSongAnswered={activeIsCurrentSongAnswered}
               onWorkSelection={handleWorkSelectionWithSound}

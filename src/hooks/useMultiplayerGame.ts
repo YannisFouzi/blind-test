@@ -89,6 +89,10 @@ export const useMultiplayerGame = ({
 
   const handleValidateAnswer = async () => {
     if (!currentSong || !selectedWork) return;
+    if (state !== "playing") {
+      setSubmitError("La partie n'a pas démarré");
+      return;
+    }
     const isCorrect = selectedWork === currentSong.workId;
     try {
       console.log("[multi] submit answer", {
@@ -131,6 +135,18 @@ export const useMultiplayerGame = ({
     // Utiliser la valeur directe de usePartyKitRoom (plus fiable)
     return isHostFromRoom;
   }, [isHostFromRoom]);
+
+  useEffect(() => {
+    console.info("[useMultiplayerGame] state snapshot", {
+      roomId: room?.id,
+      state,
+      songs: room?.songs?.length ?? 0,
+      currentSongId: currentSong?.id,
+      players: players.length,
+      isHost,
+      isConnected,
+    });
+  }, [room?.id, state, room?.songs?.length, currentSong?.id, players.length, isHost, isConnected]);
 
   return {
     mode: "multiplayer" as const,

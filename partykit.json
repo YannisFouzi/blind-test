@@ -1,5 +1,9 @@
 {
   "name": "blind-test-party",
   "main": "party/index.ts",
+  "parties": {
+    "game": "party/index.ts",
+    "lobby": "party/lobby.ts"
+  },
   "compatibilityDate": "2024-11-01"
 }

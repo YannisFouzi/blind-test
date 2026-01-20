@@ -20,7 +20,8 @@
       "Bash(if not exist \"docs\" mkdir docs)",
       "Bash(move partymachinesgameMachine.ts docsgameMachine.ts.example)",
       "Bash(move partyINTEGRATION_XSTATE.md docsINTEGRATION_XSTATE.md)",
-      "Bash(if not exist \"docs\\archive\" mkdir docsarchive)"
+      "Bash(if not exist \"docs\\archive\" mkdir docsarchive)",
+      "Bash(rd /s /q \".partykit\\state\")"
     ],
     "deny": [],
     "ask": []

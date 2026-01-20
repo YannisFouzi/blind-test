@@ -3,6 +3,7 @@ import { Cinzel, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ProvidersWithAuth } from "./providers";
 import { Toaster } from "@/components/ui";
+import { PartyKitProvider } from "@/context/PartyKitProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,7 +37,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} antialiased`}
       >
-        <ProvidersWithAuth>{children}</ProvidersWithAuth>
+        <ProvidersWithAuth>
+          <PartyKitProvider>{children}</PartyKitProvider>
+        </ProvidersWithAuth>
         <Toaster />
       </body>
     </html>

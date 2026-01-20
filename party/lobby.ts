@@ -10,6 +10,7 @@ interface RoomMetadata {
   playersCount: number;
   createdAt: number;
   updatedAt: number;
+  universeId?: string;
 }
 
 /**
@@ -57,8 +58,21 @@ export default class LobbyParty implements Party.Server {
    * - room_deleted : Room supprimée
    */
   async onRequest(req: Party.Request) {
+    // CORS preflight
+    if (req.method === "OPTIONS") {
+      return new Response("ok", {
+        status: 200,
+        headers: this.corsHeaders(),
+      });
+    }
+
+    // DELETE : Vider toutes les rooms (admin)
+    if (req.method === "DELETE") {
+      return this.handleClearAllRooms();
+    }
+
     if (req.method !== "POST") {
-      return new Response("Method not allowed", { status: 405 });
+      return new Response("Method not allowed", { status: 405, headers: this.corsHeaders() });
     }
 
     try {
@@ -82,14 +96,36 @@ export default class LobbyParty implements Party.Server {
           await this.handleRoomDeleted(roomId);
           break;
         default:
-          return new Response("Unknown event type", { status: 400 });
+          return new Response("Unknown event type", { status: 400, headers: this.corsHeaders() });
       }
 
-      return new Response("OK", { status: 200 });
+      return new Response("OK", { status: 200, headers: this.corsHeaders() });
     } catch (error) {
       console.error("[Lobby] Error:", error);
-      return new Response("Internal error", { status: 500 });
+      return new Response("Internal error", { status: 500, headers: this.corsHeaders() });
     }
+  }
+
+  /**
+   * Admin : Supprimer toutes les rooms du lobby
+   */
+  private async handleClearAllRooms() {
+    const map = await this.room.storage.list();
+    const roomKeys = Array.from(map.keys()).filter((key) => key.startsWith("room:"));
+
+    for (const key of roomKeys) {
+      await this.room.storage.delete(key);
+    }
+
+    console.log(`[Lobby] Cleared ${roomKeys.length} rooms`);
+
+    // Broadcaster la liste vide à tous les clients
+    await this.broadcastRoomsList();
+
+    return new Response(JSON.stringify({ deleted: roomKeys.length }), {
+      status: 200,
+      headers: { ...this.corsHeaders(), "Content-Type": "application/json" },
+    });
   }
 
   /**
@@ -103,6 +139,7 @@ export default class LobbyParty implements Party.Server {
       playersCount: data.playersCount || 1,
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      universeId: data.universeId,
     };
 
     await this.room.storage.put(`room:${roomId}`, metadata);
@@ -127,6 +164,9 @@ export default class LobbyParty implements Party.Server {
 
     metadata.state = data.state;
     metadata.playersCount = data.playersCount || metadata.playersCount;
+    if (data.universeId) {
+      metadata.universeId = data.universeId;
+    }
     metadata.updatedAt = Date.now();
 
     await this.room.storage.put(key, metadata);
@@ -151,22 +191,30 @@ export default class LobbyParty implements Party.Server {
 
   /**
    * Récupérer toutes les rooms depuis storage
-   *
-   * Filtre uniquement les rooms "idle" ou "configured" (joinables)
-   * Les rooms "playing" ou "results" ne sont pas affichées
+   * Supprime automatiquement les rooms expirées (TTL de 2 heures)
    */
   private async getRooms(): Promise<RoomMetadata[]> {
     const rooms: RoomMetadata[] = [];
     const map = await this.room.storage.list<RoomMetadata>();
+    const now = Date.now();
+    const TTL_MS = 2 * 60 * 60 * 1000; // 2 heures en millisecondes
 
     for (const [key, value] of map.entries()) {
       if (key.startsWith("room:")) {
-        rooms.push(value);
+        // Vérifier si la room est expirée (pas de mise à jour depuis 2h)
+        const isExpired = now - value.updatedAt > TTL_MS;
+
+        if (isExpired) {
+          // Supprimer la room expirée
+          await this.room.storage.delete(key);
+          console.log(`[Lobby] Room expired and deleted: ${value.id} (last update: ${new Date(value.updatedAt).toISOString()})`);
+        } else {
+          rooms.push(value);
+        }
       }
     }
 
-    // Filtrer uniquement les rooms joinables
-    return rooms.filter((r) => r.state === "idle" || r.state === "configured");
+    return rooms;
   }
 
   /**
@@ -195,6 +243,17 @@ export default class LobbyParty implements Party.Server {
         rooms,
       })
     );
+  }
+
+  /**
+   * Headers CORS pour les requêtes HTTP (création room depuis le front)
+   */
+  private corsHeaders() {
+    return {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    };
   }
 }
 

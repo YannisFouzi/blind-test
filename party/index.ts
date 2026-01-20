@@ -42,6 +42,7 @@ const MessageSchema = z.discriminatedUnion("type", [
     ),
     allowedWorks: z.array(z.string()).optional(),
     options: z.object({ noSeek: z.boolean() }).optional(),
+    hostId: z.string().optional(),
   }),
   z.object({
     type: z.literal("start"),
@@ -145,10 +146,24 @@ export default class BlindTestRoom implements Party.Server {
    * Nouvelle connexion WebSocket
    */
   async onConnect(conn: Party.Connection, ctx: Party.ConnectionContext) {
+    // Si une alarme de cleanup était programmée, l'annuler car quelqu'un revient
+    const existingAlarm = await this.room.storage.getAlarm();
+    if (existingAlarm) {
+      await this.room.storage.deleteAlarm();
+      await this.room.storage.delete("roomIdForCleanup");
+      console.log(`[${this.room.id}] Cleanup alarm canceled (player reconnected)`);
+    }
+
     const country = ctx.request.cf?.country || "unknown";
     console.log(`[${this.room.id}] Connection: ${conn.id} from ${country}`);
 
     // Envoyer l'état complet au nouveau client
+    console.log(`[${this.room.id}] onConnect -> state_sync snapshot`, {
+      hostId: this.state.hostId,
+      state: this.state.state,
+      songs: this.state.songs.length,
+      players: this.state.players.size,
+    });
     conn.send(
       JSON.stringify({
         type: "state_sync",
@@ -165,7 +180,7 @@ export default class BlindTestRoom implements Party.Server {
       const data = JSON.parse(message);
       const parsed = MessageSchema.parse(data);
 
-      console.log(`[${this.room.id}] Message from ${sender.id}:`, parsed.type);
+      console.log(`[${this.room.id}] Message from ${sender.id}:`, parsed.type, parsed);
 
       // Router le message vers le bon handler
       switch (parsed.type) {
@@ -243,14 +258,62 @@ export default class BlindTestRoom implements Party.Server {
       }
     }
 
-    // Si plus personne n'est connecté, on pourrait nettoyer (PartyKit va auto-hibernate)
+    // Si plus personne n'est connecté, programmer une alarme de cleanup (survit à l'hibernation)
     const hasConnectedPlayers = Array.from(this.state.players.values()).some((p) => p.connected);
     if (!hasConnectedPlayers) {
-      console.log(`[${this.room.id}] No players connected, room will hibernate`);
-
-      // ✅ Phase 7: Notifier le Lobby que la room est vide et peut être supprimée
-      void this.notifyLobby("room_deleted");
+      const existingAlarm = await this.room.storage.getAlarm();
+      if (existingAlarm) {
+        console.log(`[${this.room.id}] Cleanup alarm already pending`);
+        return;
+      }
+      const connections = Array.from(this.room.getConnections());
+      console.log(`[${this.room.id}] No players connected, scheduling cleanup alarm`, {
+        remainingPlayers: this.state.players.size,
+        connectionsCount: connections.length,
+        connectionIds: connections.map((c) => c.id),
+      });
+      // Sauvegarder le roomId dans le storage (car this.room.id n'est pas accessible dans onAlarm)
+      await this.room.storage.put("roomIdForCleanup", this.room.id);
+      // Alarme dans 30 secondes - survit même si le serveur hiberne
+      await this.room.storage.setAlarm(Date.now() + 30000);
     }
+  }
+
+  /**
+   * Alarme de cleanup - appelée automatiquement par PartyKit après le délai
+   * Survit à l'hibernation du serveur
+   * Note: this.room.id n'est pas accessible ici (limitation PartyKit)
+   */
+  async onAlarm() {
+    // Récupérer le roomId depuis le storage (sauvegardé avant l'alarme)
+    const roomId = await this.room.storage.get<string>("roomIdForCleanup");
+    if (!roomId) {
+      console.log("[onAlarm] No roomId found in storage, skipping cleanup");
+      return;
+    }
+
+    console.log(`[${roomId}] Cleanup alarm triggered, notifying lobby room_deleted`);
+
+    // Notifier le lobby directement (sans passer par notifyLobby qui utilise this.room.id)
+    try {
+      const lobbyUrl = `${this.room.env.PARTYKIT_HOST}/parties/lobby/main`;
+      await fetch(lobbyUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "room_deleted",
+          roomId,
+        }),
+      });
+      console.log(`[${roomId}] Notified lobby: room_deleted`);
+    } catch (error) {
+      console.error(`[${roomId}] Failed to notify lobby:`, error);
+    }
+
+    // ✅ SUPPRIMER COMPLÈTEMENT L'ÉTAT DU DURABLE OBJECT
+    // Cela supprime le fichier SQLite physique et libère les ressources
+    await this.room.storage.deleteAll();
+    console.log(`[${roomId}] Room state deleted completely (SQLite file removed)`);
   }
 
   // ==========================================================================
@@ -298,7 +361,7 @@ export default class BlindTestRoom implements Party.Server {
         });
       }
 
-      console.log(`[${this.room.id}] Player ${playerId} joined (${displayName})`);
+      console.log(`[${this.room.id}] Player ${playerId} joined (${displayName}) | hostId=${this.state.hostId} | total=${this.state.players.size}`);
     }
 
     // Envoyer confirmation au joueur
@@ -307,6 +370,17 @@ export default class BlindTestRoom implements Party.Server {
         type: "join_success",
         playerId,
         isHost: this.state.players.get(playerId)!.isHost,
+        hostId: this.state.hostId,
+        state: this.state.state,
+      })
+    );
+
+    // Envoyer l'état complet au joueur (important pour les reconnexions)
+    // Cela garantit que le client a toujours les songs même si le socket était réutilisé
+    sender.send(
+      JSON.stringify({
+        type: "state_sync",
+        state: this.serializeState(),
       })
     );
 
@@ -315,13 +389,51 @@ export default class BlindTestRoom implements Party.Server {
       type: "players_update",
       players: this.getPlayersArray(),
     });
+
+    console.log(`[${this.room.id}] handleJoin snapshot`, {
+      hostId: this.state.hostId,
+      state: this.state.state,
+      songs: this.state.songs.length,
+      players: this.state.players.size,
+    });
   }
 
   /**
    * Handler: CONFIGURE - Configuration de la playlist
    */
   private handleConfigure(msg: Extract<Message, { type: "configure" }>, sender: Party.Connection) {
-    const { universeId, songs, allowedWorks, options } = msg;
+    console.log(`[${this.room.id}] ========== CONFIGURE MESSAGE RECEIVED ==========`);
+    const { universeId, songs, allowedWorks, options, hostId: hostIdFromClient } = msg;
+    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+    const senderId = senderPlayer?.id ?? hostIdFromClient;
+
+    console.log(`[${this.room.id}] handleConfigure called`, {
+      senderId,
+      senderPlayer: senderPlayer?.id,
+      senderConn: sender.id,
+      expectedHostId: this.state.hostId,
+      hostIdFromClient,
+      universeId,
+      songs: songs.length,
+      allowedWorks: allowedWorks?.length ?? 0,
+      options,
+      state: this.state.state,
+      allPlayers: Array.from(this.state.players.values()).map(p => ({ id: p.id, connId: p.connectionId })),
+    });
+
+    // Validation: seul l'host peut configurer
+    if (!senderId || senderId !== this.state.hostId) {
+      console.warn(
+        `[${this.room.id}] CONFIGURE rejected: expected hostId=${this.state.hostId}, senderId=${senderId}, conn=${sender.id}`
+      );
+      sender.send(
+        JSON.stringify({
+          type: "error",
+          message: "Only the host can configure the game",
+        })
+      );
+      return;
+    }
 
     // Vérifier que c'est le host qui configure (optionnel, on peut laisser n'importe qui)
     // Pour l'instant, on autorise tout le monde pour simplifier
@@ -342,14 +454,37 @@ export default class BlindTestRoom implements Party.Server {
       })
     );
 
+    // Notifier le Lobby que la room est configur?e avec l'univers choisi
+    void this.notifyLobby("room_state_changed", {
+      state: "configured",
+      playersCount: this.state.players.size,
+      universeId,
+    });
+
     // Broadcaster la nouvelle config avec les songs
-    this.broadcast({
+    const broadcastMessage = {
       type: "room_configured",
       universeId,
       songsCount: songs.length,
       songs,
       allowedWorks,
       options,
+    };
+    const configConnections = Array.from(this.room.getConnections());
+    console.log(`[${this.room.id}] Broadcasting room_configured`, {
+      universeId,
+      songsCount: songs.length,
+      connectionsCount: configConnections.length,
+      connectionIds: configConnections.map(c => c.id),
+    });
+    this.broadcast(broadcastMessage);
+    console.log(`[${this.room.id}] room_configured broadcast DONE`);
+
+    console.log(`[${this.room.id}] handleConfigure applied`, {
+      universeId: this.state.universeId,
+      songs: this.state.songs.length,
+      state: this.state.state,
+      players: this.state.players.size,
     });
   }
 
@@ -357,7 +492,20 @@ export default class BlindTestRoom implements Party.Server {
    * Handler: START - Démarrage de la partie
    */
   private handleStart(msg: Extract<Message, { type: "start" }>, sender: Party.Connection) {
+    console.log(`[${this.room.id}] ========== START MESSAGE RECEIVED ==========`);
     const { hostId } = msg;
+    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+
+    console.log(`[${this.room.id}] handleStart called`, {
+      hostId,
+      senderPlayer: senderPlayer?.id,
+      senderConn: sender.id,
+      expectedHostId: this.state.hostId,
+      state: this.state.state,
+      songs: this.state.songs.length,
+      players: this.state.players.size,
+      allPlayers: Array.from(this.state.players.values()).map(p => ({ id: p.id, connId: p.connectionId })),
+    });
 
     // Validation: est-ce bien le host ?
     if (hostId !== this.state.hostId) {
@@ -396,13 +544,10 @@ export default class BlindTestRoom implements Party.Server {
     this.state.state = "playing";
     this.state.currentSongIndex = 0;
 
-    console.log(`[${this.room.id}] Game started by ${hostId}`);
+    console.log(`[${this.room.id}] Game started by hostId=${hostId} (conn=${sender.id}, senderPlayer=${senderPlayer?.id})`);
 
     // ✅ Phase 7: Notifier le Lobby que la room a commencé à jouer
-    void this.notifyLobby("room_state_changed", {
-      state: "playing",
-      playersCount: this.state.players.size,
-    });
+    void this.notifyLobby("room_state_changed", { state: "playing", playersCount: this.state.players.size, universeId: this.state.universeId, });
 
     // Broadcaster le démarrage (avec la liste complète des songs)
     this.broadcast({
@@ -421,6 +566,14 @@ export default class BlindTestRoom implements Party.Server {
   private handleAnswer(msg: Extract<Message, { type: "answer" }>, sender: Party.Connection) {
     const { playerId, songId } = msg;
     const workId = msg.workId ?? null; // Normaliser undefined → null
+    console.log(`[${this.room.id}] handleAnswer called`, {
+      playerId,
+      songId,
+      workId,
+      state: this.state.state,
+      responses: this.state.responses.size,
+      players: this.state.players.size,
+    });
 
     // ✅ Validation: le jeu doit être en mode "playing"
     if (this.state.state !== "playing") {
@@ -554,7 +707,15 @@ export default class BlindTestRoom implements Party.Server {
    * Handler: NEXT - Passer au morceau suivant
    */
   private handleNext(msg: Extract<Message, { type: "next" }>, sender: Party.Connection) {
+    console.log(`[${this.room.id}] handleNext called`, {
+      hostId: msg.hostId,
+      expectedHostId: this.state.hostId,
+      state: this.state.state,
+      currentSongIndex: this.state.currentSongIndex,
+      songs: this.state.songs.length,
+    });
     const { hostId } = msg;
+    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
 
     // Validation: est-ce bien le host ?
     if (hostId !== this.state.hostId) {
@@ -704,3 +865,4 @@ export default class BlindTestRoom implements Party.Server {
     }
   }
 }
+
