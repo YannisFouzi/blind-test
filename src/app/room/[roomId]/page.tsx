@@ -194,22 +194,9 @@ export default function WaitingRoomPage() {
             <h1 className="text-4xl font-bold text-white mb-4">
               Sélectionne un univers
             </h1>
-            <p className="text-slate-300">
-              Room : <span className="font-mono text-sm">{roomId}</span>
-            </p>
           </div>
 
-          <div className="bg-slate-900/60 border border-purple-500/30 rounded-2xl p-6 max-w-2xl mx-auto">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-slate-300">
-                <span className={`inline-block w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-gray-500'}`} />
-                {isConnected ? 'Connecté' : 'Connexion...'}
-              </p>
-              <p className="text-xs text-slate-400">
-                {players.length} joueur{players.length > 1 ? 's' : ''}
-              </p>
-            </div>
-
+          <div className="p-6 max-w-2xl mx-auto">
             <div className="bg-slate-800/60 rounded-xl p-4">
               <p className="text-xs uppercase tracking-[0.15em] text-slate-400 mb-2">
                 Joueurs connectés
@@ -256,28 +243,9 @@ export default function WaitingRoomPage() {
   // Si INVITÉ : afficher page d'attente
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900 flex items-center justify-center">
-      <div className="bg-slate-900/80 border border-purple-500/30 rounded-2xl p-6 max-w-lg w-full text-white space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-300">
-              Room
-            </p>
-            <p className="text-lg font-semibold break-all">{roomId}</p>
-          </div>
-          <div
-            className={`px-3 py-1 rounded-full text-xs ${
-              isConnected ? "bg-green-500/20 text-green-200" : "bg-slate-700 text-slate-200"
-            }`}
-          >
-            {isConnected ? "Connecté" : "Connexion..."}
-          </div>
-        </div>
-
+      <div className="p-6 max-w-lg w-full text-white space-y-4">
         <div className="text-sm text-slate-200">
           <p className="font-medium">En attente de l&apos;hôte...</p>
-          <p className="text-slate-400">
-            Tu es connecté à la room. Le jeu démarre automatiquement quand l&apos;hôte lance.
-          </p>
         </div>
 
         <div className="bg-slate-800/60 rounded-xl p-4">
@@ -301,12 +269,6 @@ export default function WaitingRoomPage() {
           )}
         </div>
 
-        <div className="flex items-center gap-2 text-slate-300 text-sm">
-          <LoadingSpinner />
-          <span>
-            État : <strong className="text-white">{state}</strong>
-          </span>
-        </div>
       </div>
     </div>
   );
