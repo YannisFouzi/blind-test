@@ -103,12 +103,14 @@ router.get("/status/:jobId", (req, res) => {
     return res.status(404).json({ success: false, error: "Job introuvable." });
   }
 
+  const result = job.result ? { success: true, ...job.result } : undefined;
+
   return res.json({
     success: true,
     jobId: job.id,
     status: job.status,
     progress: job.progress,
-    result: job.result,
+    result,
     error: job.error,
   });
 });
