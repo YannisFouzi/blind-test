@@ -22,7 +22,8 @@
       "Bash(move partyINTEGRATION_XSTATE.md docsINTEGRATION_XSTATE.md)",
       "Bash(if not exist \"docs\\archive\" mkdir docsarchive)",
       "Bash(rd /s /q \".partykit\\state\")",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
