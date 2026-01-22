@@ -20,14 +20,59 @@ const ingestionResponseSchema = z.object({
   errors: z.array(z.string()).optional(),
 });
 
+type IngestionResult = z.infer<typeof ingestionResponseSchema>;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const pollJob = async (jobId: string): Promise<IngestionResult> => {
+  const maxWaitMs = 15 * 60 * 1000;
+  const intervalMs = 2000;
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < maxWaitMs) {
+    const response = await fetch(
+      `/api/audio/import-playlist/status?jobId=${encodeURIComponent(jobId)}`
+    );
+
+    const json = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: json?.error || "Erreur lors du suivi du job d'import.",
+      };
+    }
+
+    if (json?.status === "done") {
+      const parsed = ingestionResponseSchema.safeParse(json?.result);
+      if (!parsed.success) {
+        return {
+          success: false,
+          error: "Reponse invalide du service d'import audio.",
+        };
+      }
+      return parsed.data;
+    }
+
+    if (json?.status === "error") {
+      return {
+        success: false,
+        error: json?.error || "Erreur lors de l'import audio.",
+      };
+    }
+
+    await sleep(intervalMs);
+  }
+
+  return {
+    success: false,
+    error: "Timeout: import trop long.",
+  };
+};
+
 export const AudioIngestionService = {
   async importPlaylist(workId: string, playlistId: string) {
-    console.log("🎵 [AudioIngestionService] Début import playlist");
-    console.log("📋 [AudioIngestionService] workId:", workId, "playlistId:", playlistId);
-
     try {
-      console.log("🔗 [AudioIngestionService] Appel /api/audio/import-playlist");
-
       const response = await fetch("/api/audio/import-playlist", {
         method: "POST",
         headers: {
@@ -36,34 +81,38 @@ export const AudioIngestionService = {
         body: JSON.stringify({ workId, playlistId }),
       });
 
-      console.log("📡 [AudioIngestionService] Réponse status:", response.status);
+      const json = await response.json().catch(() => null);
 
-      if (!response.ok) {
-        const message =
-          response.status === 404
-            ? "Le service d'import audio n'est pas disponible."
-            : "Erreur lors de l'import audio.";
-        console.error("❌ [AudioIngestionService] Erreur:", message);
-        return { success: false as const, error: message };
+      // Backward compatibility: if API returns full result directly
+      if (json?.songs || json?.imported !== undefined) {
+        const parsed = ingestionResponseSchema.safeParse(json);
+        if (!parsed.success) {
+          return {
+            success: false as const,
+            error: "Reponse invalide du service d'import audio.",
+          };
+        }
+        return parsed.data;
       }
 
-      const json = await response.json();
-      console.log("📦 [AudioIngestionService] JSON reçu:", json);
-
-      const parsed = ingestionResponseSchema.safeParse(json);
-
-      if (!parsed.success) {
-        console.error("❌ [AudioIngestionService] Validation schema échouée:", parsed.error);
+      if (!response.ok) {
         return {
           success: false as const,
-          error: "Réponse invalide du service d'import audio.",
+          error:
+            json?.error ||
+            "Erreur lors de l'import audio.",
         };
       }
 
-      console.log("✅ [AudioIngestionService] Import réussi:", parsed.data);
-      return parsed.data;
+      if (!json?.jobId) {
+        return {
+          success: false as const,
+          error: "Reponse invalide du service d'import audio.",
+        };
+      }
+
+      return await pollJob(json.jobId);
     } catch (error) {
-      console.error("❌ [AudioIngestionService] Exception:", error);
       return {
         success: false as const,
         error:

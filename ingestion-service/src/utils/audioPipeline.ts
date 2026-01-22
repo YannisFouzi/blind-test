@@ -8,12 +8,23 @@ import { uploadToR2, buildObjectKey } from "../services/cloudflare.js";
 import { fetchPlaylistVideos } from "../services/youtube.js";
 
 // Railway: /app/bin/yt-dlp | Local: yt-dlp in PATH
-const ytdlpPath = process.env.YT_DLP_PATH || (fs.existsSync("/app/bin/yt-dlp") ? "/app/bin/yt-dlp" : "yt-dlp");
+const ytdlpPath =
+  process.env.YT_DLP_PATH || (fs.existsSync("/app/bin/yt-dlp") ? "/app/bin/yt-dlp" : "yt-dlp");
 const youtubedl = create(ytdlpPath);
+
+const cookiesPath = "/app/cookies/cookies.txt";
+const ytdlpBaseOptions = {
+  sleepInterval: 3,
+  maxSleepInterval: 5,
+  sleepRequests: 2,
+  userAgent:
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  ...(fs.existsSync(cookiesPath) ? { cookies: cookiesPath } : {}),
+};
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
-interface ProcessPlaylistResult {
+export interface ProcessPlaylistResult {
   imported: number;
   skipped: number;
   errors: string[];
@@ -26,6 +37,17 @@ interface ProcessPlaylistResult {
     audioUrl: string;
   }>;
 }
+
+export type ProgressUpdate = {
+  total: number;
+  processed: number;
+  imported: number;
+  errors: number;
+};
+
+export type ProcessPlaylistOptions = {
+  onProgress?: (progress: ProgressUpdate) => void;
+};
 
 type YtdlpMetadata = {
   artist?: string;
@@ -43,6 +65,7 @@ const fetchVideoMetadata = async (videoId: string): Promise<YtdlpMetadata> => {
       skipDownload: true,
       noWarnings: true,
       quiet: true,
+      ...ytdlpBaseOptions,
     })) as YtdlpMetadata;
     return info;
   } catch (error) {
@@ -53,12 +76,25 @@ const fetchVideoMetadata = async (videoId: string): Promise<YtdlpMetadata> => {
 
 export const processPlaylist = async (
   workId: string,
-  playlistId: string
+  playlistId: string,
+  options: ProcessPlaylistOptions = {}
 ): Promise<ProcessPlaylistResult> => {
   const videos = await fetchPlaylistVideos(playlistId);
   if (!videos.length) {
     return { imported: 0, skipped: 0, errors: [], songs: [] };
   }
+
+  const total = videos.length;
+  let processed = 0;
+  let imported = 0;
+  let errorsCount = 0;
+
+  options.onProgress?.({
+    total,
+    processed,
+    imported,
+    errors: errorsCount,
+  });
 
   const concurrency = Number(process.env.INGESTION_CONCURRENCY || "2");
   const limit = pLimit(Math.max(1, concurrency));
@@ -94,21 +130,31 @@ export const processPlaylist = async (
             artist,
             audioUrl: processed.url,
           });
+          imported += 1;
         } catch (error) {
           const message =
             error instanceof Error
               ? `${video.title} - ${error.message}`
               : `${video.title} - Erreur inconnue`;
           errors.push(message);
+          errorsCount += 1;
           console.error("[ingestion] erreur piste", message);
+        } finally {
+          processed += 1;
+          options.onProgress?.({
+            total,
+            processed,
+            imported,
+            errors: errorsCount,
+          });
         }
       })
     )
   );
 
   return {
-    imported: songs.length,
-    skipped: videos.length - songs.length,
+    imported,
+    skipped: total - imported,
     errors,
     songs,
   };
@@ -156,6 +202,7 @@ const downloadAudioStream = async (videoId: string, destination: string) => {
       noPlaylist: true,
       quiet: true,
       noWarnings: true,
+      ...ytdlpBaseOptions,
     });
 
     console.log(`[yt-dlp] Downloaded successfully: ${videoId}`);

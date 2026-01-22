@@ -7,17 +7,17 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  console.log("📥 [API /api/audio/import-playlist] Requête reçue");
+  console.log("[API /api/audio/import-playlist] Request received");
 
   const body = await request.json().catch(() => null);
-  console.log("📦 [API] Body reçu:", body);
+  console.log("[API] Body:", body);
 
   const parsed = bodySchema.safeParse(body);
 
   if (!parsed.success) {
-    console.error("❌ [API] Validation échouée:", parsed.error);
+    console.error("[API] Validation failed:", parsed.error);
     return NextResponse.json(
-      { success: false, error: "Requête invalide." },
+      { success: false, error: "Requete invalide." },
       { status: 400 }
     );
   }
@@ -25,21 +25,21 @@ export async function POST(request: Request) {
   const ingestionUrl = process.env.INGESTION_SERVICE_URL;
   const ingestionToken = process.env.INGESTION_SERVICE_TOKEN;
 
-  console.log("🔧 [API] INGESTION_SERVICE_URL:", ingestionUrl || "❌ NON DÉFINIE");
-  console.log("🔑 [API] INGESTION_SERVICE_TOKEN:", ingestionToken ? "✅ Défini" : "❌ Non défini");
+  console.log("[API] INGESTION_SERVICE_URL:", ingestionUrl || "NOT SET");
+  console.log("[API] INGESTION_SERVICE_TOKEN:", ingestionToken ? "SET" : "NOT SET");
 
   if (!ingestionUrl) {
-    console.error("❌ [API] Service d'ingestion non configuré");
+    console.error("[API] Ingestion service not configured");
     return NextResponse.json(
-      { success: false, error: "Service d'import audio non configuré." },
+      { success: false, error: "Service d'import audio non configure." },
       { status: 500 }
     );
   }
 
   try {
-    const targetUrl = `${ingestionUrl}/api/import-playlist`;
-    console.log("🚀 [API] Appel au service d'ingestion:", targetUrl);
-    console.log("📤 [API] Données envoyées:", parsed.data);
+    const targetUrl = `${ingestionUrl}/api/import-playlist/async`;
+    console.log("[API] Calling ingestion service (async):", targetUrl);
+    console.log("[API] Payload:", parsed.data);
 
     const response = await fetch(targetUrl, {
       method: "POST",
@@ -50,28 +50,34 @@ export async function POST(request: Request) {
       body: JSON.stringify(parsed.data),
     });
 
-    console.log("📨 [API] Réponse status:", response.status);
+    console.log("[API] Response status:", response.status);
 
     const json = await response.json().catch(() => null);
-    console.log("📨 [API] Réponse JSON:", json);
+    console.log("[API] Response JSON:", json);
 
     if (!response.ok) {
-      console.error("❌ [API] Erreur du service d'ingestion:", json);
+      console.error("[API] Ingestion service error:", json);
       return NextResponse.json(
         {
           success: false,
-          error:
-            json?.error ||
-            "Le service d'import audio a rencontré une erreur.",
+          error: json?.error || "Le service d'import audio a rencontre une erreur.",
         },
         { status: response.status }
       );
     }
 
-    console.log("✅ [API] Import terminé avec succès");
-    return NextResponse.json(json);
+    if (!json?.jobId) {
+      console.error("[API] Missing jobId in response");
+      return NextResponse.json(
+        { success: false, error: "Reponse invalide du service d'import audio." },
+        { status: 500 }
+      );
+    }
+
+    console.log("[API] Job created:", json.jobId);
+    return NextResponse.json({ success: true, jobId: json.jobId }, { status: 202 });
   } catch (error) {
-    console.error("❌ [API] Exception:", error);
+    console.error("[API] Exception:", error);
     return NextResponse.json(
       {
         success: false,

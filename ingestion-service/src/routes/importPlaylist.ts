@@ -1,6 +1,14 @@
 import { Router } from "express";
 import { z } from "zod";
 import { processPlaylist } from "../utils/audioPipeline.js";
+import {
+  createJob,
+  getJob,
+  setJobError,
+  setJobDone,
+  setJobRunning,
+  updateJobProgress,
+} from "../services/importJobs.js";
 
 const requestSchema = z.object({
   playlistId: z.string().min(1),
@@ -53,4 +61,54 @@ router.post("/", async (req, res) => {
         error instanceof Error ? error.message : "Erreur inconnue lors de l'import.",
     });
   }
+});
+
+router.post("/async", async (req, res) => {
+  console.log("[INGESTION-SERVICE] Async request received");
+  console.log("[INGESTION-SERVICE] Body:", req.body);
+
+  const parsed = requestSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    console.error("[INGESTION-SERVICE] Validation failed:", parsed.error);
+    return res.status(400).json({
+      success: false,
+      error: "Requête invalide.",
+    });
+  }
+
+  const job = createJob();
+  res.status(202).json({ jobId: job.id });
+
+  setImmediate(async () => {
+    try {
+      setJobRunning(job.id);
+      const result = await processPlaylist(parsed.data.workId, parsed.data.playlistId, {
+        onProgress: (progress) => updateJobProgress(job.id, progress),
+      });
+      setJobDone(job.id, result);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Erreur inconnue lors de l'import.";
+      setJobError(job.id, message);
+    }
+  });
+});
+
+router.get("/status/:jobId", (req, res) => {
+  const { jobId } = req.params;
+  const job = getJob(jobId);
+
+  if (!job) {
+    return res.status(404).json({ success: false, error: "Job introuvable." });
+  }
+
+  return res.json({
+    success: true,
+    jobId: job.id,
+    status: job.status,
+    progress: job.progress,
+    result: job.result,
+    error: job.error,
+  });
 });
