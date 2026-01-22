@@ -59,7 +59,16 @@ export const WorkSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
   universeId: z.string().min(1),
-  playlistId: z.string().min(1),
+  playlistId: z.preprocess(
+    (value) => {
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed.length === 0 ? undefined : trimmed;
+      }
+      return value;
+    },
+    z.string().min(1).optional()
+  ),
   order: z.number().int().min(0),
   createdAt: timestampSchema,
 });
