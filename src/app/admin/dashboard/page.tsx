@@ -43,6 +43,8 @@ export default function AdminDashboard() {
     updateSong,
     deleteSong,
     importSongsFromPlaylist,
+    resumeImportFromJob,
+    pendingImportJob,
   } = useAdmin(user);
 
   // État local pour les modales et formulaires
@@ -381,6 +383,8 @@ export default function AdminDashboard() {
               onCancel={handleCloseModal}
               loading={loading}
               onImportSongs={importSongsFromPlaylist}
+              pendingImportJob={pendingImportJob}
+              onResumeImport={resumeImportFromJob}
             />
           </div>
         </div>

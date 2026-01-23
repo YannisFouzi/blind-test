@@ -1,5 +1,5 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { createReadStream } from "fs";
+import { promises as fs } from "fs";
 import path from "path";
 
 const accountId = process.env.R2_ACCOUNT_ID;
@@ -35,11 +35,14 @@ export const uploadToR2 = async (
     throw new Error("Cloudflare R2 est mal configuré.");
   }
 
+  const body = await fs.readFile(filePath);
+
   const command = new PutObjectCommand({
     Bucket: bucket,
     Key: key,
-    Body: createReadStream(filePath),
+    Body: body,
     ContentType: "audio/mpeg",
+    ContentLength: body.length,
     Metadata: metadata,
   });
 

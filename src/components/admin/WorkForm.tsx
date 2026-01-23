@@ -20,6 +20,11 @@ interface WorkFormProps {
     workId: string,
     playlistId: string
   ) => Promise<{ success: boolean; error?: string }>;
+  pendingImportJob?: { workId: string; jobId: string } | null;
+  onResumeImport?: (
+    workId: string,
+    jobId: string
+  ) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const WorkForm = ({
@@ -30,9 +35,12 @@ export const WorkForm = ({
   onCancel,
   loading = false,
   onImportSongs,
+  pendingImportJob,
+  onResumeImport,
 }: WorkFormProps) => {
   const [validating, setValidating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [resuming, setResuming] = useState(false);
 
   const {
     register,
@@ -153,6 +161,19 @@ export const WorkForm = ({
       await onImportSongs(work.id, playlistId);
     } finally {
       setImporting(false);
+    }
+  };
+
+  const handleResumeImport = async () => {
+    if (!work?.id || !pendingImportJob?.jobId || !onResumeImport) {
+      return;
+    }
+
+    setResuming(true);
+    try {
+      await onResumeImport(work.id, pendingImportJob.jobId);
+    } finally {
+      setResuming(false);
     }
   };
 
@@ -311,6 +332,24 @@ export const WorkForm = ({
             )}
           </div>
         )}
+        {pendingImportJob &&
+          work?.id === pendingImportJob.workId &&
+          onResumeImport && (
+            <div className="mt-3 flex items-center space-x-2">
+              <Button
+                type="button"
+                variant="warning"
+                size="sm"
+                onClick={handleResumeImport}
+                disabled={resuming}
+              >
+                {resuming ? "Reprise..." : "Reprendre l'import"}
+              </Button>
+              <p className="text-yellow-400 text-xs">
+                Import en attente (jobId: {pendingImportJob.jobId})
+              </p>
+            </div>
+          )}
         {errors.playlistId && (
           <p className="text-red-400 text-sm mt-1">
             {errors.playlistId.message}

@@ -24,9 +24,30 @@ type IngestionResult = z.infer<typeof ingestionResponseSchema>;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const pollJob = async (jobId: string): Promise<IngestionResult> => {
-  const maxWaitMs = 15 * 60 * 1000;
-  const intervalMs = 2000;
+type IngestionJobStatus = "done" | "error" | "timeout";
+type IngestionResultWithJob = IngestionResult & {
+  jobId?: string;
+  status?: IngestionJobStatus;
+};
+
+const getDefaultTimeoutMs = () => {
+  const minutes = Number(
+    process.env.NEXT_PUBLIC_INGESTION_TIMEOUT_MINUTES ?? "60"
+  );
+
+  if (Number.isFinite(minutes) && minutes > 0) {
+    return minutes * 60 * 1000;
+  }
+
+  return 60 * 60 * 1000;
+};
+
+const pollJob = async (
+  jobId: string,
+  options?: { maxWaitMs?: number; intervalMs?: number }
+): Promise<IngestionResultWithJob> => {
+  const maxWaitMs = options?.maxWaitMs ?? getDefaultTimeoutMs();
+  const intervalMs = options?.intervalMs ?? 2000;
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < maxWaitMs) {
@@ -40,6 +61,8 @@ const pollJob = async (jobId: string): Promise<IngestionResult> => {
       return {
         success: false,
         error: json?.error || "Erreur lors du suivi du job d'import.",
+        status: "error",
+        jobId,
       };
     }
 
@@ -49,15 +72,23 @@ const pollJob = async (jobId: string): Promise<IngestionResult> => {
         return {
           success: false,
           error: "Reponse invalide du service d'import audio.",
+          status: "error",
+          jobId,
         };
       }
-      return parsed.data;
+      return {
+        ...parsed.data,
+        status: "done",
+        jobId,
+      };
     }
 
     if (json?.status === "error") {
       return {
         success: false,
         error: json?.error || "Erreur lors de l'import audio.",
+        status: "error",
+        jobId,
       };
     }
 
@@ -67,6 +98,8 @@ const pollJob = async (jobId: string): Promise<IngestionResult> => {
   return {
     success: false,
     error: "Timeout: import trop long.",
+    status: "timeout",
+    jobId,
   };
 };
 
@@ -92,7 +125,10 @@ export const AudioIngestionService = {
             error: "Reponse invalide du service d'import audio.",
           };
         }
-        return parsed.data;
+        return {
+          ...parsed.data,
+          status: "done",
+        };
       }
 
       if (!response.ok) {
@@ -121,5 +157,8 @@ export const AudioIngestionService = {
             : "Erreur inconnue lors de l'import audio.",
       };
     }
+  },
+  async resumeImport(jobId: string, maxWaitMs?: number) {
+    return await pollJob(jobId, { maxWaitMs });
   },
 };

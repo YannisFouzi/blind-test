@@ -1,5 +1,7 @@
 import fs from "fs-extra";
+import path from "path";
 import tmp from "tmp";
+import { spawnSync } from "child_process";
 import { create } from "youtube-dl-exec";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
@@ -13,7 +15,53 @@ const ytdlpPath =
 const youtubedl = create(ytdlpPath);
 
 const cookiesPath = "/app/cookies/cookies.txt";
-const ytdlpBaseOptions = {
+const nodeRuntime =
+  process.execPath.includes(" ") ? "node" : `node:${process.execPath}`;
+
+let cachedSupportsJsRuntimes: boolean | null = null;
+const supportsJsRuntimes = () => {
+  if (cachedSupportsJsRuntimes !== null) {
+    return cachedSupportsJsRuntimes;
+  }
+  try {
+    const result = spawnSync(ytdlpPath, ["--help"], { encoding: "utf8" });
+    const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+    cachedSupportsJsRuntimes = output.includes("--js-runtimes");
+  } catch {
+    cachedSupportsJsRuntimes = false;
+  }
+
+  if (!cachedSupportsJsRuntimes) {
+    console.warn(
+      "[yt-dlp] --js-runtimes not supported by current binary. Continuing without JS runtime."
+    );
+  }
+  return cachedSupportsJsRuntimes;
+};
+
+const parsePlayerClients = (value?: string) => {
+  if (!value) {
+    return [];
+  }
+  return value
+    .split(",")
+    .map((client) => client.trim())
+    .filter(Boolean);
+};
+
+const defaultPlayerClients = "web,tv,ios";
+const playerClientsEnv = process.env.YT_DLP_PLAYER_CLIENTS || defaultPlayerClients;
+const poToken = process.env.YT_DLP_PO_TOKEN;
+const configuredClients = parsePlayerClients(playerClientsEnv);
+const effectiveClients = poToken
+  ? configuredClients
+  : configuredClients.filter((client) => client !== "android");
+const extractorArgsValue = effectiveClients.length
+  ? `youtube:player_client=${effectiveClients.join(",")}${poToken ? `;po_token=android.gvs+${poToken}` : ""}`
+  : undefined;
+
+const ytdlpBaseOptions: Record<string, unknown> = {
+  ...(supportsJsRuntimes() ? { jsRuntimes: nodeRuntime } : {}),
   sleepInterval: 3,
   maxSleepInterval: 5,
   sleepRequests: 2,
@@ -21,6 +69,14 @@ const ytdlpBaseOptions = {
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   ...(fs.existsSync(cookiesPath) ? { cookies: cookiesPath } : {}),
 };
+const ytdlpFallbackOptions: Record<string, unknown> = {
+  ...ytdlpBaseOptions,
+  ...(extractorArgsValue ? { extractorArgs: extractorArgsValue } : {}),
+  retries: 3,
+  fragmentRetries: 3,
+};
+const ytdlpPrimaryFormat = "bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio";
+const ytdlpFallbackFormat = "140/251/bestaudio";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
@@ -167,46 +223,89 @@ const downloadUploadAudio = async (
   artist: string,
   duration: number
 ) => {
-  // Use .webm as YouTube's default audio format (no conversion by yt-dlp needed)
-  const tmpInput = tmp.tmpNameSync({ postfix: ".webm" });
+  const tmpInputBase = tmp.tmpNameSync();
   const tmpOutput = tmp.tmpNameSync({ postfix: ".mp3" });
+  let tmpInput: string | null = null;
 
   try {
-    await downloadAudioStream(videoId, tmpInput);
-    await convertToMp3(tmpInput, tmpOutput);
+    const downloadedPath = await downloadAudioStream(videoId, tmpInputBase);
+    tmpInput = downloadedPath;
+    await convertToMp3(downloadedPath, tmpOutput);
     const key = buildObjectKey(workId, videoId, title);
-    const upload = await uploadToR2(tmpOutput, key, {
-      title,
-      artist,
-      youtubeid: videoId,
-      duration: String(duration),
-    });
+    const upload = await uploadToR2(tmpOutput, key);
     return upload;
   } finally {
-    await Promise.allSettled([fs.remove(tmpInput), fs.remove(tmpOutput)]);
+    await Promise.allSettled([
+      tmpInput ? fs.remove(tmpInput) : Promise.resolve(),
+      fs.remove(tmpOutput),
+    ]);
   }
 };
 
-const downloadAudioStream = async (videoId: string, destination: string) => {
+const resolveDownloadedPath = async (result: unknown, outputBase: string) => {
+  if (typeof result === "string") {
+    const candidate = result.trim().split(/\r?\n/).pop()?.trim();
+    if (candidate && (await fs.pathExists(candidate))) {
+      return candidate;
+    }
+  }
+
+  const dir = path.dirname(outputBase);
+  const baseName = path.basename(outputBase);
+  const entries = await fs.readdir(dir);
+  const match = entries.find(
+    (name) =>
+      name.startsWith(baseName) && !name.endsWith(".part") && !name.endsWith(".ytdl")
+  );
+  if (match) {
+    return path.join(dir, match);
+  }
+
+  throw new Error("yt-dlp did not produce an output file.");
+};
+
+const downloadAudioStream = async (videoId: string, outputBase: string) => {
   const url = `https://www.youtube.com/watch?v=${videoId}`;
+  const outputTemplate = `${outputBase}.%(ext)s`;
 
-  try {
+  const attempt = async (
+    format: string,
+    opts: Record<string, unknown>
+  ): Promise<string> => {
     console.log(`[yt-dlp] Downloading: ${url}`);
-
-    // Download best audio WITHOUT conversion (no ffmpeg needed by yt-dlp)
-    // fluent-ffmpeg will handle the conversion to MP3 later
-    await youtubedl(url, {
-      format: "bestaudio",
-      // Removed: extractAudio and audioFormat (those require ffmpeg in yt-dlp's PATH)
-      output: destination,
+    const result = await youtubedl(url, {
+      format,
+      output: outputTemplate,
       noPlaylist: true,
       quiet: true,
       noWarnings: true,
-      ...ytdlpBaseOptions,
+      ...opts,
     });
-
+    const downloadedPath = await resolveDownloadedPath(result, outputBase);
     console.log(`[yt-dlp] Downloaded successfully: ${videoId}`);
+    return downloadedPath;
+  };
+
+  try {
+    return await attempt(ytdlpPrimaryFormat, ytdlpBaseOptions);
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const retryable =
+      /403|Forbidden|Sign in|confirm you|429|Requested format is not available/i.test(
+        message
+      );
+    if (retryable) {
+      console.warn(`[yt-dlp] Retry with fallback for ${videoId}`);
+      try {
+        return await attempt(ytdlpFallbackFormat, ytdlpFallbackOptions);
+      } catch (fallbackError) {
+        console.error(`[yt-dlp] Fallback failed for ${videoId}:`, fallbackError);
+        throw new Error(
+          `yt-dlp failed: ${fallbackError instanceof Error ? fallbackError.message : "Unknown error"}`
+        );
+      }
+    }
+
     console.error(`[yt-dlp] Error downloading ${videoId}:`, error);
     throw new Error(
       `yt-dlp failed: ${error instanceof Error ? error.message : "Unknown error"}`

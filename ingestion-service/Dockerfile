@@ -13,7 +13,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY scripts ./scripts
 
-RUN npm ci
+# Skip dependency postinstall scripts (youtube-dl-exec tries to download from GitHub)
+RUN npm ci --ignore-scripts
 
 COPY . .
 

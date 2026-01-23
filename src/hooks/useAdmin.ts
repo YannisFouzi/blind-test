@@ -29,10 +29,12 @@ interface AdminState {
   loading: boolean;
   error: string | null;
   success: string | null;
+  pendingImportJob: { workId: string; jobId: string } | null;
 }
 
 export const useAdmin = (user: User | null) => {
   const router = useRouter();
+  const pendingImportStorageKey = "bt_pending_import_job";
   const [state, setState] = useState<AdminState>({
     universes: [],
     works: [],
@@ -40,6 +42,7 @@ export const useAdmin = (user: User | null) => {
     loading: false,
     error: null,
     success: null,
+    pendingImportJob: null,
   });
 
   // Vérification des droits admin
@@ -63,6 +66,20 @@ export const useAdmin = (user: User | null) => {
 
   const setSuccess = (success: string | null) => {
     setState((prev) => ({ ...prev, success }));
+  };
+
+  const setPendingImportJob = (job: { workId: string; jobId: string } | null) => {
+    setState((prev) => ({ ...prev, pendingImportJob: job }));
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (job) {
+      localStorage.setItem(pendingImportStorageKey, JSON.stringify(job));
+    } else {
+      localStorage.removeItem(pendingImportStorageKey);
+    }
   };
 
   const clearMessages = () => {
@@ -90,6 +107,23 @@ export const useAdmin = (user: User | null) => {
       loadUniverses();
     }
   }, [isAdmin, loadUniverses]);
+
+  // Charger un job d'import en attente (ex: timeout UI)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const stored = localStorage.getItem(pendingImportStorageKey);
+    if (!stored) return;
+
+    try {
+      const parsed = JSON.parse(stored) as { workId: string; jobId: string };
+      if (parsed?.workId && parsed?.jobId) {
+        setState((prev) => ({ ...prev, pendingImportJob: parsed }));
+      }
+    } catch {
+      localStorage.removeItem(pendingImportStorageKey);
+    }
+  }, []);
 
   const addUniverse = async (
     universeData: Omit<Universe, "id" | "createdAt">
@@ -366,16 +400,26 @@ export const useAdmin = (user: User | null) => {
       console.log("📦 [useAdmin] Résultat ingestion:", ingestionResult);
 
       if (!ingestionResult.success || !ingestionResult.songs) {
-        console.error("❌ [useAdmin] Échec de l'ingestion:", ingestionResult.error);
-        setError(
-          ingestionResult.error ||
-            "Erreur lors du traitement audio de la playlist"
-        );
+        console.error("??? [useAdmin] ??chec de l'ingestion:", ingestionResult.error);
+
+        if (ingestionResult.status === "timeout" && ingestionResult.jobId) {
+          setPendingImportJob({ workId, jobId: ingestionResult.jobId });
+          setError(
+            `Import en cours cote serveur (jobId: ${ingestionResult.jobId}). ` +
+              "Cliquez sur Reprendre l'import pour finaliser Firestore."
+          );
+        } else {
+          setError(
+            ingestionResult.error ||
+              "Erreur lors du traitement audio de la playlist"
+          );
+        }
+
         setLoading(false);
         return { success: false, error: ingestionResult.error };
       }
 
-      console.log("🔄 [useAdmin] Import dans Firestore...");
+            console.log("🔄 [useAdmin] Import dans Firestore...");
       const importResult = await importSongsIntoFirestore(
         workId,
         ingestionResult.songs
@@ -384,6 +428,9 @@ export const useAdmin = (user: User | null) => {
       console.log("📦 [useAdmin] Résultat Firestore:", importResult);
 
       if (importResult.success) {
+        if (state.pendingImportJob?.workId === workId) {
+          setPendingImportJob(null);
+        }
         const stats = importResult.data;
         const message = `Import terminé ! ${
           stats?.imported ?? 0
@@ -413,6 +460,68 @@ export const useAdmin = (user: User | null) => {
         error instanceof Error ? error.message : "Erreur inconnue";
       console.error("❌ [useAdmin] Exception:", error);
       setError("Erreur lors de l'import des chansons : " + errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  const resumeImportFromJob = async (workId: string, jobId: string) => {
+    console.log("??? [useAdmin] resumeImportFromJob:", jobId);
+    setLoading(true);
+    clearMessages();
+
+    try {
+      const ingestionResult = await AudioIngestionService.resumeImport(jobId);
+      console.log("???? [useAdmin] R??sultat reprise ingestion:", ingestionResult);
+
+      if (!ingestionResult.success || !ingestionResult.songs) {
+        if (ingestionResult.status === "timeout") {
+          setError(
+            "Import toujours en cours cote serveur. Reessayez dans quelques minutes."
+          );
+        } else {
+          setError(
+            ingestionResult.error ||
+              "Erreur lors de la reprise de l'import audio."
+          );
+        }
+        return { success: false, error: ingestionResult.error };
+      }
+
+      const importResult = await importSongsIntoFirestore(
+        workId,
+        ingestionResult.songs
+      );
+
+      if (importResult.success) {
+        setPendingImportJob(null);
+        const stats = importResult.data;
+        const message = `Import termin?? ! ${
+          stats?.imported ?? 0
+        } chanson(s) ajout??e(s)${
+          stats?.skipped
+            ? `, ${stats.skipped} ignor??e(s) (d??j?? existante(s))`
+            : ""
+        }.`;
+
+        setSuccess(message);
+        loadSongs(workId);
+        return {
+          success: true,
+          imported: stats?.imported,
+          skipped: stats?.skipped,
+          errors: stats?.errors,
+        };
+      }
+
+      setError("Erreur lors de l'import : " + importResult.error);
+      return { success: false, error: importResult.error };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Erreur inconnue";
+      setError("Erreur lors de la reprise : " + errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
@@ -452,5 +561,7 @@ export const useAdmin = (user: User | null) => {
 
     // Import automatique
     importSongsFromPlaylist,
+    resumeImportFromJob,
+    pendingImportJob: state.pendingImportJob,
   };
 };
