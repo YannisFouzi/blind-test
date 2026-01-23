@@ -197,7 +197,7 @@ export default class LobbyParty implements Party.Server {
     const rooms: RoomMetadata[] = [];
     const map = await this.room.storage.list<RoomMetadata>();
     const now = Date.now();
-    const TTL_MS = 2 * 60 * 60 * 1000; // 2 heures en millisecondes
+    const TTL_MS = 15 * 60 * 1000; // 15 minutes en millisecondes
 
     for (const [key, value] of map.entries()) {
       if (key.startsWith("room:")) {
