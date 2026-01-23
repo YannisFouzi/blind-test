@@ -40,21 +40,26 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 }
 
-// Auth anonyme automatique pour permettre l'accès Firestore (multi)
-const initAnonymousAuth = () => {
-  if (!auth.currentUser) {
-    void signInAnonymously(auth).catch(() => {
-      // on laisse silencieux; un autre render pourra réessayer
-    });
-  }
-};
-
 export function ProvidersWithAuth({ children }: { children: ReactNode }) {
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, () => {
-      initAnonymousAuth();
+    // Flag pour s'assurer qu'on n'initialise qu'une seule fois
+    // après que Firebase ait vérifié s'il y a une session existante
+    let initialized = false;
+
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!initialized) {
+        initialized = true;
+        // Firebase a fini de vérifier la session stockée
+        // Si aucun utilisateur n'est connecté, créer une session anonyme
+        // pour permettre l'accès Firestore (mode multijoueur)
+        if (!user) {
+          signInAnonymously(auth).catch(() => {
+            // Silencieux en cas d'erreur
+          });
+        }
+      }
     });
-    initAnonymousAuth();
+
     return () => unsub();
   }, []);
 
