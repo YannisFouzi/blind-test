@@ -4,15 +4,16 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HeroSection } from "@/components/home/HeroSection";
 import { UniverseGrid } from "@/components/home/UniverseGrid";
+import { UniverseCustomizeModal } from "@/components/home/UniverseCustomizeModal";
 import { HomePageSkeleton } from "@/components/HomePage/HomePageSkeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useUniverses } from "@/hooks/useUniverses";
+import { useUniverseCustomization } from "@/hooks/useUniverseCustomization";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePartyKitLobby } from "@/hooks/usePartyKitLobby";
-import { getWorksByUniverse } from "@/services/firebase";
-import { Room, Universe, Work } from "@/types";
+import { Room } from "@/types";
 import { useIdentity } from "@/hooks/useIdentity";
 
 type Mode = "solo" | "multi";
@@ -49,12 +50,20 @@ export const HomeContent = () => {
   const [homeError, setHomeError] = useState<string | null>(null);
   const [homeInfo, setHomeInfo] = useState<string | null>(null);
 
-  // Customization state
-  const [customizingUniverse, setCustomizingUniverse] = useState<Universe | null>(null);
-  const [customWorks, setCustomWorks] = useState<Work[]>([]);
-  const [customAllowedWorks, setCustomAllowedWorks] = useState<string[]>([]);
-  const [customNoSeek, setCustomNoSeek] = useState(false);
-  const [customLoadingWorks, setCustomLoadingWorks] = useState(false);
+  // Hook de personnalisation (partagé avec la page room)
+  const {
+    customizingUniverse,
+    works: customWorks,
+    allowedWorks: customAllowedWorks,
+    noSeek: customNoSeek,
+    loading: customLoadingWorks,
+    error: customError,
+    openCustomize,
+    closeCustomize,
+    toggleWork,
+    setNoSeek: setCustomNoSeek,
+    reset: resetCustomization,
+  } = useUniverseCustomization();
 
   const isHost = useMemo(() => mode === "multi" && Boolean(hostRoomId), [mode, hostRoomId]);
 
@@ -246,44 +255,14 @@ export const HomeContent = () => {
     setHomeError(null);
     setHostRoomId("");
     setHomeInfo(null);
-    setCustomizingUniverse(null);
-    setCustomWorks([]);
-    setCustomAllowedWorks([]);
-    setCustomNoSeek(false);
+    resetCustomization();
     hasUsedRoomRef.current = false;
-  }, [mode]);
-
-  // Customization modal helpers
-  const openCustomize = useCallback(async (universe: Universe) => {
-    setCustomizingUniverse(universe);
-    setCustomNoSeek(false);
-    setCustomAllowedWorks([]);
-    setCustomLoadingWorks(true);
-    setHomeError(null);
-    try {
-      const worksResult = await getWorksByUniverse(universe.id);
-      if (worksResult.success && worksResult.data) {
-        setCustomWorks(worksResult.data);
-        setCustomAllowedWorks(worksResult.data.map((w) => w.id));
-      } else {
-        setCustomWorks([]);
-      }
-    } catch (error) {
-      setCustomWorks([]);
-      setHomeError(error instanceof Error ? error.message : "Erreur chargement oeuvres");
-    } finally {
-      setCustomLoadingWorks(false);
-    }
-  }, []);
-
-  const toggleWork = (workId: string) => {
-    setCustomAllowedWorks((prev) => (prev.includes(workId) ? prev.filter((id) => id !== workId) : [...prev, workId]));
-  };
+  }, [mode, resetCustomization]);
 
   const applyCustomizeAndPlay = useCallback(async () => {
     if (!customizingUniverse) return;
     const universeId = customizingUniverse.id;
-    setCustomizingUniverse(null);
+    closeCustomize();
 
     const ensuredPlayerId = ensurePlayerId();
     if (!identityReady || !ensuredPlayerId) return;
@@ -337,6 +316,7 @@ export const HomeContent = () => {
     displayName,
     ensurePlayerId,
     identityReady,
+    closeCustomize,
   ]);
 
   if (universesLoading) {
@@ -450,57 +430,19 @@ export const HomeContent = () => {
       )}
 
       {customizingUniverse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur">
-          <div className="w-full max-w-3xl bg-slate-900/90 border border-purple-500/40 rounded-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-white">Paramètres avancés – {customizingUniverse.name}</h3>
-              <button onClick={() => setCustomizingUniverse(null)} className="text-slate-300 hover:text-white text-sm">
-                Fermer
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <label className="flex items-center gap-2 text-white text-sm">
-                <input type="checkbox" checked={customNoSeek} onChange={(e) => setCustomNoSeek(e.target.checked)} />
-                Activer le mode sans avance (timeline non cliquable)
-              </label>
-              <div className="text-white text-sm font-semibold">Oeuvres incluses</div>
-              {customLoadingWorks ? (
-                <div className="text-slate-200 text-sm">Chargement des oeuvres...</div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
-                  {customWorks.map((work) => (
-                    <label
-                      key={work.id}
-                      className="flex items-center gap-2 text-white text-sm bg-slate-800/60 px-2 py-1 rounded"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={customAllowedWorks.includes(work.id)}
-                        onChange={() => toggleWork(work.id)}
-                      />
-                      {work.title}
-                    </label>
-                  ))}
-                </div>
-              )}
-              {homeError && <div className="text-xs text-red-300">{homeError}</div>}
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setCustomizingUniverse(null)} className="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm">
-                Annuler
-              </button>
-              <button
-                onClick={applyCustomizeAndPlay}
-                className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm"
-                disabled={isCreatingRoom}
-              >
-                {isCreatingRoom ? "Patiente..." : "Appliquer et jouer"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <UniverseCustomizeModal
+          universe={customizingUniverse}
+          works={customWorks}
+          allowedWorks={customAllowedWorks}
+          noSeek={customNoSeek}
+          loading={customLoadingWorks}
+          error={customError || homeError}
+          isApplying={isCreatingRoom}
+          onToggleWork={toggleWork}
+          onSetNoSeek={setCustomNoSeek}
+          onApply={applyCustomizeAndPlay}
+          onClose={closeCustomize}
+        />
       )}
     </div>
   );

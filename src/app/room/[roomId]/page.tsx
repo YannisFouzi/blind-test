@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { usePartyKitRoom } from "@/hooks/usePartyKitRoom";
+import { useUniverseCustomization } from "@/hooks/useUniverseCustomization";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { UniverseCustomizeModal } from "@/components/home/UniverseCustomizeModal";
 import { useIdentity } from "@/hooks/useIdentity";
 import { useUniverses } from "@/hooks/useUniverses";
 import { UniverseGrid } from "@/components/home/UniverseGrid";
@@ -64,8 +66,82 @@ export default function WaitingRoomPage() {
 
   const { universes, loading: universesLoading } = useUniverses();
   const [isConfiguringRoom, setIsConfiguringRoom] = useState(false);
+  const [configError, setConfigError] = useState<string | null>(null);
 
-  // Handler pour quand le HOST clique sur un univers
+  // Hook de personnalisation (partagé avec HomeContent)
+  const {
+    customizingUniverse,
+    works: customWorks,
+    allowedWorks: customAllowedWorks,
+    noSeek: customNoSeek,
+    loading: customLoadingWorks,
+    error: customError,
+    openCustomize,
+    closeCustomize,
+    toggleWork,
+    setNoSeek: setCustomNoSeek,
+  } = useUniverseCustomization();
+
+  // Appliquer les paramètres et lancer le jeu (logique spécifique multi avec PartyKit)
+  const applyCustomizeAndPlay = useCallback(async () => {
+    if (!customizingUniverse || !isHost || !configureRoom) return;
+
+    const universeId = customizingUniverse.id;
+    closeCustomize();
+    setIsConfiguringRoom(true);
+    setConfigError(null);
+
+    try {
+      // Filtrer les works selon la sélection
+      const worksToUse = customAllowedWorks.length > 0 && customAllowedWorks.length !== customWorks.length
+        ? customWorks.filter((w) => customAllowedWorks.includes(w.id))
+        : customWorks;
+
+      if (worksToUse.length === 0) {
+        setConfigError("Aucune oeuvre sélectionnée");
+        setIsConfiguringRoom(false);
+        return;
+      }
+
+      // Charger les songs des works sélectionnés
+      const songPromises = worksToUse.map((work) => getSongsByWork(work.id));
+      const songsResults = await Promise.all(songPromises);
+
+      const allSongs: Song[] = [];
+      for (const result of songsResults) {
+        if (result.success && result.data) {
+          allSongs.push(...result.data);
+        }
+      }
+
+      if (allSongs.length === 0) {
+        setConfigError("Aucune chanson trouvée pour les oeuvres sélectionnées");
+        setIsConfiguringRoom(false);
+        return;
+      }
+
+      // Mélanger et limiter à 10 morceaux
+      const shuffled = shuffleArray([...allSongs]);
+      const selectedSongs = shuffled.slice(0, 10);
+
+      // Configurer avec les options personnalisées
+      const allowedWorkIds = customAllowedWorks.length > 0 && customAllowedWorks.length !== customWorks.length
+        ? customAllowedWorks
+        : undefined;
+
+      await configureRoom(universeId, selectedSongs, allowedWorkIds, { noSeek: customNoSeek });
+
+      if (startGame) {
+        await startGame();
+      }
+    } catch (error) {
+      console.error("[WaitingRoomPage] Error applying custom settings:", error);
+      setConfigError(error instanceof Error ? error.message : "Erreur inconnue");
+      setIsConfiguringRoom(false);
+    }
+  }, [customizingUniverse, isHost, configureRoom, startGame, customAllowedWorks, customWorks, customNoSeek, closeCustomize]);
+
+  // Handler pour quand le HOST clique sur un univers (sans personnalisation)
   const handleUniverseClick = useCallback(
     async (universeId: string) => {
       if (!isHost || !configureRoom) {
@@ -232,7 +308,25 @@ export default function WaitingRoomPage() {
             <UniverseGrid
               universes={universes}
               onSelect={handleUniverseClick}
+              onCustomize={openCustomize}
               error={null}
+            />
+          )}
+
+          {/* Modal de personnalisation */}
+          {customizingUniverse && (
+            <UniverseCustomizeModal
+              universe={customizingUniverse}
+              works={customWorks}
+              allowedWorks={customAllowedWorks}
+              noSeek={customNoSeek}
+              loading={customLoadingWorks}
+              error={customError || configError}
+              isApplying={isConfiguringRoom}
+              onToggleWork={toggleWork}
+              onSetNoSeek={setCustomNoSeek}
+              onApply={applyCustomizeAndPlay}
+              onClose={closeCustomize}
             />
           )}
         </div>
