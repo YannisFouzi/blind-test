@@ -402,7 +402,7 @@ export const useAdmin = (user: User | null) => {
       if (!ingestionResult.success || !ingestionResult.songs) {
         console.error("??? [useAdmin] ??chec de l'ingestion:", ingestionResult.error);
 
-        if (ingestionResult.status === "timeout" && ingestionResult.jobId) {
+        if ("status" in ingestionResult && ingestionResult.status === "timeout" && "jobId" in ingestionResult && ingestionResult.jobId) {
           setPendingImportJob({ workId, jobId: ingestionResult.jobId });
           setError(
             `Import en cours cote serveur (jobId: ${ingestionResult.jobId}). ` +
