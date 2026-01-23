@@ -56,12 +56,16 @@ export const HomeContent = () => {
     works: customWorks,
     allowedWorks: customAllowedWorks,
     noSeek: customNoSeek,
+    maxSongs: customMaxSongs,
+    totalSongsAvailable: customTotalSongs,
+    songCountByWork: customSongCountByWork,
     loading: customLoadingWorks,
     error: customError,
     openCustomize,
     closeCustomize,
     toggleWork,
     setNoSeek: setCustomNoSeek,
+    setMaxSongs: setCustomMaxSongs,
     reset: resetCustomization,
   } = useUniverseCustomization();
 
@@ -274,6 +278,9 @@ export const HomeContent = () => {
       if (customAllowedWorks.length && customAllowedWorks.length !== customWorks.length) {
         params.set("works", customAllowedWorks.join(","));
       }
+      if (customMaxSongs !== null && customMaxSongs < customTotalSongs) {
+        params.set("maxsongs", String(customMaxSongs));
+      }
       router.push(`/game/${universeId}?${params.toString()}`);
       return;
     }
@@ -296,6 +303,9 @@ export const HomeContent = () => {
       if (customAllowedWorks.length && customAllowedWorks.length !== customWorks.length) {
         params.set("works", customAllowedWorks.join(","));
       }
+      if (customMaxSongs !== null && customMaxSongs < customTotalSongs) {
+        params.set("maxsongs", String(customMaxSongs));
+      }
       hasUsedRoomRef.current = true;
 
       router.push(`/game/${universeId}?${params.toString()}`);
@@ -312,6 +322,8 @@ export const HomeContent = () => {
     customAllowedWorks,
     customWorks.length,
     customNoSeek,
+    customMaxSongs,
+    customTotalSongs,
     router,
     displayName,
     ensurePlayerId,
@@ -435,11 +447,15 @@ export const HomeContent = () => {
           works={customWorks}
           allowedWorks={customAllowedWorks}
           noSeek={customNoSeek}
+          maxSongs={customMaxSongs}
+          totalSongsAvailable={customTotalSongs}
+          songCountByWork={customSongCountByWork}
           loading={customLoadingWorks}
           error={customError || homeError}
           isApplying={isCreatingRoom}
           onToggleWork={toggleWork}
           onSetNoSeek={setCustomNoSeek}
+          onSetMaxSongs={setCustomMaxSongs}
           onApply={applyCustomizeAndPlay}
           onClose={closeCustomize}
         />

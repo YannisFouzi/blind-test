@@ -74,12 +74,16 @@ export default function WaitingRoomPage() {
     works: customWorks,
     allowedWorks: customAllowedWorks,
     noSeek: customNoSeek,
+    maxSongs: customMaxSongs,
+    totalSongsAvailable: customTotalSongs,
+    songCountByWork: customSongCountByWork,
     loading: customLoadingWorks,
     error: customError,
     openCustomize,
     closeCustomize,
     toggleWork,
     setNoSeek: setCustomNoSeek,
+    setMaxSongs: setCustomMaxSongs,
   } = useUniverseCustomization();
 
   // Appliquer les paramètres et lancer le jeu (logique spécifique multi avec PartyKit)
@@ -120,9 +124,12 @@ export default function WaitingRoomPage() {
         return;
       }
 
-      // Mélanger et limiter à 10 morceaux
+      // Mélanger et limiter selon maxSongs (ou toutes si null)
       const shuffled = shuffleArray([...allSongs]);
-      const selectedSongs = shuffled.slice(0, 10);
+      const maxCount = customMaxSongs !== null && customMaxSongs < shuffled.length
+        ? customMaxSongs
+        : shuffled.length;
+      const selectedSongs = shuffled.slice(0, maxCount);
 
       // Configurer avec les options personnalisées
       const allowedWorkIds = customAllowedWorks.length > 0 && customAllowedWorks.length !== customWorks.length
@@ -139,7 +146,7 @@ export default function WaitingRoomPage() {
       setConfigError(error instanceof Error ? error.message : "Erreur inconnue");
       setIsConfiguringRoom(false);
     }
-  }, [customizingUniverse, isHost, configureRoom, startGame, customAllowedWorks, customWorks, customNoSeek, closeCustomize]);
+  }, [customizingUniverse, isHost, configureRoom, startGame, customAllowedWorks, customWorks, customNoSeek, customMaxSongs, closeCustomize]);
 
   // Handler pour quand le HOST clique sur un univers (sans personnalisation)
   const handleUniverseClick = useCallback(
@@ -320,11 +327,15 @@ export default function WaitingRoomPage() {
               works={customWorks}
               allowedWorks={customAllowedWorks}
               noSeek={customNoSeek}
+              maxSongs={customMaxSongs}
+              totalSongsAvailable={customTotalSongs}
+              songCountByWork={customSongCountByWork}
               loading={customLoadingWorks}
               error={customError || configError}
               isApplying={isConfiguringRoom}
               onToggleWork={toggleWork}
               onSetNoSeek={setCustomNoSeek}
+              onSetMaxSongs={setCustomMaxSongs}
               onApply={applyCustomizeAndPlay}
               onClose={closeCustomize}
             />

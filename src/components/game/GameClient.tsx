@@ -39,6 +39,7 @@ export function GameClient({ universeId }: GameClientProps) {
   const queryName = searchParams?.get("name") || "";
   const queryNoSeek = searchParams?.get("noseek") === "1";
   const queryWorks = searchParams?.get("works") || "";
+  const queryMaxSongs = searchParams?.get("maxsongs");
   const queryMode = (searchParams?.get("mode") as Mode | null) || "solo";
   const mode = queryMode;
   const roomId = searchParams?.get("room") || "";
@@ -98,6 +99,10 @@ export function GameClient({ universeId }: GameClientProps) {
     () => (queryWorks ? queryWorks.split(",").filter(Boolean) : undefined),
     [queryWorks]
   );
+  const maxSongsFromQuery = useMemo(
+    () => (queryMaxSongs ? parseInt(queryMaxSongs, 10) : undefined),
+    [queryMaxSongs]
+  );
 
   // S'assurer que la ref contient l'ID stable avant d'initialiser les hooks multi
   if (identityReady && playerId && !playerIdRef.current) {
@@ -133,7 +138,7 @@ export function GameClient({ universeId }: GameClientProps) {
     [preloadTrack]
   );
 
-  const soloGame = useGame(universeId, preloadNextMedia, allowedWorksFromQuery);
+  const soloGame = useGame(universeId, preloadNextMedia, allowedWorksFromQuery, maxSongsFromQuery);
 
   const multiplayerGame = useMultiplayerGame({
     universeId,

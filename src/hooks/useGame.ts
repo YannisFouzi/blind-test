@@ -8,7 +8,8 @@ import { generateId, shuffleArray } from "../utils/formatters";
 export const useGame = (
   universeId: string,
   preloadNextTrack?: (song: Song) => void,
-  allowedWorks?: string[]
+  allowedWorks?: string[],
+  maxSongs?: number
 ) => {
   const [gameSession, setGameSession] = useState<GameSession | null>(null);
   const [works, setWorks] = useState<Work[]>([]);
@@ -63,10 +64,15 @@ export const useGame = (
       setUsingDemoData(false);
 
       const shuffledSongs = shuffleArray(songs);
+      // Limiter le nombre de chansons si maxSongs est défini
+      const limitedSongs = maxSongs && maxSongs > 0 && maxSongs < shuffledSongs.length
+        ? shuffledSongs.slice(0, maxSongs)
+        : shuffledSongs;
+      
       const newGameSession: GameSession = {
         id: generateId(),
         universeId,
-        songs: shuffledSongs,
+        songs: limitedSongs,
         currentSongIndex: 0,
         score: { correct: 0, incorrect: 0 },
         answers: [],
@@ -74,13 +80,13 @@ export const useGame = (
       };
 
       setGameSession(newGameSession);
-      setCurrentSong(shuffledSongs[0]);
+      setCurrentSong(limitedSongs[0]);
     } catch (error) {
       if (process.env.NODE_ENV === "development") {
         console.error("Erreur lors de l'initialisation du jeu:", error);
       }
     }
-  }, [universeId, allowedWorks]);
+  }, [universeId, allowedWorks, maxSongs]);
 
   const handleWorkSelection = (workId: string) => {
     if (showAnswer || !gameSession || !currentSong) return;

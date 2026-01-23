@@ -146,7 +146,7 @@ const UniverseGridComponent = ({
                       onClick={() => onCustomize(universe)}
                       className="inline-flex items-center gap-2 rounded-full bg-slate-900/60 border border-white/25 px-6 py-2 text-sm font-semibold text-white transition-transform duration-300 hover:scale-105"
                     >
-                      Parametres
+                      Personnaliser
                     </button>
                   )}
                 </div>
