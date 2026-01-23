@@ -1,14 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { processPlaylist } from "../utils/audioPipeline.js";
-import {
-  createJob,
-  getJob,
-  setJobError,
-  setJobDone,
-  setJobRunning,
-  updateJobProgress,
-} from "../services/importJobs.js";
+import { addImportJob, getJobById, getQueueStatus } from "../services/queue.js";
 
 const requestSchema = z.object({
   playlistId: z.string().min(1),
@@ -17,100 +9,91 @@ const requestSchema = z.object({
 
 export const router = Router();
 
+/**
+ * POST /api/import-playlist
+ * Ajoute une playlist à la queue d'import
+ * Retourne immédiatement avec le jobId
+ */
 router.post("/", async (req, res) => {
-  console.log("🎯 [INGESTION-SERVICE] Requête POST reçue sur /api/import-playlist");
-  console.log("📦 [INGESTION-SERVICE] Body:", req.body);
+  console.log("[Import] Requête POST reçue");
+  console.log("[Import] Body:", req.body);
 
   const parsed = requestSchema.safeParse(req.body);
 
   if (!parsed.success) {
-    console.error("❌ [INGESTION-SERVICE] Validation échouée:", parsed.error);
+    console.error("[Import] Validation échouée:", parsed.error);
     return res.status(400).json({
       success: false,
       error: "Requête invalide.",
     });
   }
 
-  console.log("✅ [INGESTION-SERVICE] Validation OK");
-  console.log("📋 [INGESTION-SERVICE] workId:", parsed.data.workId, "playlistId:", parsed.data.playlistId);
+  try {
+    const job = await addImportJob(parsed.data);
+    
+    console.log(`[Import] Job ajouté à la queue: ${job.id}`);
+
+    return res.status(202).json({
+      success: true,
+      jobId: job.id,
+      message: "Import ajouté à la queue",
+    });
+  } catch (error) {
+    console.error("[Import] Erreur ajout queue:", error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur inconnue",
+    });
+  }
+});
+
+/**
+ * GET /api/import-playlist/status/:jobId
+ * Récupère le statut d'un job spécifique
+ */
+router.get("/status/:jobId", async (req, res) => {
+  const { jobId } = req.params;
 
   try {
-    console.log("🚀 [INGESTION-SERVICE] Lancement processPlaylist...");
-    const result = await processPlaylist(parsed.data.workId, parsed.data.playlistId);
+    const job = await getJobById(jobId);
 
-    console.log("✅ [INGESTION-SERVICE] processPlaylist terminé");
-    console.log("📊 [INGESTION-SERVICE] Résultat:", {
-      imported: result.imported,
-      skipped: result.skipped,
-      errors: result.errors?.length || 0,
-      songs: result.songs?.length || 0,
-    });
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: "Job introuvable",
+      });
+    }
 
     return res.json({
       success: true,
-      imported: result.imported,
-      skipped: result.skipped,
-      errors: result.errors,
-      songs: result.songs,
+      ...job,
     });
   } catch (error) {
-    console.error("❌ [INGESTION-SERVICE] Exception:", error);
+    console.error("[Import] Erreur récupération status:", error);
     return res.status(500).json({
       success: false,
-      error:
-        error instanceof Error ? error.message : "Erreur inconnue lors de l'import.",
+      error: error instanceof Error ? error.message : "Erreur inconnue",
     });
   }
 });
 
-router.post("/async", async (req, res) => {
-  console.log("[INGESTION-SERVICE] Async request received");
-  console.log("[INGESTION-SERVICE] Body:", req.body);
+/**
+ * GET /api/import-playlist/queue
+ * Récupère l'état complet de la queue
+ */
+router.get("/queue", async (_req, res) => {
+  try {
+    const status = await getQueueStatus();
 
-  const parsed = requestSchema.safeParse(req.body);
-
-  if (!parsed.success) {
-    console.error("[INGESTION-SERVICE] Validation failed:", parsed.error);
-    return res.status(400).json({
+    return res.json({
+      success: true,
+      ...status,
+    });
+  } catch (error) {
+    console.error("[Import] Erreur récupération queue:", error);
+    return res.status(500).json({
       success: false,
-      error: "Requête invalide.",
+      error: error instanceof Error ? error.message : "Erreur inconnue",
     });
   }
-
-  const job = createJob();
-  res.status(202).json({ jobId: job.id });
-
-  setImmediate(async () => {
-    try {
-      setJobRunning(job.id);
-      const result = await processPlaylist(parsed.data.workId, parsed.data.playlistId, {
-        onProgress: (progress) => updateJobProgress(job.id, progress),
-      });
-      setJobDone(job.id, result);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Erreur inconnue lors de l'import.";
-      setJobError(job.id, message);
-    }
-  });
-});
-
-router.get("/status/:jobId", (req, res) => {
-  const { jobId } = req.params;
-  const job = getJob(jobId);
-
-  if (!job) {
-    return res.status(404).json({ success: false, error: "Job introuvable." });
-  }
-
-  const result = job.result ? { success: true, ...job.result } : undefined;
-
-  return res.json({
-    success: true,
-    jobId: job.id,
-    status: job.status,
-    progress: job.progress,
-    result,
-    error: job.error,
-  });
 });

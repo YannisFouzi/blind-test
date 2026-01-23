@@ -1,0 +1,35 @@
+services:
+  ingestion:
+    build: .
+    container_name: blind-test-ingestion
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - R2_BUCKET_NAME=${R2_BUCKET_NAME}
+      - R2_PUBLIC_BASE_URL=${R2_PUBLIC_BASE_URL}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - INGESTION_CONCURRENCY=${INGESTION_CONCURRENCY}
+    volumes:
+      - ./cookies:/app/cookies:ro
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: blind-test-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory-policy noeviction
+    restart: unless-stopped
+
+volumes:
+  redis-data:

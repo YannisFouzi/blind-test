@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const targetUrl = `${ingestionUrl}/api/import-playlist/async`;
+    const targetUrl = `${ingestionUrl}/api/import-playlist`;
     console.log("[API] Calling ingestion service (async):", targetUrl);
     console.log("[API] Payload:", parsed.data);
 
