@@ -105,6 +105,7 @@ export const RoomPlayerSchema = z.object({
   connected: z.boolean().default(true),
   lastSeen: timestampSchema.optional(),
   isHost: z.boolean().optional(),
+  hasAnsweredCurrentSong: z.boolean().optional(),
 });
 
 export const RoomResponseSchema = z.object({

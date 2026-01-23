@@ -130,12 +130,12 @@ export const WorkSelector = ({
         {/* Container principal */}
         <div className="relative bg-slate-900/40 backdrop-blur-lg rounded-3xl p-8 border border-blue-500/20">
           {/* Titre avec effet magique */}
-          <div className="text-center mb-8">
+          {/* <div className="text-center mb-8">
             <h2 className="fantasy-text text-4xl md:text-5xl font-bold mb-4">
               Sélectionnez l&apos;œuvre
             </h2>
             <div className="w-24 h-1 bg-gradient-to-r from-blue-400 to-purple-500 mx-auto rounded-full glow-effect" />
-          </div>
+          </div> */}
 
           {/* Grille de cartes responsive avec tailles uniformes */}
           <div className="uniform-card-grid mb-8">

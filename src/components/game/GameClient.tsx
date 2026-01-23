@@ -15,6 +15,7 @@ import { Song } from "@/types";
 
 import { WorkSelector } from "@/components/game/WorkSelector";
 import { PointsCelebration } from "@/components/game/PointsCelebration";
+import { PlayersScoreboard } from "@/components/game/PlayersScoreboard";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useGame } from "@/hooks/useGame";
@@ -453,8 +454,27 @@ export function GameClient({ universeId }: GameClientProps) {
           </div>
         )}
 
-        {mode === "multi" && roomId && null}
       </div>
+
+      {/* Tableau de score multijoueur - Position fixe à droite sur desktop */}
+      {isMultiActive && (
+        <div className="fixed top-6 right-6 z-40 hidden lg:block">
+          <PlayersScoreboard
+            players={multiplayerGame.players}
+            currentPlayerId={playerId || ""}
+          />
+        </div>
+      )}
+
+      {/* Tableau de score multijoueur - Version mobile (sous le WorkSelector) */}
+      {isMultiActive && (
+        <div className="lg:hidden px-4 mt-6 flex justify-center">
+          <PlayersScoreboard
+            players={multiplayerGame.players}
+            currentPlayerId={playerId || ""}
+          />
+        </div>
+      )}
 
       {/* Effets de lumière */}
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none">

@@ -138,7 +138,7 @@ const UniverseGridComponent = ({
                     className="inline-flex items-center gap-2 rounded-full bg-white/15 px-6 py-2 text-sm font-semibold text-white transition-transform duration-300 hover:scale-105"
                   >
                     <PlayIcon className="h-4 w-4" />
-                    Jouer
+                    Mode Rapide
                   </button>
                   {onCustomize && (
                     <button

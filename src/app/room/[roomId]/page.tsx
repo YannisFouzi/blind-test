@@ -185,9 +185,9 @@ export default function WaitingRoomPage() {
           return;
         }
 
-        // 3. Mélanger et limiter à 10 morceaux
+        // 3. Mélanger toutes les musiques (pas de limite par défaut)
         const shuffled = shuffleArray([...allSongs]);
-        const selectedSongs = shuffled.slice(0, 10);
+        const selectedSongs = shuffled;
 
         // 4. Configurer la room via PartyKit
         console.info("[WaitingRoomPage] Configuring room with songs", {

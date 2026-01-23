@@ -45,6 +45,7 @@ type IncomingMessage =
   | { type: "song_changed"; currentSongIndex?: number; currentSong?: Song }
   | { type: "game_ended"; players?: RoomPlayer[] }
   | { type: "answer_recorded"; rank: number; points: number; isCorrect: boolean; duplicate: boolean }
+  | { type: "player_answered"; playerId: string; songId: string }
   | { type: "all_players_answered" }
   | { type: "host_changed"; newHostId?: string; players?: RoomPlayer[] }
   | { type: "error"; message: string }

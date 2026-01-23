@@ -686,7 +686,14 @@ export default class BlindTestRoom implements Party.Server {
       })
     );
 
-    // Broadcaster la mise à jour des scores
+    // Broadcaster qu'un joueur a répondu (sans révéler si correct)
+    this.broadcast({
+      type: "player_answered",
+      playerId,
+      songId,
+    });
+
+    // Broadcaster la mise à jour des scores et statuts
     this.broadcast({
       type: "players_update",
       players: this.getPlayersArray(),
@@ -805,16 +812,27 @@ export default class BlindTestRoom implements Party.Server {
 
   /**
    * Convertir Map<string, Player> en tableau
+   * Inclut hasAnsweredCurrentSong pour le tableau de score temps réel
    */
   private getPlayersArray() {
-    return Array.from(this.state.players.values()).map((p) => ({
-      id: p.id,
-      displayName: p.displayName,
-      score: p.score,
-      incorrect: p.incorrect,
-      isHost: p.isHost,
-      connected: p.connected,
-    }));
+    const currentSongId = this.state.songs[this.state.currentSongIndex]?.id;
+    
+    return Array.from(this.state.players.values()).map((p) => {
+      // Vérifier si ce joueur a répondu au morceau actuel
+      const hasAnsweredCurrentSong = currentSongId
+        ? this.state.responses.has(`${currentSongId}-${p.id}`)
+        : false;
+      
+      return {
+        id: p.id,
+        displayName: p.displayName,
+        score: p.score,
+        incorrect: p.incorrect,
+        isHost: p.isHost,
+        connected: p.connected,
+        hasAnsweredCurrentSong,
+      };
+    });
   }
 
   /**
