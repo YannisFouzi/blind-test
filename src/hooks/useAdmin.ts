@@ -13,7 +13,6 @@ import {
   getSongsByWork,
   getUniverses,
   getWorksByUniverse,
-  importSongsFromPlaylist as importSongsIntoFirestore,
   reorderWorks as reorderWorksMutation,
   updateSong as patchSong,
   updateUniverse as patchUniverse,
@@ -380,33 +379,34 @@ export const useAdmin = (user: User | null) => {
   };
 
   // Import automatique des chansons depuis une playlist
+  // L'écriture Firestore se fait maintenant CÔTÉ SERVEUR (service d'ingestion)
   const importSongsFromPlaylist = async (
     workId: string,
     playlistId: string
   ) => {
-    console.log("🎬 [useAdmin] importSongsFromPlaylist appelé");
-    console.log("📋 [useAdmin] workId:", workId, "playlistId:", playlistId);
+    console.log("[useAdmin] importSongsFromPlaylist appelé");
+    console.log("[useAdmin] workId:", workId, "playlistId:", playlistId);
 
     setLoading(true);
     clearMessages();
 
     try {
-      console.log("🔄 [useAdmin] Appel AudioIngestionService.importPlaylist");
+      console.log("[useAdmin] Appel AudioIngestionService.importPlaylist");
       const ingestionResult = await AudioIngestionService.importPlaylist(
         workId,
         playlistId
       );
 
-      console.log("📦 [useAdmin] Résultat ingestion:", ingestionResult);
+      console.log("[useAdmin] Résultat ingestion:", ingestionResult);
 
-      if (!ingestionResult.success || !ingestionResult.songs) {
-        console.error("??? [useAdmin] ??chec de l'ingestion:", ingestionResult.error);
+      if (!ingestionResult.success) {
+        console.error("[useAdmin] Échec de l'ingestion:", ingestionResult.error);
 
         if ("status" in ingestionResult && ingestionResult.status === "timeout" && "jobId" in ingestionResult && ingestionResult.jobId) {
           setPendingImportJob({ workId, jobId: ingestionResult.jobId });
           setError(
-            `Import en cours cote serveur (jobId: ${ingestionResult.jobId}). ` +
-              "Cliquez sur Reprendre l'import pour finaliser Firestore."
+            `Import en cours côté serveur (jobId: ${ingestionResult.jobId}). ` +
+              "Réessayez dans quelques minutes pour voir les résultats."
           );
         } else {
           setError(
@@ -419,46 +419,30 @@ export const useAdmin = (user: User | null) => {
         return { success: false, error: ingestionResult.error };
       }
 
-            console.log("🔄 [useAdmin] Import dans Firestore...");
-      const importResult = await importSongsIntoFirestore(
-        workId,
-        ingestionResult.songs
-      );
-
-      console.log("📦 [useAdmin] Résultat Firestore:", importResult);
-
-      if (importResult.success) {
-        if (state.pendingImportJob?.workId === workId) {
-          setPendingImportJob(null);
-        }
-        const stats = importResult.data;
-        const message = `Import terminé ! ${
-          stats?.imported ?? 0
-        } chanson(s) ajoutée(s)${
-          stats?.skipped
-            ? `, ${stats.skipped} ignorée(s) (déjà existante(s))`
-            : ""
-        }.`;
-
-        console.log("✅ [useAdmin] Import réussi:", message);
-        setSuccess(message);
-        loadSongs(workId);
-
-        return {
-          success: true,
-          imported: stats?.imported,
-          skipped: stats?.skipped,
-          errors: stats?.errors,
-        };
-      } else {
-        console.error("❌ [useAdmin] Échec import Firestore:", importResult.error);
-        setError("Erreur lors de l'import : " + importResult.error);
-        return { success: false, error: importResult.error };
+      // L'écriture Firestore est faite côté serveur maintenant
+      // On recharge juste les chansons pour afficher les nouvelles
+      if (state.pendingImportJob?.workId === workId) {
+        setPendingImportJob(null);
       }
+
+      const imported = ingestionResult.songs?.length ?? 0;
+      const firestoreWrites = ingestionResult.firestoreWrites ?? imported;
+      
+      const message = `Import terminé ! ${firestoreWrites} chanson(s) ajoutée(s) en base de données.`;
+
+      console.log("[useAdmin] Import réussi:", message);
+      setSuccess(message);
+      loadSongs(workId);
+
+      return {
+        success: true,
+        imported: firestoreWrites,
+        skipped: imported - firestoreWrites,
+      };
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Erreur inconnue";
-      console.error("❌ [useAdmin] Exception:", error);
+      console.error("[useAdmin] Exception:", error);
       setError("Erreur lors de l'import des chansons : " + errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -467,19 +451,21 @@ export const useAdmin = (user: User | null) => {
   };
 
 
+  // Reprendre un import en cours (si timeout UI)
+  // L'écriture Firestore se fait maintenant CÔTÉ SERVEUR
   const resumeImportFromJob = async (workId: string, jobId: string) => {
-    console.log("??? [useAdmin] resumeImportFromJob:", jobId);
+    console.log("[useAdmin] resumeImportFromJob:", jobId);
     setLoading(true);
     clearMessages();
 
     try {
       const ingestionResult = await AudioIngestionService.resumeImport(jobId);
-      console.log("???? [useAdmin] R??sultat reprise ingestion:", ingestionResult);
+      console.log("[useAdmin] Résultat reprise ingestion:", ingestionResult);
 
-      if (!ingestionResult.success || !ingestionResult.songs) {
+      if (!ingestionResult.success) {
         if (ingestionResult.status === "timeout") {
           setError(
-            "Import toujours en cours cote serveur. Reessayez dans quelques minutes."
+            "Import toujours en cours côté serveur. Réessayez dans quelques minutes."
           );
         } else {
           setError(
@@ -490,34 +476,22 @@ export const useAdmin = (user: User | null) => {
         return { success: false, error: ingestionResult.error };
       }
 
-      const importResult = await importSongsIntoFirestore(
-        workId,
-        ingestionResult.songs
-      );
+      // L'écriture Firestore est faite côté serveur maintenant
+      setPendingImportJob(null);
+      
+      const imported = ingestionResult.songs?.length ?? 0;
+      const firestoreWrites = ingestionResult.firestoreWrites ?? imported;
+      
+      const message = `Import terminé ! ${firestoreWrites} chanson(s) ajoutée(s) en base de données.`;
 
-      if (importResult.success) {
-        setPendingImportJob(null);
-        const stats = importResult.data;
-        const message = `Import termin?? ! ${
-          stats?.imported ?? 0
-        } chanson(s) ajout??e(s)${
-          stats?.skipped
-            ? `, ${stats.skipped} ignor??e(s) (d??j?? existante(s))`
-            : ""
-        }.`;
-
-        setSuccess(message);
-        loadSongs(workId);
-        return {
-          success: true,
-          imported: stats?.imported,
-          skipped: stats?.skipped,
-          errors: stats?.errors,
-        };
-      }
-
-      setError("Erreur lors de l'import : " + importResult.error);
-      return { success: false, error: importResult.error };
+      setSuccess(message);
+      loadSongs(workId);
+      
+      return {
+        success: true,
+        imported: firestoreWrites,
+        skipped: imported - firestoreWrites,
+      };
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Erreur inconnue";

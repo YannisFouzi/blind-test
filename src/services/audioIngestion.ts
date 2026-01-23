@@ -17,6 +17,7 @@ const ingestionResponseSchema = z.object({
     .optional(),
   imported: z.number().optional(),
   skipped: z.number().optional(),
+  firestoreWrites: z.number().optional(),
   errors: z.array(z.string()).optional(),
 });
 

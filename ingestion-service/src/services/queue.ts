@@ -9,8 +9,10 @@ export type ImportJobData = {
 };
 
 export type ImportJobResult = {
+  success: boolean;
   imported: number;
   skipped: number;
+  firestoreWrites: number;
   errors: string[];
   songs: Array<{
     id: string;

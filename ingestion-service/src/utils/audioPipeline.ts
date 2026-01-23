@@ -8,6 +8,7 @@ import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import pLimit from "p-limit";
 import { uploadToR2, buildObjectKey } from "../services/cloudflare.js";
 import { fetchPlaylistVideos } from "../services/youtube.js";
+import { addSongToFirestore, isFirestoreEnabled } from "../services/firestore.js";
 
 // Railway: /app/bin/yt-dlp | Local: yt-dlp in PATH
 const ytdlpPath =
@@ -81,8 +82,10 @@ const ytdlpFallbackFormat = "140/251/bestaudio";
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 export interface ProcessPlaylistResult {
+  success: boolean;
   imported: number;
   skipped: number;
+  firestoreWrites: number;
   errors: string[];
   songs: Array<{
     id: string;
@@ -137,13 +140,21 @@ export const processPlaylist = async (
 ): Promise<ProcessPlaylistResult> => {
   const videos = await fetchPlaylistVideos(playlistId);
   if (!videos.length) {
-    return { imported: 0, skipped: 0, errors: [], songs: [] };
+    return { success: true, imported: 0, skipped: 0, firestoreWrites: 0, errors: [], songs: [] };
   }
 
   const total = videos.length;
   let processed = 0;
   let imported = 0;
   let errorsCount = 0;
+  let firestoreWrites = 0;
+
+  // Log si Firestore est activé
+  if (isFirestoreEnabled()) {
+    console.log("[ingestion] Firestore activé - écriture directe après chaque upload R2");
+  } else {
+    console.warn("[ingestion] Firestore NON activé - les songs ne seront PAS écrites en BDD");
+  }
 
   options.onProgress?.({
     total,
@@ -171,20 +182,37 @@ export const processPlaylist = async (
             "Artiste YouTube";
           const trackTitle = meta.track || meta.title || video.title;
 
-          const processed = await downloadUploadAudio(
+          // 1. Télécharger et uploader sur R2
+          const uploadResult = await downloadUploadAudio(
             workId,
             video.id,
             trackTitle,
             artist,
             video.duration
           );
+
+          // 2. Écrire IMMÉDIATEMENT dans Firestore après upload R2
+          const firestoreId = await addSongToFirestore({
+            title: trackTitle,
+            artist,
+            youtubeId: video.id,
+            audioUrl: uploadResult.url,
+            duration: video.duration,
+            workId,
+          });
+
+          if (firestoreId) {
+            firestoreWrites += 1;
+          }
+
+          // 3. Garder en mémoire pour le résultat (compatibilité frontend)
           songs.push({
             id: video.id,
             title: trackTitle,
             description: video.description,
             duration: video.duration,
             artist,
-            audioUrl: processed.url,
+            audioUrl: uploadResult.url,
           });
           imported += 1;
         } catch (error) {
@@ -208,9 +236,13 @@ export const processPlaylist = async (
     )
   );
 
+  console.log(`[ingestion] Terminé: ${imported} importés, ${firestoreWrites} écrits en Firestore`);
+
   return {
+    success: true,
     imported,
     skipped: total - imported,
+    firestoreWrites,
     errors,
     songs,
   };
