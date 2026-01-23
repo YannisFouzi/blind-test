@@ -8,7 +8,7 @@ import { UniverseCustomizeModal } from "@/components/home/UniverseCustomizeModal
 import { HomePageSkeleton } from "@/components/HomePage/HomePageSkeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useUniverses } from "@/hooks/useUniverses";
-import { useUniverseCustomization } from "@/hooks/useUniverseCustomization";
+import { useUniverseCustomization, CUSTOM_UNIVERSE } from "@/hooks/useUniverseCustomization";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -61,7 +61,10 @@ export const HomeContent = () => {
     songCountByWork: customSongCountByWork,
     loading: customLoadingWorks,
     error: customError,
+    isCustomMode,
+    maxWorksAllowed,
     openCustomize,
+    openCustomMode,
     closeCustomize,
     toggleWork,
     setNoSeek: setCustomNoSeek,
@@ -265,7 +268,12 @@ export const HomeContent = () => {
 
   const applyCustomizeAndPlay = useCallback(async () => {
     if (!customizingUniverse) return;
-    const universeId = customizingUniverse.id;
+    
+    // Déterminer si c'est le mode custom (toutes les œuvres)
+    const isCustomModeActive = customizingUniverse.id === CUSTOM_UNIVERSE.id;
+    // En mode custom, on utilise "__custom__" comme universeId
+    const universeId = isCustomModeActive ? "__custom__" : customizingUniverse.id;
+    
     closeCustomize();
 
     const ensuredPlayerId = ensurePlayerId();
@@ -275,9 +283,14 @@ export const HomeContent = () => {
     if (mode === "solo") {
       const params = new URLSearchParams();
       if (customNoSeek) params.set("noseek", "1");
-      if (customAllowedWorks.length && customAllowedWorks.length !== customWorks.length) {
+      
+      // En mode custom, on passe TOUJOURS les works sélectionnés
+      if (isCustomModeActive) {
+        params.set("works", customAllowedWorks.join(","));
+      } else if (customAllowedWorks.length && customAllowedWorks.length !== customWorks.length) {
         params.set("works", customAllowedWorks.join(","));
       }
+      
       if (customMaxSongs !== null && customMaxSongs < customTotalSongs) {
         params.set("maxsongs", String(customMaxSongs));
       }
@@ -300,9 +313,14 @@ export const HomeContent = () => {
         room: hostRoomId,
       });
       if (customNoSeek) params.set("noseek", "1");
-      if (customAllowedWorks.length && customAllowedWorks.length !== customWorks.length) {
+      
+      // En mode custom, on passe TOUJOURS les works sélectionnés
+      if (isCustomModeActive) {
+        params.set("works", customAllowedWorks.join(","));
+      } else if (customAllowedWorks.length && customAllowedWorks.length !== customWorks.length) {
         params.set("works", customAllowedWorks.join(","));
       }
+      
       if (customMaxSongs !== null && customMaxSongs < customTotalSongs) {
         params.set("maxsongs", String(customMaxSongs));
       }
@@ -438,6 +456,7 @@ export const HomeContent = () => {
           error={universesError}
           onSelect={handleUniverseClick}
           onCustomize={openCustomize}
+          onCustomMode={openCustomMode}
         />
       )}
 
@@ -453,6 +472,8 @@ export const HomeContent = () => {
           loading={customLoadingWorks}
           error={customError || homeError}
           isApplying={isCreatingRoom}
+          isCustomMode={isCustomMode}
+          maxWorksAllowed={maxWorksAllowed}
           onToggleWork={toggleWork}
           onSetNoSeek={setCustomNoSeek}
           onSetMaxSongs={setCustomMaxSongs}

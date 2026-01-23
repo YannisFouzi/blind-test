@@ -14,6 +14,8 @@ interface UniverseCustomizeModalProps {
   loading: boolean;
   error: string | null;
   isApplying?: boolean;
+  isCustomMode?: boolean; // Mode custom = toutes les œuvres avec limite
+  maxWorksAllowed?: number | null; // Limite d'œuvres sélectionnables (mode custom)
   onToggleWork: (workId: string) => void;
   onSetNoSeek: (value: boolean) => void;
   onSetMaxSongs: (value: number | null) => void;
@@ -32,12 +34,16 @@ const UniverseCustomizeModalComponent = ({
   loading,
   error,
   isApplying = false,
+  isCustomMode = false,
+  maxWorksAllowed = null,
   onToggleWork,
   onSetNoSeek,
   onSetMaxSongs,
   onApply,
   onClose,
 }: UniverseCustomizeModalProps) => {
+  // En mode custom, vérifier si on a atteint la limite
+  const canSelectMoreWorks = !maxWorksAllowed || allowedWorks.length < maxWorksAllowed;
   // Valeur effective du slider (si null = toutes les musiques = totalSongsAvailable)
   const effectiveMaxSongs = maxSongs ?? totalSongsAvailable;
   
@@ -116,7 +122,14 @@ const UniverseCustomizeModalComponent = ({
 
           {/* Œuvres incluses */}
           <div className="space-y-2">
-            <div className="text-white text-sm font-semibold">Oeuvres incluses</div>
+            <div className="flex items-center justify-between">
+              <span className="text-white text-sm font-semibold">Oeuvres incluses</span>
+              {isCustomMode && maxWorksAllowed && (
+                <span className={`text-xs ${allowedWorks.length >= maxWorksAllowed ? "text-orange-400" : "text-slate-400"}`}>
+                  {allowedWorks.length}/{maxWorksAllowed} sélectionnées
+                </span>
+              )}
+            </div>
 
             {loading ? (
               <div className="text-slate-200 text-sm">Chargement des oeuvres...</div>
@@ -124,15 +137,23 @@ const UniverseCustomizeModalComponent = ({
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                 {works.map((work) => {
                   const songCount = songCountByWork[work.id] || 0;
+                  const isSelected = allowedWorks.includes(work.id);
+                  const isDisabled = !isSelected && !canSelectMoreWorks;
+                  
                   return (
                     <label
                       key={work.id}
-                      className="flex items-center gap-2 text-white text-sm bg-slate-800/60 px-2 py-1.5 rounded cursor-pointer hover:bg-slate-700/60 transition-colors"
+                      className={`flex items-center gap-2 text-sm px-2 py-1.5 rounded transition-colors ${
+                        isDisabled
+                          ? "bg-slate-800/30 text-slate-500 cursor-not-allowed"
+                          : "bg-slate-800/60 text-white cursor-pointer hover:bg-slate-700/60"
+                      }`}
                     >
                       <input
                         type="checkbox"
-                        checked={allowedWorks.includes(work.id)}
-                        onChange={() => onToggleWork(work.id)}
+                        checked={isSelected}
+                        onChange={() => !isDisabled && onToggleWork(work.id)}
+                        disabled={isDisabled}
                         className="w-4 h-4 rounded"
                       />
                       <span className="flex-1 truncate">{work.title}</span>

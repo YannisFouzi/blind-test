@@ -12,6 +12,51 @@ import { getSongsByWork, deleteSong } from "./songs";
 
 const COLLECTION = "works";
 
+/**
+ * Récupère TOUTES les œuvres de tous les univers (pour le mode custom)
+ */
+export const getAllWorks = async (): Promise<ServiceResponse<Work[]>> => {
+  try {
+    const data = await fetchDocuments<Work>(
+      COLLECTION,
+      [orderBy("order", "asc")],
+      WorkSchema
+    );
+    return { success: true, data };
+  } catch (error) {
+    return {
+      success: false,
+      error: formatError(error, "Erreur lors du chargement des œuvres"),
+    };
+  }
+};
+
+/**
+ * Récupère des œuvres par leurs IDs (pour le mode custom)
+ */
+export const getWorksByIds = async (
+  workIds: string[]
+): Promise<ServiceResponse<Work[]>> => {
+  try {
+    // Récupérer toutes les œuvres et filtrer par IDs
+    const allWorksResult = await getAllWorks();
+    if (!allWorksResult.success || !allWorksResult.data) {
+      return allWorksResult;
+    }
+    
+    const filteredWorks = allWorksResult.data.filter((work) =>
+      workIds.includes(work.id)
+    );
+    
+    return { success: true, data: filteredWorks };
+  } catch (error) {
+    return {
+      success: false,
+      error: formatError(error, "Erreur lors du chargement des œuvres"),
+    };
+  }
+};
+
 export const getWorksByUniverse = async (
   universeId: string
 ): Promise<ServiceResponse<Work[]>> => {

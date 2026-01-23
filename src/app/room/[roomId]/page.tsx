@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { usePartyKitRoom } from "@/hooks/usePartyKitRoom";
-import { useUniverseCustomization } from "@/hooks/useUniverseCustomization";
+import { useUniverseCustomization, CUSTOM_UNIVERSE } from "@/hooks/useUniverseCustomization";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { UniverseCustomizeModal } from "@/components/home/UniverseCustomizeModal";
@@ -79,7 +79,10 @@ export default function WaitingRoomPage() {
     songCountByWork: customSongCountByWork,
     loading: customLoadingWorks,
     error: customError,
+    isCustomMode,
+    maxWorksAllowed,
     openCustomize,
+    openCustomMode,
     closeCustomize,
     toggleWork,
     setNoSeek: setCustomNoSeek,
@@ -90,16 +93,22 @@ export default function WaitingRoomPage() {
   const applyCustomizeAndPlay = useCallback(async () => {
     if (!customizingUniverse || !isHost || !configureRoom) return;
 
-    const universeId = customizingUniverse.id;
+    // Déterminer si c'est le mode custom
+    const isCustomModeActive = customizingUniverse.id === CUSTOM_UNIVERSE.id;
+    const universeId = isCustomModeActive ? "__custom__" : customizingUniverse.id;
+    
     closeCustomize();
     setIsConfiguringRoom(true);
     setConfigError(null);
 
     try {
-      // Filtrer les works selon la sélection
-      const worksToUse = customAllowedWorks.length > 0 && customAllowedWorks.length !== customWorks.length
+      // En mode custom, on utilise TOUJOURS les works sélectionnés (pas de fallback)
+      // En mode normal, si aucune sélection spécifique, on utilise tous les works
+      const worksToUse = isCustomModeActive
         ? customWorks.filter((w) => customAllowedWorks.includes(w.id))
-        : customWorks;
+        : (customAllowedWorks.length > 0 && customAllowedWorks.length !== customWorks.length
+            ? customWorks.filter((w) => customAllowedWorks.includes(w.id))
+            : customWorks);
 
       if (worksToUse.length === 0) {
         setConfigError("Aucune oeuvre sélectionnée");
@@ -131,10 +140,12 @@ export default function WaitingRoomPage() {
         : shuffled.length;
       const selectedSongs = shuffled.slice(0, maxCount);
 
-      // Configurer avec les options personnalisées
-      const allowedWorkIds = customAllowedWorks.length > 0 && customAllowedWorks.length !== customWorks.length
+      // En mode custom, on passe TOUJOURS les allowedWorkIds
+      const allowedWorkIds = isCustomModeActive
         ? customAllowedWorks
-        : undefined;
+        : (customAllowedWorks.length > 0 && customAllowedWorks.length !== customWorks.length
+            ? customAllowedWorks
+            : undefined);
 
       await configureRoom(universeId, selectedSongs, allowedWorkIds, { noSeek: customNoSeek });
 
@@ -316,6 +327,7 @@ export default function WaitingRoomPage() {
               universes={universes}
               onSelect={handleUniverseClick}
               onCustomize={openCustomize}
+              onCustomMode={openCustomMode}
               error={null}
             />
           )}
@@ -333,6 +345,8 @@ export default function WaitingRoomPage() {
               loading={customLoadingWorks}
               error={customError || configError}
               isApplying={isConfiguringRoom}
+              isCustomMode={isCustomMode}
+              maxWorksAllowed={maxWorksAllowed}
               onToggleWork={toggleWork}
               onSetNoSeek={setCustomNoSeek}
               onSetMaxSongs={setCustomMaxSongs}

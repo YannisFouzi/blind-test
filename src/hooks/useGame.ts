@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { GameAnswer, GameSession, Song, Work } from "@/types";
-import { getSongsByWork, getWorksByUniverse } from "@/services/firebase";
+import { getSongsByWork, getWorksByUniverse, getWorksByIds } from "@/services/firebase";
 import { generateId, shuffleArray } from "../utils/formatters";
+
+// ID spécial pour le mode custom
+export const CUSTOM_UNIVERSE_ID = "__custom__";
 
 export const useGame = (
   universeId: string,
@@ -22,13 +25,24 @@ export const useGame = (
 
   const initializeGame = useCallback(async () => {
     try {
-      const worksResult = await getWorksByUniverse(universeId);
-      const fetchedWorks = worksResult.success && worksResult.data ? worksResult.data : [];
+      let fetchedWorks: Work[] = [];
+      let filteredWorks: Work[] = [];
 
-      const filteredWorks =
-        allowedWorks && allowedWorks.length
-          ? fetchedWorks.filter((w) => allowedWorks.includes(w.id))
-          : fetchedWorks;
+      // Mode Custom : charger les works par leurs IDs directement
+      if (universeId === CUSTOM_UNIVERSE_ID && allowedWorks && allowedWorks.length > 0) {
+        const worksResult = await getWorksByIds(allowedWorks);
+        fetchedWorks = worksResult.success && worksResult.data ? worksResult.data : [];
+        filteredWorks = fetchedWorks; // Tous les works récupérés sont déjà filtrés
+      } else {
+        // Mode normal : charger les works de l'univers
+        const worksResult = await getWorksByUniverse(universeId);
+        fetchedWorks = worksResult.success && worksResult.data ? worksResult.data : [];
+
+        filteredWorks =
+          allowedWorks && allowedWorks.length
+            ? fetchedWorks.filter((w) => allowedWorks.includes(w.id))
+            : fetchedWorks;
+      }
 
       if (!fetchedWorks.length && process.env.NODE_ENV === "development") {
         console.warn(
