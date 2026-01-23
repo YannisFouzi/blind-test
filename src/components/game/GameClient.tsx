@@ -189,7 +189,6 @@ export function GameClient({ universeId }: GameClientProps) {
   }, [isMultiActive, multiplayerGame.players, soloGame.gameSession?.score]);
 
   const activeLastGain = isMultiActive ? multiplayerGame.lastGain : soloGame.lastGain;
-  const [isLoaded, setIsLoaded] = useState(false);
   const [pointsFlash, setPointsFlash] = useState<{ points: number; key: number } | null>(null);
 
   useEffect(() => {
@@ -259,10 +258,6 @@ export function GameClient({ universeId }: GameClientProps) {
     handleAudioProgressClick(event);
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoaded(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Log multi snapshots only when key fields change to reduce spam
   useEffect(() => {
@@ -403,11 +398,7 @@ export function GameClient({ universeId }: GameClientProps) {
       <div className="absolute inset-0 bg-gradient-to-r from-purple-800/20 via-transparent to-blue-800/20 pointer-events-none" />
 
       {/* Navigation */}
-      <div
-        className={`fixed top-6 left-6 z-50 ${
-          isLoaded ? "slide-in-left" : "opacity-0"
-        }`}
-      >
+      <div className="fixed top-6 left-6 z-50">
         <button
           onClick={() => {
             router.push("/");
@@ -422,12 +413,7 @@ export function GameClient({ universeId }: GameClientProps) {
       {/* Conteneur principal */}
       <div className="container mx-auto px-4 py-8 pb-24 relative z-10">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-7xl mx-auto justify-items-center">
-          <div
-            className={`xl:col-span-2 w-full flex justify-center ${
-              isLoaded ? "slide-in-right" : "opacity-0"
-            }`}
-            style={{ animationDelay: "0.6s" }}
-          >
+          <div className="xl:col-span-2 w-full flex justify-center">
             <WorkSelector
               works={activeWorks}
               currentSongWorkId={activeCurrentSong?.workId}
