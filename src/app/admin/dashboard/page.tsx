@@ -14,6 +14,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { UniverseSection } from "@/components/admin/dashboard/UniverseSection";
 import { WorksSection } from "@/components/admin/dashboard/WorksSection";
 import { SongsSection } from "@/components/admin/dashboard/SongsSection";
+import { CookieStatus } from "@/components/admin/CookieStatus";
 
 type ModalType = "universe" | "work" | "song" | null;
 
@@ -302,6 +303,9 @@ export default function AdminDashboard() {
       onNavigateHome={handleNavigateHome}
     >
       <div className="space-y-8">
+        {/* Statut des cookies YouTube */}
+        <CookieStatus />
+
         <UniverseSection
           universes={universes}
           loading={loading}

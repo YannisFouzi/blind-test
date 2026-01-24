@@ -3,6 +3,8 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 import { router as importPlaylistRouter } from "./routes/importPlaylist.js";
+import { router as cookieCheckRouter } from "./routes/cookieCheck.js";
+import { router as uploadCookiesRouter } from "./routes/uploadCookies.js";
 import { startWorker, stopWorker } from "./services/worker.js";
 import { importQueue, queueEvents } from "./services/queue.js";
 
@@ -17,6 +19,8 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/import-playlist", importPlaylistRouter);
+app.use("/api/cookie-check", cookieCheckRouter);
+app.use("/api/upload-cookies", uploadCookiesRouter);
 
 const port = process.env.PORT || 4000;
 
