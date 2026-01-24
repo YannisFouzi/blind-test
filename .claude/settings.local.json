@@ -23,7 +23,10 @@
       "Bash(if not exist \"docs\\archive\" mkdir docsarchive)",
       "Bash(rd /s /q \".partykit\\state\")",
       "WebFetch(domain:github.com)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)"
     ],
     "deny": [],
     "ask": []

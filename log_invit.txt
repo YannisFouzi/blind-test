@@ -1,0 +1,177 @@
+ Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+ [Fast Refresh] rebuilding
+ [Fast Refresh] done in 1976ms
+ [Fast Refresh] rebuilding
+ [Fast Refresh] done in 508ms
+ [Fast Refresh] rebuilding
+ [Fast Refresh] done in 644ms
+ [Fast Refresh] rebuilding
+ [Fast Refresh] rebuilding
+ [Fast Refresh] done in 37ms
+ [Fast Refresh] done in 511ms
+ [WaitingRoomPage] RENDER Object
+ [WaitingRoomPage] roomId Object
+ [WaitingRoomPage] RENDER Object
+ [WaitingRoomPage] roomId Object
+ [usePartyKitRoom] skip connection (missing params) Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:137 [WaitingRoomPage] auto-redirect effect triggered Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:147 [WaitingRoomPage] auto-redirect SKIP Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:334 [usePartyKitRoom] skip connection (missing params) Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:137 [WaitingRoomPage] auto-redirect effect triggered Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:147 [WaitingRoomPage] auto-redirect SKIP Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:339 [usePartyKitRoom] init connection Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:137 [WaitingRoomPage] auto-redirect effect triggered Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:147 [WaitingRoomPage] auto-redirect SKIP Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\context\PartyKitProvider.tsx:33 [PartyKitProvider] socket open Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:355 [usePartyKitRoom] socket open Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:109 [usePartyKitRoom] state_sync Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:131 [usePartyKitRoom] state_sync applied Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:146 [usePartyKitRoom] join_success Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:404 [usePartyKitRoom] cleanup connection Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:339 [usePartyKitRoom] init connection Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:355 [usePartyKitRoom] socket open Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:137 [WaitingRoomPage] auto-redirect effect triggered Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:147 [WaitingRoomPage] auto-redirect SKIP Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:157 [usePartyKitRoom] players_update Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:146 [usePartyKitRoom] join_success Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:157 [usePartyKitRoom] players_update Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:166 [usePartyKitRoom] room_configured RECEIVED Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:183 [usePartyKitRoom] room_configured APPLIED Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:183 [usePartyKitRoom] room_configured APPLIED Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:404 [usePartyKitRoom] cleanup connection Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:339 [usePartyKitRoom] init connection Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:355 [usePartyKitRoom] socket open Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:137 [WaitingRoomPage] auto-redirect effect triggered Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:176 [WaitingRoomPage] REDIRECTING to game Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\src\client\components\react-dev-overlay\app\hot-reloader-client.tsx:306 [Fast Refresh] rebuilding
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:195 [usePartyKitRoom] game_started Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:146 [usePartyKitRoom] join_success Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:157 [usePartyKitRoom] players_update Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:157 [usePartyKitRoom] players_update Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:404 [usePartyKitRoom] cleanup connection Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:339 [usePartyKitRoom] init connection Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:355 [usePartyKitRoom] socket open Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:137 [WaitingRoomPage] auto-redirect effect triggered Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:176 [WaitingRoomPage] REDIRECTING to game Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:157 [usePartyKitRoom] players_update Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:146 [usePartyKitRoom] join_success Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:157 [usePartyKitRoom] players_update Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:16 [WaitingRoomPage] RENDER Object
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\app\room\[roomId]\page.tsx:22 [WaitingRoomPage] roomId Object
+C:\src\client\components\react-dev-overlay\utils\report-hmr-latency.ts:26 [Fast Refresh] done in 530ms
+C:\src\client\components\react-dev-overlay\app\hot-reloader-client.tsx:306 [Fast Refresh] rebuilding
+C:\src\client\components\react-dev-overlay\utils\report-hmr-latency.ts:26 [Fast Refresh] done in 1455ms
+C:\src\client\components\react-dev-overlay\app\hot-reloader-client.tsx:306 [Fast Refresh] rebuilding
+C:\src\client\components\react-dev-overlay\utils\report-hmr-latency.ts:26 [Fast Refresh] done in 225ms
+C:\src\client\components\react-dev-overlay\app\hot-reloader-client.tsx:306 [Fast Refresh] rebuilding
+C:\src\client\components\react-dev-overlay\utils\report-hmr-latency.ts:26 [Fast Refresh] done in 394ms
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875330}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875332}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:404 [usePartyKitRoom] cleanup connection {key: 'room-1768812819747-q9pgdey|E20F0wR59D-_fLDNbssBv|Joueur_InVIT', roomId: 'room-1768812819747-q9pgdey', playerId: 'E20F0wR59D-_fLDNbssBv', managed: true}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:62 [GameClient] mount {roomId: 'room-1768812819747-q9pgdey', universeId: 'P3iE45PQXeqT5h2uUAzc', mode: 'multi', queryPlayer: 'E20F0wR59D-_fLDNbssBv', queryName: 'Joueur_InVIT', …}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:334 [usePartyKitRoom] skip connection (missing params) {roomId: 'room-1768812819747-q9pgdey', playerId: undefined, displayName: 'Joueur'}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\useMultiplayerGame.ts:140 [useMultiplayerGame] state snapshot {roomId: undefined, state: 'idle', songs: 0, currentSongId: undefined, players: 0, …}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:274 [GameClient] multi snapshot {roomId: 'room-1768812819747-q9pgdey', state: 'idle', songs: 0, currentSongId: undefined, players: 0, …}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:334 [usePartyKitRoom] skip connection (missing params) {roomId: 'room-1768812819747-q9pgdey', playerId: undefined, displayName: 'Joueur'}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\useMultiplayerGame.ts:140 [useMultiplayerGame] state snapshot {roomId: undefined, state: 'idle', songs: 0, currentSongId: undefined, players: 0, …}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:274 [GameClient] multi snapshot {roomId: 'room-1768812819747-q9pgdey', state: 'idle', songs: 0, currentSongId: undefined, players: 0, …}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875402}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875403}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:339 [usePartyKitRoom] init connection {key: 'room-1768812819747-q9pgdey|E20F0wR59D-_fLDNbssBv|Joueur_InVIT', roomId: 'room-1768812819747-q9pgdey', playerId: 'E20F0wR59D-_fLDNbssBv', displayName: 'Joueur_InVIT'}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:355 [usePartyKitRoom] socket open {roomId: 'room-1768812819747-q9pgdey', playerId: 'E20F0wR59D-_fLDNbssBv', displayName: 'Joueur_InVIT'}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message {data: '{"type":"players_update","players":[{"id":"pttEfn0…,"incorrect":0,"isHost":false,"connected":true}]}'}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:157 [usePartyKitRoom] players_update {roomId: 'room-1768812819747-q9pgdey', playerId: 'E20F0wR59D-_fLDNbssBv', players: 2}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875442}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875443}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message {data: '{"type":"join_success","playerId":"E20F0wR59D-_fLD…ostId":"pttEfn0YX3-vTWpHtuB3S","state":"playing"}'}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:146 [usePartyKitRoom] join_success {roomId: 'room-1768812819747-q9pgdey', playerId: 'E20F0wR59D-_fLDNbssBv', isHost: false, state: 'playing', hostIdFromMessage: 'pttEfn0YX3-vTWpHtuB3S', …}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message {data: '{"type":"players_update","players":[{"id":"pttEfn0…,"incorrect":0,"isHost":false,"connected":true}]}'}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:157 [usePartyKitRoom] players_update {roomId: 'room-1768812819747-q9pgdey', playerId: 'E20F0wR59D-_fLDNbssBv', players: 2}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\useMultiplayerGame.ts:140 [useMultiplayerGame] state snapshot {roomId: undefined, state: 'idle', songs: 0, currentSongId: undefined, players: 2, …}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:274 [GameClient] multi snapshot {roomId: 'room-1768812819747-q9pgdey', state: 'idle', songs: 0, currentSongId: undefined, players: 2, …}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875451}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875452}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message {data: '{"type":"players_update","players":[{"id":"pttEfn0…,"incorrect":0,"isHost":false,"connected":true}]}'}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:157 [usePartyKitRoom] players_update {roomId: 'room-1768812819747-q9pgdey', playerId: 'E20F0wR59D-_fLDNbssBv', players: 2}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:404 [usePartyKitRoom] cleanup connection {key: 'room-1768812819747-q9pgdey|E20F0wR59D-_fLDNbssBv|Joueur_InVIT', roomId: 'room-1768812819747-q9pgdey', playerId: 'E20F0wR59D-_fLDNbssBv', managed: true}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:339 [usePartyKitRoom] init connection {key: 'room-1768812819747-q9pgdey|E20F0wR59D-_fLDNbssBv|Joueur_InVIT', roomId: 'room-1768812819747-q9pgdey', playerId: 'E20F0wR59D-_fLDNbssBv', displayName: 'Joueur_InVIT'}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:355 [usePartyKitRoom] socket open {roomId: 'room-1768812819747-q9pgdey', playerId: 'E20F0wR59D-_fLDNbssBv', displayName: 'Joueur_InVIT'}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875460}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875462}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message {data: '{"type":"join_success","playerId":"E20F0wR59D-_fLD…ostId":"pttEfn0YX3-vTWpHtuB3S","state":"playing"}'}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:146 [usePartyKitRoom] join_success {roomId: 'room-1768812819747-q9pgdey', playerId: 'E20F0wR59D-_fLDNbssBv', isHost: false, state: 'playing', hostIdFromMessage: 'pttEfn0YX3-vTWpHtuB3S', …}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875465}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875466}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:367 [usePartyKitRoom] raw message {data: '{"type":"players_update","players":[{"id":"pttEfn0…,"incorrect":0,"isHost":false,"connected":true}]}'}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\hooks\usePartyKitRoom.ts:157 [usePartyKitRoom] players_update {roomId: 'room-1768812819747-q9pgdey', playerId: 'E20F0wR59D-_fLDNbssBv', players: 2}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875469}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875470}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875594}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875595}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875598}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875599}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875729}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875730}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875732}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875733}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875796}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812875797}
+C:\src\client\components\react-dev-overlay\app\hot-reloader-client.tsx:306 [Fast Refresh] rebuilding
+C:\src\client\components\react-dev-overlay\utils\report-hmr-latency.ts:26 [Fast Refresh] done in 474ms
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812888865}
+C:\Users\yanni\PROJET PORTFOLIO\blindTest\blind-test\src\components\game\GameClient.tsx:34 [GameClient] RENDER START {universeId: 'P3iE45PQXeqT5h2uUAzc', timestamp: 1768812888867}
