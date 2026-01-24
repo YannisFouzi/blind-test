@@ -57,7 +57,7 @@ yarn-error.log*
 next-env.d.ts
 
 .md
-
+*.txt
 
 .claude/settings.local.json
 

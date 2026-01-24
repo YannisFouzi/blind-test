@@ -16,29 +16,6 @@ const ytdlpPath =
 const youtubedl = create(ytdlpPath);
 
 const cookiesPath = "/app/cookies/cookies.txt";
-const nodeRuntime =
-  process.execPath.includes(" ") ? "node" : `node:${process.execPath}`;
-
-let cachedSupportsJsRuntimes: boolean | null = null;
-const supportsJsRuntimes = () => {
-  if (cachedSupportsJsRuntimes !== null) {
-    return cachedSupportsJsRuntimes;
-  }
-  try {
-    const result = spawnSync(ytdlpPath, ["--help"], { encoding: "utf8" });
-    const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
-    cachedSupportsJsRuntimes = output.includes("--js-runtimes");
-  } catch {
-    cachedSupportsJsRuntimes = false;
-  }
-
-  if (!cachedSupportsJsRuntimes) {
-    console.warn(
-      "[yt-dlp] --js-runtimes not supported by current binary. Continuing without JS runtime."
-    );
-  }
-  return cachedSupportsJsRuntimes;
-};
 
 const parsePlayerClients = (value?: string) => {
   if (!value) {
@@ -50,7 +27,7 @@ const parsePlayerClients = (value?: string) => {
     .filter(Boolean);
 };
 
-const defaultPlayerClients = "web,tv,ios";
+const defaultPlayerClients = "web,mweb";
 const playerClientsEnv = process.env.YT_DLP_PLAYER_CLIENTS || defaultPlayerClients;
 const poToken = process.env.YT_DLP_PO_TOKEN;
 const configuredClients = parsePlayerClients(playerClientsEnv);
@@ -62,22 +39,20 @@ const extractorArgsValue = effectiveClients.length
   : undefined;
 
 const ytdlpBaseOptions: Record<string, unknown> = {
-  ...(supportsJsRuntimes() ? { jsRuntimes: nodeRuntime } : {}),
   sleepInterval: 3,
   maxSleepInterval: 5,
   sleepRequests: 2,
   userAgent:
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   ...(fs.existsSync(cookiesPath) ? { cookies: cookiesPath } : {}),
-};
-const ytdlpFallbackOptions: Record<string, unknown> = {
-  ...ytdlpBaseOptions,
-  ...(extractorArgsValue ? { extractorArgs: extractorArgsValue } : {}),
   retries: 3,
   fragmentRetries: 3,
+  jsRuntimes: "node",
+  remoteComponents: "ejs:github",
+  ...(extractorArgsValue ? { extractorArgs: extractorArgsValue } : {}),
 };
-const ytdlpPrimaryFormat = "bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio";
-const ytdlpFallbackFormat = "140/251/bestaudio";
+const ytdlpPrimaryFormat = "bestaudio/best";
+const ytdlpFallbackFormat = "bestaudio/best";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
@@ -321,23 +296,6 @@ const downloadAudioStream = async (videoId: string, outputBase: string) => {
   try {
     return await attempt(ytdlpPrimaryFormat, ytdlpBaseOptions);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const retryable =
-      /403|Forbidden|Sign in|confirm you|429|Requested format is not available/i.test(
-        message
-      );
-    if (retryable) {
-      console.warn(`[yt-dlp] Retry with fallback for ${videoId}`);
-      try {
-        return await attempt(ytdlpFallbackFormat, ytdlpFallbackOptions);
-      } catch (fallbackError) {
-        console.error(`[yt-dlp] Fallback failed for ${videoId}:`, fallbackError);
-        throw new Error(
-          `yt-dlp failed: ${fallbackError instanceof Error ? fallbackError.message : "Unknown error"}`
-        );
-      }
-    }
-
     console.error(`[yt-dlp] Error downloading ${videoId}:`, error);
     throw new Error(
       `yt-dlp failed: ${error instanceof Error ? error.message : "Unknown error"}`
