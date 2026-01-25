@@ -39,13 +39,6 @@ const videoIdSchema = z.object({
   videoId: videoIdField,
 });
 
-const videoIdsSchema = z.object({
-  videoIds: z
-    .array(videoIdSchema.shape.videoId)
-    .min(1, "Au moins un ID de vidéo est requis")
-    .max(50, "Maximum 50 vidéos par requête"),
-});
-
 const fetchVideoData = async (query: string) => {
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) {
@@ -109,38 +102,6 @@ export async function GET(request: Request) {
     console.error("[YouTube video] GET error:", error);
     return NextResponse.json(
       { error: "Erreur lors de la récupération de la vidéo" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
-  const parseResult = videoIdsSchema.safeParse(body);
-
-  if (!parseResult.success) {
-    return NextResponse.json(
-      { error: parseResult.error.issues[0].message },
-      { status: 400 }
-    );
-  }
-
-  try {
-    const ids = parseResult.data.videoIds.join(",");
-    const data = await fetchVideoData(`id=${ids}`);
-
-    const videos = data.items.map(mapVideo);
-
-    return NextResponse.json({
-      success: true,
-      data: videos,
-      count: videos.length,
-      requested: parseResult.data.videoIds.length,
-    });
-  } catch (error) {
-    console.error("[YouTube video] POST error:", error);
-    return NextResponse.json(
-      { error: "Erreur lors de la validation des vidéos" },
       { status: 500 }
     );
   }

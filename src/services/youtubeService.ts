@@ -22,29 +22,6 @@ const playlistInfoSchema = z.object({
   error: z.string().optional(),
 });
 
-const playlistImportSchema = z.object({
-  success: z.boolean(),
-  songs: z
-    .array(
-      z.object({
-        id: z.string(),
-        title: z.string(),
-        description: z.string(),
-        duration: z.number(),
-        thumbnails: z
-          .object({
-            default: z.object({ url: z.string() }).optional(),
-            medium: z.object({ url: z.string() }).optional(),
-            high: z.object({ url: z.string() }).optional(),
-          })
-          .optional(),
-      })
-    )
-    .optional(),
-  count: z.number().optional(),
-  error: z.string().optional(),
-});
-
 const videoInfoSchema = z.object({
   success: z.boolean(),
   data: z
@@ -104,11 +81,6 @@ export class YouTubeService {
       { method: "GET" },
       playlistInfoSchema
     );
-  }
-
-  static async importPlaylistSongs(playlistId: string) {
-    const body = JSON.stringify({ playlistId });
-    return request("/playlist", { method: "PUT", body }, playlistImportSchema);
   }
 
   static extractPlaylistId(url: string): string | null {
@@ -183,10 +155,6 @@ export class YouTubeService {
 
   static async validateVideoId(videoId: string) {
     return this.validateVideo(videoId);
-  }
-
-  static async getVideoInfo(videoId: string) {
-    return request(`/video?videoId=${videoId}`, { method: "GET" }, videoInfoSchema);
   }
 }
 

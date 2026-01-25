@@ -5,4 +5,3 @@
  */
 
 export { useWorksQuery } from "./useWorksQuery";
-export { useSongsQuery } from "./useSongsQuery";

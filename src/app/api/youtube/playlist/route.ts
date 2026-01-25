@@ -64,8 +64,6 @@ const playlistBodySchema = z.object({
   playlistId: playlistIdField("ID ou URL de playlist requis"),
 });
 
-const importBodySchema = playlistIdSchema;
-
 const ISO_DURATION = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
 
 const parseDuration = (duration: string): number => {
@@ -201,41 +199,6 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { isValid: false, error: "Erreur lors de la validation de la playlist" },
       { status: 200 }
-    );
-  }
-}
-
-export async function PUT(request: Request) {
-  const body = await request.json().catch(() => null);
-  const parseResult = importBodySchema.safeParse(body);
-
-  if (!parseResult.success) {
-    return NextResponse.json(
-      { error: parseResult.error.issues[0].message },
-      { status: 400 }
-    );
-  }
-
-  try {
-    const videos = await getPlaylistVideos(parseResult.data.playlistId);
-
-    if (videos.length === 0) {
-      return NextResponse.json(
-        { error: "Aucune vidéo trouvée dans cette playlist" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      songs: videos,
-      count: videos.length,
-    });
-  } catch (error) {
-    console.error("[YouTube playlist] PUT error:", error);
-    return NextResponse.json(
-      { error: "Erreur lors de l'import de la playlist" },
-      { status: 500 }
     );
   }
 }

@@ -26,7 +26,11 @@
       "Bash(cat:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(rm:*)",
+      "Bash(if exist \"src\\app\\test-partykit\" rd /s /q srcapptest-partykit)",
+      "Bash(Get-ChildItem -Recurse party/ -Include *.ts,*.json)",
+      "Bash(ForEach-Object { Write-Host $_ullName })"
     ],
     "deny": [],
     "ask": []
