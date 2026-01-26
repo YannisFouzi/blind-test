@@ -27,7 +27,14 @@ export type RoomMachineEvent =
   | { type: "socket_close" }
   | { type: "socket_error"; error: string }
   | { type: "state_sync"; state: ServerStateSnapshot }
-  | { type: "join_success"; playerId: string; isHost?: boolean; state?: string; hostId?: string }
+  | {
+      type: "join_success";
+      playerId: string;
+      isHost?: boolean;
+      state?: string;
+      hostId?: string;
+      sessionToken?: string;
+    }
   | { type: "players_update"; players: RoomPlayer[] }
   | { type: "room_configured"; universeId?: string; songs?: Song[]; allowedWorks?: string[]; options?: { noSeek?: boolean } }
   | { type: "game_started"; currentSongIndex?: number; state?: "playing"; songs?: Song[] }

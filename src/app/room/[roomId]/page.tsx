@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { usePartyKitRoom } from "@/hooks/usePartyKitRoom";
 import { CUSTOM_UNIVERSE, MAX_WORKS_CUSTOM_MODE } from "@/hooks/useUniverseCustomization";
-import { useGameConfiguration } from "@/stores";
+import { useGameConfiguration, useRoomAuthStore } from "@/stores";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { UniverseCustomizeModal } from "@/components/home/UniverseCustomizeModal";
@@ -27,6 +27,10 @@ export default function WaitingRoomPage() {
   const { playerId, displayName: storedName, ready: identityReady, setIdentity } = useIdentity();
   const queryPlayerId = searchParams?.get("player");
   const queryDisplayName = searchParams?.get("name");
+  const pendingPassword = useRoomAuthStore((state) =>
+    roomId ? state.pendingPasswords[roomId] : ""
+  );
+  const clearPendingPassword = useRoomAuthStore((state) => state.clearPendingPassword);
 
   useEffect(() => {
     if (!queryPlayerId) return;
@@ -55,19 +59,37 @@ export default function WaitingRoomPage() {
     options,
     configureRoom,
     startGame,
+    authRequired,
+    authError,
+    submitPassword,
+    isAuthenticated,
   } = usePartyKitRoom(
     identityReady && playerId && roomId
       ? {
           roomId,
           playerId,
           displayName,
+          password: pendingPassword,
         }
       : {}
   );
 
+  useEffect(() => {
+    if (roomId && isAuthenticated) {
+      clearPendingPassword(roomId);
+    }
+  }, [roomId, isAuthenticated, clearPendingPassword]);
+
+  useEffect(() => {
+    if (authRequired && pendingPassword) {
+      setPasswordInput(pendingPassword);
+    }
+  }, [authRequired, pendingPassword]);
+
   const { universes, loading: universesLoading } = useUniverses();
   const [isConfiguringRoom, setIsConfiguringRoom] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
+  const [passwordInput, setPasswordInput] = useState("");
 
   // Hook de personnalisation (partagé avec HomeContent)
   const {
@@ -93,6 +115,12 @@ export default function WaitingRoomPage() {
       maxWorksAllowed: MAX_WORKS_CUSTOM_MODE,
     });
   }, [openCustomizeStore]);
+
+  const handlePasswordSubmit = useCallback(() => {
+    const trimmed = passwordInput.trim();
+    if (!trimmed) return;
+    submitPassword(trimmed);
+  }, [passwordInput, submitPassword]);
 
   // Appliquer les paramètres et lancer le jeu (logique spécifique multi avec PartyKit)
   const applyCustomizeAndPlay = useCallback(async () => {
@@ -253,6 +281,38 @@ export default function WaitingRoomPage() {
     [isHost, configureRoom, startGame, roomId]
   );
 
+  const passwordGate = authRequired ? (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+      <div className="w-full max-w-sm magic-card p-6 space-y-4">
+        <div className="text-center">
+          <p className="text-lg font-bold text-[var(--color-text-primary)]">
+            Room protegée
+          </p>
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            Entrez le mot de passe pour rejoindre la room.
+          </p>
+        </div>
+        <input
+          type="password"
+          value={passwordInput}
+          onChange={(event) => setPasswordInput(event.target.value)}
+          placeholder="Mot de passe"
+          className="w-full bg-[var(--color-surface-overlay)] text-[var(--color-text-primary)] text-sm px-4 py-3 rounded-xl border-2 border-black focus:outline-none focus:border-black shadow-[3px_3px_0_#1B1B1B]"
+        />
+        {authError && (
+          <div className="text-xs text-red-600 text-center">{authError}</div>
+        )}
+        <button
+          onClick={handlePasswordSubmit}
+          disabled={!passwordInput.trim()}
+          className="magic-button w-full px-4 py-2 text-sm font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          Valider
+        </button>
+      </div>
+    </div>
+  ) : null;
+
   // Dès que l'univers est connu, on bascule sur la page de jeu
   useEffect(() => {
     console.log("[WaitingRoomPage] auto-redirect effect triggered", {
@@ -373,6 +433,7 @@ export default function WaitingRoomPage() {
             />
           )}
         </div>
+        {passwordGate}
       </div>
     );
   }
@@ -407,6 +468,11 @@ export default function WaitingRoomPage() {
         </div>
 
       </div>
+      {passwordGate}
     </div>
   );
 }
+
+
+
+

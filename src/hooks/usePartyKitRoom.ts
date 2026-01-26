@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PartySocket from "partysocket";
 import { useMachine } from "@xstate/react";
 import type { Room, RoomPlayer, RoomResponse, Song } from "@/types";
@@ -13,11 +13,20 @@ type UsePartyKitRoomOptions = {
   roomId?: string;
   playerId?: string;
   displayName?: string;
+  password?: string;
 };
 
 type IncomingMessage =
   | { type: "state_sync"; state: ServerStateSnapshot }
-  | { type: "join_success"; playerId: string; isHost?: boolean; state?: string; hostId?: string }
+  | {
+      type: "join_success";
+      playerId: string;
+      isHost?: boolean;
+      state?: string;
+      hostId?: string;
+      sessionToken?: string;
+    }
+  | { type: "password_required" }
   | { type: "players_update"; players: RoomPlayer[] }
   | {
       type: "room_configured";
@@ -49,6 +58,7 @@ export const usePartyKitRoom = ({
   roomId,
   playerId,
   displayName,
+  password,
 }: UsePartyKitRoomOptions) => {
   const [machineState, send] = useMachine(roomMachine);
   const { room, players, responses, allPlayersAnswered, isConnected } =
@@ -71,6 +81,11 @@ export const usePartyKitRoom = ({
   };
   const pendingAnswerCallbackRef = useRef<PendingAnswer | null>(null);
   const partyKitProvider = usePartyKitProvider();
+  const [authRequired, setAuthRequired] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const isAuthenticatedRef = useRef(false);
+  const initialPasswordRef = useRef<string | undefined>(password);
 
   // ============================================================================
   // COMPUTED
@@ -106,6 +121,51 @@ export const usePartyKitRoom = ({
     return Boolean(me?.isHost);
   }, [playerId, room.hostId, players]);
 
+  useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (password && !initialPasswordRef.current) {
+      initialPasswordRef.current = password;
+    }
+  }, [password]);
+
+  const getSessionToken = useCallback(() => {
+    if (typeof window === "undefined" || !roomId) return null;
+    return window.sessionStorage.getItem(`roomToken:${roomId}`);
+  }, [roomId]);
+
+  const storeSessionToken = useCallback(
+    (token: string) => {
+      if (typeof window === "undefined" || !roomId) return;
+      window.sessionStorage.setItem(`roomToken:${roomId}`, token);
+    },
+    [roomId]
+  );
+
+  const clearSessionToken = useCallback(() => {
+    if (typeof window === "undefined" || !roomId) return;
+    window.sessionStorage.removeItem(`roomToken:${roomId}`);
+  }, [roomId]);
+
+  const sendJoin = useCallback(
+    (options?: { password?: string; token?: string }) => {
+      if (!socketRef.current || !playerId || !displayName) return;
+      const storedToken = options?.token ?? getSessionToken();
+      const payload = {
+        type: "join",
+        playerId,
+        displayName,
+        ...(options?.password ? { password: options.password } : {}),
+        ...(storedToken ? { token: storedToken } : {}),
+      };
+      setAuthError(null);
+      socketRef.current.send(JSON.stringify(payload));
+    },
+    [displayName, getSessionToken, playerId]
+  );
+
   // ============================================================================
   // MESSAGE HANDLER
   // ============================================================================
@@ -113,6 +173,24 @@ export const usePartyKitRoom = ({
   const handleMessage = useCallback(
     (message: IncomingMessage) => {
       switch (message.type) {
+        case "password_required": {
+          clearSessionToken();
+          setAuthRequired(true);
+          setIsAuthenticated(false);
+          return;
+        }
+
+        case "join_success": {
+          if (message.sessionToken) {
+            storeSessionToken(message.sessionToken);
+          }
+          setIsAuthenticated(true);
+          setAuthRequired(false);
+          setAuthError(null);
+          send(message as RoomMachineEvent);
+          return;
+        }
+
         case "answer_recorded": {
           if (currentSongId && playerId) {
             const newResponse: RoomResponse = {
@@ -144,6 +222,11 @@ export const usePartyKitRoom = ({
         }
 
         case "error": {
+          if (!isAuthenticatedRef.current) {
+            setAuthError(message.message);
+            setAuthRequired(true);
+            return;
+          }
           console.error("[usePartyKitRoom] Server error:", message.message, {
             roomId,
             playerId,
@@ -170,7 +253,17 @@ export const usePartyKitRoom = ({
           send(message as RoomMachineEvent);
       }
     },
-    [currentSongId, displayName, playerId, room.hostId, room.state, roomId, send]
+    [
+      currentSongId,
+      displayName,
+      playerId,
+      room.hostId,
+      room.state,
+      roomId,
+      send,
+      storeSessionToken,
+      clearSessionToken,
+    ]
   );
 
   // Garder le ref Ã  jour avec la derniÃ¨re version de handleMessage
@@ -209,13 +302,10 @@ export const usePartyKitRoom = ({
 
     const handleOpen = () => {
       send({ type: "socket_open" });
-      socket.send(
-        JSON.stringify({
-          type: "join",
-          playerId,
-          displayName,
-        })
-      );
+      setIsAuthenticated(false);
+      setAuthRequired(false);
+      setAuthError(null);
+      sendJoin({ password: initialPasswordRef.current });
     };
 
     const handleMessageEvent = (event: MessageEvent) => {
@@ -229,6 +319,8 @@ export const usePartyKitRoom = ({
 
     const handleClose = (event: CloseEvent) => {
       send({ type: "socket_close" });
+      setIsAuthenticated(false);
+      setAuthRequired(false);
       if (process.env.NODE_ENV === "development") {
         console.info("[usePartyKitRoom] socket close", {
           roomId,
@@ -270,7 +362,7 @@ export const usePartyKitRoom = ({
       connectionKeyRef.current = null;
       send({ type: "socket_close" });
     };
-  }, [roomId, playerId, displayName, partyKitProvider, send]);
+  }, [roomId, playerId, displayName, partyKitProvider, send, sendJoin]);
 
   // ============================================================================
   // ACTIONS
@@ -329,6 +421,15 @@ export const usePartyKitRoom = ({
       return { success: true };
     },
     [isHost, playerId]
+  );
+
+  const submitPassword = useCallback(
+    (nextPassword: string) => {
+      const trimmed = nextPassword.trim();
+      if (!trimmed) return;
+      sendJoin({ password: trimmed });
+    },
+    [sendJoin]
   );
 
   const submitAnswer = useCallback(
@@ -391,5 +492,9 @@ export const usePartyKitRoom = ({
 
     isConnected,
     isHost,
+    authRequired,
+    authError,
+    isAuthenticated,
+    submitPassword,
   };
 };

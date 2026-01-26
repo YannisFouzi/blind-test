@@ -11,6 +11,7 @@ interface RoomMetadata {
   createdAt: number;
   updatedAt: number;
   universeId?: string;
+  hasPassword?: boolean;
 }
 
 /**
@@ -140,6 +141,7 @@ export default class LobbyParty implements Party.Server {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       universeId: data.universeId,
+      hasPassword: Boolean(data.hasPassword),
     };
 
     await this.room.storage.put(`room:${roomId}`, metadata);
@@ -166,6 +168,9 @@ export default class LobbyParty implements Party.Server {
     metadata.playersCount = data.playersCount || metadata.playersCount;
     if (data.universeId) {
       metadata.universeId = data.universeId;
+    }
+    if (typeof data.hasPassword === "boolean") {
+      metadata.hasPassword = data.hasPassword;
     }
     metadata.updatedAt = Date.now();
 

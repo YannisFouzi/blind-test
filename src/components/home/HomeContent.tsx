@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -9,15 +9,17 @@ import { HomePageSkeleton } from "@/components/home/HomePageSkeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useUniverses } from "@/hooks/useUniverses";
 import { CUSTOM_UNIVERSE, MAX_WORKS_CUSTOM_MODE } from "@/hooks/useUniverseCustomization";
-import { useGameConfiguration } from "@/stores";
+import { useGameConfiguration, useRoomAuthStore } from "@/stores";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePartyKitLobby } from "@/hooks/usePartyKitLobby";
 import { Room, Universe } from "@/types";
 import { useIdentity } from "@/hooks/useIdentity";
+import { Lock } from "lucide-react";
 
 type Mode = "solo" | "multi";
+type LobbyRoom = Room & { hasPassword?: boolean };
 
 const displayNameSchema = z.object({
   displayName: z
@@ -32,7 +34,7 @@ export const HomeContent = () => {
   const { user } = useAuth();
   const { universes, loading: universesLoading, error: universesError } = useUniverses();
 
-  // Hook PartyKit Lobby pour les rooms en temps réel
+  // Hook PartyKit Lobby pour les rooms en temps rÃ©el
   const {
     rooms: partyKitRooms,
     isConnected: lobbyConnected,
@@ -43,6 +45,7 @@ export const HomeContent = () => {
   const [mode, setMode] = useState<Mode>("solo");
   const { playerId, displayName: storedDisplayName, ready: identityReady, setIdentity } = useIdentity();
   const playerIdRef = useRef<string>("");
+  const setPendingPassword = useRoomAuthStore((state) => state.setPendingPassword);
 
   const [hostRoomId, setHostRoomId] = useState<string>("");
   const hasUsedRoomRef = useRef(false);
@@ -50,6 +53,8 @@ export const HomeContent = () => {
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [homeError, setHomeError] = useState<string | null>(null);
   const [homeInfo, setHomeInfo] = useState<string | null>(null);
+  const [createPassword, setCreatePassword] = useState("");
+  const [joinPasswords, setJoinPasswords] = useState<Record<string, string>>({});
 
   // Hook de configuration du jeu (Zustand store)
   const {
@@ -67,7 +72,7 @@ export const HomeContent = () => {
     openCustomizeStore(universe);
   }, [openCustomizeStore]);
 
-  // Mode custom : toutes les œuvres de tous les univers
+  // Mode custom : toutes les Å“uvres de tous les univers
   const openCustomMode = useCallback(async () => {
     openCustomizeStore(CUSTOM_UNIVERSE, {
       isCustomMode: true,
@@ -89,8 +94,8 @@ export const HomeContent = () => {
     [handleToggleMode]
   );
 
-  // Adapter PartyKit RoomMetadata vers le type Room pour compatibilité JSX
-  const adaptedRooms = useMemo<Room[]>(() => {
+  // Adapter PartyKit RoomMetadata vers le type Room pour compatibilitÃ© JSX
+  const adaptedRooms = useMemo<LobbyRoom[]>(() => {
     if (mode !== "multi") return [];
 
     return partyKitRooms.map((partyRoom) => ({
@@ -100,12 +105,13 @@ export const HomeContent = () => {
       hostDisplayName: partyRoom.hostName,
       state: partyRoom.state,
       universeId: partyRoom.universeId || "",
+      hasPassword: partyRoom.hasPassword,
       songs: [],
       currentSongIndex: 0,
       createdAt: new Date(partyRoom.createdAt),
       options: undefined,
       allowedWorks: undefined,
-    } as Room));
+    } as LobbyRoom));
   }, [partyKitRooms, mode]);
 
   const form = useForm<z.infer<typeof displayNameSchema>>({
@@ -117,7 +123,7 @@ export const HomeContent = () => {
 
   const displayName = form.watch("displayName");
 
-  // Charger/initialiser l'identité persistée (playerId + pseudo)
+  // Charger/initialiser l'identitÃ© persistÃ©e (playerId + pseudo)
   useEffect(() => {
     if (!identityReady || !playerId) return;
     if (!playerIdRef.current) {
@@ -170,8 +176,14 @@ export const HomeContent = () => {
     setHomeError(null);
     setHomeInfo(null);
     try {
-      // PartyKit : Génération d'ID locale (instantané)
-      const roomId = await createPartyKitRoom(name, "__pending__");
+      const trimmedPassword = createPassword.trim();
+      const hasPassword = Boolean(trimmedPassword);
+      // PartyKit : GÃ©nÃ©ration d'ID locale (instantanÃ©)
+      const roomId = await createPartyKitRoom(name, "__pending__", hasPassword);
+
+      if (hasPassword) {
+        setPendingPassword(roomId, trimmedPassword);
+      }
 
       console.info("[HomeContent] Room created, redirecting HOST to waiting room", {
         roomId,
@@ -183,17 +195,17 @@ export const HomeContent = () => {
       router.push(
         `/room/${roomId}?name=${encodeURIComponent(name)}&player=${playerIdRef.current}&host=1`
       );
-      setHomeInfo(`Room créée: ${roomId}. Sélectionne un univers pour lancer la partie.`);
+      setHomeInfo(`Room crÃ©Ã©e: ${roomId}. SÃ©lectionne un univers pour lancer la partie.`);
     } catch (error) {
       console.error("[multi][host][PartyKit] create room error", error);
       setHomeError(error instanceof Error ? error.message : "Erreur inconnue");
     } finally {
       setIsCreatingRoom(false);
     }
-  }, [hostRoomId, ensureDisplayName, createPartyKitRoom, ensurePlayerId, identityReady, router]);
+  }, [hostRoomId, ensureDisplayName, createPartyKitRoom, ensurePlayerId, identityReady, router, createPassword, setPendingPassword]);
 
   const handleJoinRoom = useCallback(
-    async (roomId: string) => {
+    async (roomId: string, password?: string) => {
       const ensuredPlayerId = ensurePlayerId();
       if (!identityReady || !ensuredPlayerId) return;
       playerIdRef.current = ensuredPlayerId;
@@ -202,14 +214,17 @@ export const HomeContent = () => {
       if (!name) return;
       setHomeError(null);
       setHomeInfo(null);
-
-      // Connexion directe à la room via la page d'attente
+      const trimmedPassword = password?.trim();
+      if (trimmedPassword) {
+        setPendingPassword(roomId, trimmedPassword);
+      }
+      // Connexion directe Ã  la room via la page d'attente
       setHostRoomId("");
       router.push(
         `/room/${roomId}?name=${encodeURIComponent(name)}&player=${playerIdRef.current}`
       );
     },
-    [ensureDisplayName, ensurePlayerId, identityReady, router]
+    [ensureDisplayName, ensurePlayerId, identityReady, router, setPendingPassword]
   );
 
   const handleUniverseClick = useCallback(
@@ -231,7 +246,7 @@ export const HomeContent = () => {
       }
 
       if (!hostRoomId) {
-        setHomeError("Clique sur \"Créer\" pour générer une room, puis sélectionne l'univers.");
+        setHomeError("Clique sur \"CrÃ©er\" pour gÃ©nÃ©rer une room, puis sÃ©lectionne l'univers.");
         return;
       }
 
@@ -244,7 +259,7 @@ export const HomeContent = () => {
 
       setIsCreatingRoom(true);
       try {
-        // PartyKit gère la configuration via WebSocket dans GameClient
+        // PartyKit gÃ¨re la configuration via WebSocket dans GameClient
         if (customNoSeek) baseParams.set("noseek", "1");
         if (customAllowedWorks.length > 0) {
           baseParams.set("works", customAllowedWorks.join(","));
@@ -283,7 +298,7 @@ export const HomeContent = () => {
   const applyCustomizeAndPlay = useCallback(async () => {
     if (!customizingUniverse) return;
     
-    // Déterminer si c'est le mode custom (toutes les œuvres)
+    // DÃ©terminer si c'est le mode custom (toutes les Å“uvres)
     const isCustomModeActive = customizingUniverse.id === CUSTOM_UNIVERSE.id;
     // En mode custom, on utilise "__custom__" comme universeId
     const universeId = isCustomModeActive ? "__custom__" : customizingUniverse.id;
@@ -298,12 +313,12 @@ export const HomeContent = () => {
       const params = new URLSearchParams();
       if (customNoSeek) params.set("noseek", "1");
 
-      // Passer les works sélectionnés si nécessaire
+      // Passer les works sÃ©lectionnÃ©s si nÃ©cessaire
       if (customAllowedWorks.length > 0) {
         params.set("works", customAllowedWorks.join(","));
       }
 
-      // Passer le nombre max de songs si spécifié
+      // Passer le nombre max de songs si spÃ©cifiÃ©
       if (customMaxSongs !== null) {
         params.set("maxsongs", String(customMaxSongs));
       }
@@ -312,13 +327,13 @@ export const HomeContent = () => {
     }
 
     if (!isHost || !hostRoomId) {
-      setHomeError("Seul l'host peut appliquer les paramètres personnalisés.");
+      setHomeError("Seul l'host peut appliquer les paramÃ¨tres personnalisÃ©s.");
       return;
     }
 
     setIsCreatingRoom(true);
     try {
-      // PartyKit gère la configuration via WebSocket dans GameClient
+      // PartyKit gÃ¨re la configuration via WebSocket dans GameClient
       const params = new URLSearchParams({
         mode: "multi",
         name: displayName.trim() || "Joueur",
@@ -327,12 +342,12 @@ export const HomeContent = () => {
       });
       if (customNoSeek) params.set("noseek", "1");
 
-      // Passer les works sélectionnés si nécessaire
+      // Passer les works sÃ©lectionnÃ©s si nÃ©cessaire
       if (customAllowedWorks.length > 0) {
         params.set("works", customAllowedWorks.join(","));
       }
 
-      // Passer le nombre max de songs si spécifié
+      // Passer le nombre max de songs si spÃ©cifiÃ©
       if (customMaxSongs !== null) {
         params.set("maxsongs", String(customMaxSongs));
       }
@@ -430,7 +445,7 @@ export const HomeContent = () => {
               </div>
 
               <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.4fr)] md:items-center">
-                <div className="flex justify-center">
+                <div className="flex flex-col items-center gap-3">
                   <button
                     onClick={handleCreateRoom}
                     disabled={isCreatingRoom || Boolean(hostRoomId)}
@@ -438,6 +453,13 @@ export const HomeContent = () => {
                   >
                     {hostRoomId ? "Room créée" : isCreatingRoom ? "Création..." : "Créer une room"}
                   </button>
+                  <input
+                    type="password"
+                    value={createPassword}
+                    onChange={(event) => setCreatePassword(event.target.value)}
+                    placeholder="Mot de passe (optionnel)"
+                    className="w-full max-w-xs bg-[var(--color-surface-overlay)] text-[var(--color-text-primary)] text-xs px-4 py-2 rounded-xl border-2 border-black focus:outline-none focus:border-black shadow-[3px_3px_0_#1B1B1B]"
+                  />
                 </div>
 
                 <div className="hidden md:block w-px self-stretch bg-black/15" aria-hidden="true" />
@@ -454,14 +476,35 @@ export const HomeContent = () => {
                       {adaptedRooms.map((room) => (
                         <div
                           key={room.id}
-                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-black bg-[var(--color-surface-elevated)] px-4 py-3 shadow-[3px_3px_0_#1B1B1B]"
+                          className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-black bg-[var(--color-surface-elevated)] px-4 py-3 shadow-[3px_3px_0_#1B1B1B]"
                         >
-                          <div className="text-sm font-semibold text-[var(--color-text-primary)]">
-                            Hôte: {room.hostName || "Inconnu"}
+                          <div className="flex flex-col gap-1 min-w-[140px]">
+                            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
+                              {room.hasPassword && <Lock className="h-4 w-4" />}
+                              <span>Hôte: {room.hostName || "Inconnu"}</span>
+                              {room.hasPassword && (
+                                <span className="text-[10px] uppercase tracking-[0.2em] text-[#B45309]">Protégée</span>
+                              )}
+                            </div>
                           </div>
+                          {room.hasPassword && (
+                            <input
+                              type="password"
+                              value={joinPasswords[room.id] ?? ""}
+                              onChange={(event) =>
+                                setJoinPasswords((prev) => ({
+                                  ...prev,
+                                  [room.id]: event.target.value,
+                                }))
+                              }
+                              placeholder="Mot de passe"
+                              className="flex-1 min-w-[160px] bg-[var(--color-surface-overlay)] text-[var(--color-text-primary)] text-xs px-3 py-2 rounded-xl border-2 border-black focus:outline-none focus:border-black shadow-[2px_2px_0_#1B1B1B]"
+                            />
+                          )}
                           <button
-                            onClick={() => handleJoinRoom(room.id)}
-                            className="magic-button px-4 py-2 text-xs font-bold"
+                            onClick={() => handleJoinRoom(room.id, joinPasswords[room.id])}
+                            disabled={Boolean(room.hasPassword) && !(joinPasswords[room.id]?.trim())}
+                            className="magic-button px-4 py-2 text-xs font-bold disabled:opacity-60 disabled:cursor-not-allowed"
                           >
                             Rejoindre
                           </button>
@@ -498,3 +541,17 @@ export const HomeContent = () => {
     </div>
   );
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -80,6 +80,9 @@ export const useMultiplayerGame = ({
     configureRoom,
     isConnected,
     isHost: isHostFromRoom,
+    authRequired,
+    authError,
+    submitPassword,
   } = usePartyKitRoom({ roomId, playerId, displayName });
 
   // ============================================================
@@ -328,5 +331,8 @@ export const useMultiplayerGame = ({
     nextSong,
     startGame: handleStartGame,
     configureRoom: handleConfigureRoom,
+    authRequired,
+    authError,
+    submitPassword,
   };
 };

@@ -14,6 +14,7 @@ export interface RoomMetadata {
   createdAt: number;
   updatedAt: number;
   universeId?: string;
+  hasPassword?: boolean;
 }
 
 /**
@@ -127,11 +128,11 @@ export const usePartyKitLobby = () => {
    * @returns Promise<string> ID de la room créée
    *
    * @example
-   * const roomId = await createRoom("Alice", "P3iE45PQXeqT5h2uUAzc");
+   * const roomId = await createRoom("Alice", "P3iE45PQXeqT5h2uUAzc", true);
    * router.push(`/game/${universeId}?mode=multi&room=${roomId}&name=Alice&host=1`);
    */
   const createRoom = useCallback(
-    async (hostName: string, _universeId: string): Promise<string> => {
+    async (hostName: string, _universeId: string, hasPassword = false): Promise<string> => {
       setIsCreating(true);
       setError(null);
 
@@ -155,6 +156,7 @@ export const usePartyKitLobby = () => {
               roomId,
               hostName,
               playersCount: 1,
+              hasPassword: Boolean(hasPassword),
             }),
           });
         } catch (notifyError) {

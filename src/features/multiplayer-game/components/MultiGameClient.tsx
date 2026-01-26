@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import {
   Check,
   Home as HomeIcon,
@@ -65,6 +65,7 @@ export const MultiGameClient = ({
     ],
     []
   );
+  const [passwordInput, setPasswordInput] = useState("");
 
   const {
     isPlaying: audioIsPlaying,
@@ -112,7 +113,16 @@ export const MultiGameClient = ({
     state,
     isConnected,
     lastGain,
+    authRequired,
+    authError,
+    submitPassword,
   } = game;
+
+  useEffect(() => {
+    if (authRequired) {
+      setPasswordInput("");
+    }
+  }, [authRequired]);
 
   useEffect(() => {
     if (currentSong?.audioUrl) {
@@ -426,6 +436,38 @@ export const MultiGameClient = ({
       {playbackUnavailable && (
         <div className="mt-4 text-center text-sm text-[var(--color-text-secondary)]">
           Aucun extrait audio n&apos;est disponible pour ce morceau.
+        </div>
+      )}
+
+      {authRequired && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm magic-card p-6 space-y-4">
+            <div className="text-center">
+              <p className="text-lg font-bold text-[var(--color-text-primary)]">
+              Room protegée
+              </p>
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                Entrez le mot de passe pour rejoindre la room.
+              </p>
+            </div>
+            <input
+              type="password"
+              value={passwordInput}
+              onChange={(event) => setPasswordInput(event.target.value)}
+              placeholder="Mot de passe"
+              className="w-full bg-[var(--color-surface-overlay)] text-[var(--color-text-primary)] text-sm px-4 py-3 rounded-xl border-2 border-black focus:outline-none focus:border-black shadow-[3px_3px_0_#1B1B1B]"
+            />
+            {authError && (
+              <div className="text-xs text-red-600 text-center">{authError}</div>
+            )}
+            <button
+              onClick={() => submitPassword(passwordInput)}
+              disabled={!passwordInput.trim()}
+              className="magic-button w-full px-4 py-2 text-sm font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              Valider
+            </button>
+          </div>
         </div>
       )}
     </div>
