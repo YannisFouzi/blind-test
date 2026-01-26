@@ -364,26 +364,7 @@ export default class BlindTestRoom implements Party.Server {
         players: this.getPlayersArray(),
       });
 
-      // Si c'Ã©tait le host et qu'il y a d'autres joueurs connectÃ©s, promouvoir un nouveau host
-      if (disconnectedPlayer.isHost) {
-        const connectedPlayers = Array.from(this.state.players.values()).filter(
-          (p) => p.connected
-        );
-
-        if (connectedPlayers.length > 0) {
-          const newHost = connectedPlayers[0];
-          newHost.isHost = true;
-          this.state.hostId = newHost.id;
-
-          console.log(`[${this.room.id}] New host promoted: ${newHost.id}`);
-
-          this.broadcast({
-            type: "host_changed",
-            newHostId: newHost.id,
-            players: this.getPlayersArray(),
-          });
-        }
-      }
+      // Ne pas transférer le statut d'hôte : conserver hostId même si l'hôte est offline.
     }
 
     // Si plus personne n'est connectÃ©, programmer une alarme de cleanup (survit Ã  l'hibernation)
@@ -640,6 +621,7 @@ export default class BlindTestRoom implements Party.Server {
       existingPlayer.connected = true;
       existingPlayer.connectionId = sender.id;
       existingPlayer.displayName = displayName;
+      existingPlayer.isHost = existingPlayer.id === this.state.hostId;
       console.log(`[${this.room.id}] Player ${playerId} reconnected`);
     } else {
       // Nouveau joueur
