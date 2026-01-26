@@ -9,9 +9,6 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  css: {
-    postcss: null,
-  },
   test: {
     environment: "jsdom",
     setupFiles: "./vitest.setup.ts",
