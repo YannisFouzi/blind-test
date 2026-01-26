@@ -2,6 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+import { pressable } from "@/styles/ui";
 
 /**
  * Button Component
@@ -23,7 +24,10 @@ import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
 
 export const buttonVariants = cva(
   // Base styles
-  "inline-flex items-center justify-center rounded-md font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  cn(
+    pressable,
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface-base)] disabled:pointer-events-none disabled:opacity-50"
+  ),
   {
     variants: {
       /**
@@ -32,32 +36,30 @@ export const buttonVariants = cva(
       variant: {
         // Boutons principaux
         primary:
-          "bg-[var(--color-brand-primary)] text-white hover:bg-[var(--color-brand-primary-dark)] shadow-md hover:shadow-lg",
+          "bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-light)]",
         secondary:
-          "bg-[var(--color-brand-secondary)] text-white hover:bg-[var(--color-brand-secondary-dark)] shadow-md hover:shadow-lg",
+          "bg-white hover:bg-[var(--color-surface-overlay)]",
         accent:
-          "bg-[var(--color-brand-accent)] text-white hover:bg-[var(--color-brand-accent-dark)] shadow-md hover:shadow-lg",
+          "bg-[var(--color-brand-secondary)] text-[#1B1B1B] hover:bg-[#60a5fa]",
 
         // Bouton magic (gradient violet-rose)
         magic:
-          "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-[var(--shadow-glow-purple)] hover:shadow-xl",
+          "bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-light)]",
 
         // Bouton neon (gradient cyan-bleu)
         neon:
-          "bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-600 hover:to-blue-600 shadow-[0_8px_32px_rgba(6,182,212,0.3)] hover:shadow-xl",
+          "bg-[#67e8f9] text-[#1B1B1B] hover:bg-[#22d3ee]",
 
         // Boutons secondaires
-        outline:
-          "border-2 border-[var(--color-brand-primary)] text-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary)] hover:text-white",
-        ghost:
-          "text-[var(--color-brand-primary)] hover:bg-[rgba(139,92,246,0.1)]",
-        link: "text-[var(--color-brand-primary)] underline-offset-4 hover:underline",
+        outline: "bg-transparent",
+        ghost: "bg-transparent hover:bg-[var(--color-surface-overlay)]",
+        link: "bg-transparent hover:bg-[var(--color-surface-overlay)]",
 
         // États
         destructive:
-          "bg-red-500 text-white hover:bg-red-600 shadow-md hover:shadow-lg",
+          "bg-[#fca5a5] text-[#1B1B1B] hover:bg-[#f87171]",
         success:
-          "bg-green-500 text-white hover:bg-green-600 shadow-md hover:shadow-lg",
+          "bg-[#86efac] text-[#1B1B1B] hover:bg-[#4ade80]",
       },
 
       /**

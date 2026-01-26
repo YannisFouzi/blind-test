@@ -12,26 +12,23 @@ interface ErrorMessageProps {
 export const ErrorMessage = ({
   title = "Erreur",
   message,
-  icon = "⚠️",
+  icon = "!",
   onRetry,
   children,
   className = "",
 }: ErrorMessageProps) => {
   return (
     <div
-      className={`bg-red-500/20 border border-red-500 rounded-2xl p-8 text-center ${className}`}
+      className={`bg-[#FFE5E5] border-[3px] border-[#1B1B1B] rounded-2xl p-8 text-center shadow-[4px_4px_0_#1B1B1B] ${className}`}
     >
       <div className="text-6xl mb-4">{icon}</div>
-      <h2 className="text-2xl font-bold text-white mb-4">{title}</h2>
-      <p className="text-red-300 text-lg mb-6">{message}</p>
+      <h2 className="text-2xl font-bold text-[#1B1B1B] mb-4">{title}</h2>
+      <p className="text-red-700 text-lg mb-6">{message}</p>
 
       <div className="flex justify-center gap-4">
         {onRetry && (
-          <button
-            onClick={onRetry}
-            className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-          >
-            Réessayer
+          <button onClick={onRetry} className="magic-button px-6 py-3">
+            Reessayer
           </button>
         )}
         {children}

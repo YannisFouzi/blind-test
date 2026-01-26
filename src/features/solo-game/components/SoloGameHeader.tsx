@@ -1,6 +1,6 @@
 "use client";
 
-import { Home as HomeIcon } from "lucide-react";
+import { Check, Home as HomeIcon, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 
 /**
@@ -50,12 +50,12 @@ export const SoloGameHeader = ({
   universeName,
 }: SoloGameHeaderProps) => {
   return (
-    <div className="fixed top-0 left-0 right-0 z-40 bg-slate-900/80 border-b border-purple-500/30 backdrop-blur-lg">
+    <div className="fixed top-0 left-0 right-0 z-40 bg-white border-b-[3px] border-[#1B1B1B] shadow-[0_4px_0_#1B1B1B]">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Bouton Home */}
           {onGoHome && (
-            <button onClick={onGoHome} className="magic-button px-4 py-2 flex items-center gap-2 text-white font-semibold text-sm">
+            <button onClick={onGoHome} className="magic-button px-4 py-2 flex items-center gap-2 text-sm">
               <HomeIcon className="w-4 h-4" />
               <span className="hidden sm:inline">Accueil</span>
             </button>
@@ -64,7 +64,7 @@ export const SoloGameHeader = ({
           {/* Titre univers (optionnel) */}
           {universeName && (
             <div className="hidden md:block">
-              <h1 className="text-white text-lg font-bold">{universeName}</h1>
+              <h1 className="text-[var(--color-text-primary)] text-lg font-bold">{universeName}</h1>
             </div>
           )}
 
@@ -77,10 +77,12 @@ export const SoloGameHeader = ({
 
             {/* Score */}
             <div className="flex items-center gap-2">
-              <Badge variant="success" glow>
-                + {score.correct}
+              <Badge variant="success" glow leftIcon={<Check className="w-3 h-3" />}>
+                {score.correct}
               </Badge>
-              <Badge variant="error">- {score.incorrect}</Badge>
+              <Badge variant="error" leftIcon={<X className="w-3 h-3" />}>
+                {score.incorrect}
+              </Badge>
             </div>
           </div>
         </div>

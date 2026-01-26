@@ -93,7 +93,7 @@ const WorkSelectorComponent = ({
 
   const getWorkCardClassName = useCallback((work: Work) => {
     let className =
-      "relative group cursor-pointer transform transition-all duration-300 ease-out";
+      "relative cursor-pointer transform transition-all duration-300 ease-out";
 
     if (showAnswer || isCurrentSongAnswered) {
       className += " cursor-default";
@@ -111,10 +111,10 @@ const WorkSelectorComponent = ({
     } else {
       if (work.id === selectedWork) {
         // Sélectionné
-        className += " scale-105 hover:scale-110";
+        className += " scale-105";
       } else {
         // Non sélectionné
-        className += " hover:scale-105 hover:-translate-y-2";
+        className += "";
       }
     }
 
@@ -140,7 +140,7 @@ const WorkSelectorComponent = ({
             animationDelay: `${index * 0.1}s`,
           }}
         >
-          <div className="relative overflow-hidden uniform-card">
+          <div className="relative uniform-card">
             {/* Carte principale avec hauteur fixe */}
             <div
               className={`relative work-card h-full flex flex-col justify-center items-center p-4 transform transition-all duration-300 ${
@@ -153,9 +153,9 @@ const WorkSelectorComponent = ({
               style={{
                 background:
                   isCorrect && (showAnswer || isCurrentSongAnswered)
-                    ? "linear-gradient(135deg, rgba(234, 179, 8, 0.25), rgba(251, 146, 60, 0.25))"
+                    ? "linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(132, 204, 22, 0.2))"
                     : isWrong
-                    ? "linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(244, 63, 94, 0.25))"
+                    ? "linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(248, 113, 113, 0.18))"
                     : undefined,
               }}
             >
@@ -165,13 +165,13 @@ const WorkSelectorComponent = ({
                 <h3
                   className={`uniform-card-title font-bold text-base transition-all duration-300 px-2 ${
                     isCorrect && (showAnswer || isCurrentSongAnswered)
-                      ? "text-yellow-300"
+                      ? "text-green-700"
                       : isWrong
-                      ? "text-red-300"
+                      ? "text-red-600"
                       : isSelected &&
                         !(showAnswer || isCurrentSongAnswered)
                       ? "work-card-title--active"
-                      : "text-white group-hover:text-purple-300"
+                      : "text-[var(--color-text-primary)]"
                   }`}
                   title={work.title} // Tooltip pour voir le titre complet
                 >
@@ -197,11 +197,7 @@ const WorkSelectorComponent = ({
   return (
     <>
       <div className="relative">
-        {/* Effet de lumière d'ambiance */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 rounded-3xl blur-xl" />
-
-        {/* Container principal */}
-        <div className="relative bg-slate-900/40 backdrop-blur-lg rounded-3xl p-8 border border-blue-500/20">
+        <div className="space-y-8">
           {/* Titre avec effet magique */}
           {/* <div className="text-center mb-8">
             <h2 className="fantasy-text text-4xl md:text-5xl font-bold mb-4">
@@ -211,14 +207,14 @@ const WorkSelectorComponent = ({
           </div> */}
 
           {/* Grille de cartes responsive avec tailles uniformes */}
-          <div className="uniform-card-grid mb-8">{workCards}</div>
+          <div className="uniform-card-grid">{workCards}</div>
 
           {/* Bouton valider avec nouveau design */}
           {canValidate && !isCurrentSongAnswered && (
             <div ref={validateButtonRef} className="text-center mb-6">
               <button
                 onClick={onValidateAnswer}
-                className="magic-button px-8 py-4 text-lg font-bold shadow-2xl transform hover:scale-105 transition-all duration-300"
+                className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
               >
                 <span className="relative z-10 flex items-center gap-2">
                   Valider ma réponse
@@ -232,10 +228,7 @@ const WorkSelectorComponent = ({
             <div ref={nextButtonRef} className="text-center">
               <button
                 onClick={onNextSong}
-                className="magic-button px-8 py-4 text-lg font-bold shadow-2xl transform hover:scale-105 transition-all duration-300"
-                style={{
-                  background: "linear-gradient(135deg, #3B82F6, #8B5CF6)",
-                }}
+                className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
               >
                 <span className="relative z-10 flex items-center gap-2">
                   Morceau suivant
@@ -251,7 +244,7 @@ const WorkSelectorComponent = ({
         <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
           <button
             onClick={onValidateAnswer}
-            className="magic-button px-8 py-4 text-lg font-bold shadow-2xl"
+            className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
           >
             <span className="relative z-10 flex items-center gap-2">
               Valider ma réponse
@@ -264,10 +257,7 @@ const WorkSelectorComponent = ({
         <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
           <button
             onClick={onNextSong}
-            className="magic-button px-8 py-4 text-lg font-bold shadow-2xl"
-            style={{
-              background: "linear-gradient(135deg, #3B82F6, #8B5CF6)",
-            }}
+            className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
           >
             <span className="relative z-10 flex items-center gap-2">
               Morceau suivant

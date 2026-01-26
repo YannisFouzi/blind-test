@@ -34,7 +34,7 @@ export function useIdentity(): Identity {
     })();
 
     setPlayerId(id);
-    setDisplayName(storedName ?? `Joueur-${id.slice(0, 4)}`);
+    setDisplayName(storedName ?? "");
   }, []);
 
   const setIdentity = useCallback(

@@ -18,7 +18,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 
 const badgeVariants = cva(
   // Base styles
-  "inline-flex items-center gap-1 rounded-full font-medium transition-all",
+  "inline-flex items-center gap-1 rounded-full border-2 border-[#1B1B1B] font-semibold text-[var(--color-text-primary)] shadow-[2px_2px_0_#1B1B1B] transition-transform duration-150",
   {
     variants: {
       /**
@@ -26,35 +26,35 @@ const badgeVariants = cva(
        */
       variant: {
         default:
-          "bg-[var(--color-surface-elevated)] text-white border border-[rgba(255,255,255,0.2)]",
+          "bg-white",
         primary:
-          "bg-[var(--color-brand-primary)] text-white",
+          "bg-[var(--color-brand-primary)]",
         secondary:
-          "bg-[var(--color-brand-secondary)] text-white",
+          "bg-[var(--color-brand-secondary)] text-[#1B1B1B]",
         accent:
-          "bg-[var(--color-brand-accent)] text-white",
+          "bg-[var(--color-brand-accent)] text-[#1B1B1B]",
 
         // États
         success:
-          "bg-green-500 text-white",
+          "bg-[#86efac] text-[#1B1B1B]",
         error:
-          "bg-red-500 text-white",
+          "bg-[#fca5a5] text-[#1B1B1B]",
         warning:
-          "bg-amber-500 text-white",
+          "bg-[#fde047] text-[#1B1B1B]",
         info:
-          "bg-blue-500 text-white",
+          "bg-[#93c5fd] text-[#1B1B1B]",
 
         // Gradients
         magic:
-          "bg-gradient-to-r from-purple-500 to-pink-500 text-white",
+          "bg-[var(--color-brand-primary)]",
         neon:
-          "bg-gradient-to-r from-cyan-500 to-blue-500 text-white",
+          "bg-[#67e8f9] text-[#1B1B1B]",
 
         // Styles alternatifs
         outline:
-          "bg-transparent border-2 border-[var(--color-brand-primary)] text-[var(--color-brand-primary)]",
+          "bg-transparent text-[#1B1B1B]",
         subtle:
-          "bg-[rgba(139,92,246,0.1)] text-[var(--color-brand-primary)] border border-[rgba(139,92,246,0.2)]",
+          "bg-[var(--color-surface-overlay)] text-[#1B1B1B]",
       },
 
       /**

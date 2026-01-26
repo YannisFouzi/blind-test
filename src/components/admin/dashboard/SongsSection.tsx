@@ -29,18 +29,18 @@ const songColumns = [
           href={url}
           target="_blank"
           rel="noreferrer"
-          className="text-blue-400 hover:text-blue-300 underline"
+          className="text-[var(--color-brand-secondary)] hover:underline"
         >
           Ouvrir
         </a>
       ) : (
-        <span className="text-gray-400">Aucun</span>
+        <span className="text-[var(--color-text-secondary)]">Aucun</span>
       );
     },
   },
   {
     key: "duration" as keyof Song,
-    label: "Durée",
+    label: "Duree",
     render: (value: unknown) => {
       const duration = Number(value) || 0;
       const minutes = Math.floor(duration / 60);
@@ -62,12 +62,12 @@ export const SongsSection = ({
   return (
     <section>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-white">
-          Chansons - {workTitle || "Sélection"}
+        <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">
+          Chansons - {workTitle || "Selection"}
         </h2>
         <div className="flex space-x-2">
           <Button variant="secondary" onClick={onBack}>
-            Retour aux œuvres
+            Retour aux oeuvres
           </Button>
           <Button
             variant="primary"
@@ -84,7 +84,7 @@ export const SongsSection = ({
         data={songs}
         columns={songColumns}
         loading={loading}
-        emptyMessage="Aucune chanson créée"
+        emptyMessage="Aucune chanson creee"
         onEdit={onEditSong}
         onDelete={onDeleteSong}
       />

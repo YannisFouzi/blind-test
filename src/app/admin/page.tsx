@@ -7,14 +7,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ADMIN_EMAIL, auth, googleProvider } from "@/lib/firebase";
 import { User } from "@/types";
+import { pressable } from "@/styles/ui";
 
 const GoogleIcon = () => (
-  <svg
-    className="w-5 h-5"
-    viewBox="0 0 24 24"
-    aria-hidden="true"
-    focusable="false"
-  >
+  <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
     <path
       fill="#4285F4"
       d="M23.6 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5c-.3 1.4-1.1 2.6-2.4 3.4v2.8h3.9c2.3-2.1 3.6-5.2 3.6-8.3z"
@@ -43,7 +39,6 @@ export default function AdminLoginPage() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       if (firebaseUser) {
-        // Vérifier si l'utilisateur est admin via l'email
         const isAdmin = firebaseUser.email === ADMIN_EMAIL;
 
         if (isAdmin) {
@@ -55,11 +50,10 @@ export default function AdminLoginPage() {
             isAdmin: true,
           };
           setUser(user);
-          // Rediriger vers le dashboard
           router.push("/admin/dashboard");
         } else {
           setError(
-            `Accès refusé. Seul l'administrateur autorisé peut accéder à cette section.`
+            "Acces refuse. Seul l'administrateur autorise peut acceder a cette section."
           );
           setUser(null);
         }
@@ -82,14 +76,13 @@ export default function AdminLoginPage() {
         console.error("Erreur de connexion:", error);
       }
 
-      // Messages d'erreur plus spécifiques
       const authError = error as { code?: string };
       if (authError.code === "auth/popup-closed-by-user") {
-        setError("Connexion annulée par l'utilisateur.");
+        setError("Connexion annulee par l'utilisateur.");
       } else if (authError.code === "auth/popup-blocked") {
-        setError("Popup bloquée. Veuillez autoriser les popups pour ce site.");
+        setError("Popup bloquee. Veuillez autoriser les popups pour ce site.");
       } else {
-        setError("Erreur lors de la connexion. Veuillez réessayer.");
+        setError("Erreur lors de la connexion. Veuillez reessayer.");
       }
       setLoading(false);
     }
@@ -102,54 +95,58 @@ export default function AdminLoginPage() {
       setError(null);
     } catch (error: unknown) {
       if (process.env.NODE_ENV === "development") {
-        console.error("Erreur de déconnexion:", error);
+        console.error("Erreur de deconnexion:", error);
       }
-      setError("Erreur lors de la déconnexion.");
+      setError("Erreur lors de la deconnexion.");
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-xl">Vérification des permissions...</p>
+      <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#1B1B1B] border-t-transparent mx-auto mb-4"></div>
+          <p className="text-lg font-semibold text-[var(--color-text-primary)]">
+            Verification des permissions...
+          </p>
         </div>
       </div>
     );
   }
 
+  const cardBase =
+    "bg-white border-[3px] border-[#1B1B1B] rounded-3xl shadow-[6px_6px_0_#1B1B1B]";
+  const actionButton = `w-full px-4 py-3 text-sm font-bold ${pressable}`;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-8">
-      <div className="bg-slate-800/50 rounded-2xl p-8 border border-gray-700/50 max-w-md w-full">
+    <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center p-8">
+      <div className={`${cardBase} p-8 max-w-md w-full`}>
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400 mb-2">
+          <h1 className="text-3xl font-extrabold text-[var(--color-text-primary)] mb-2">
             Administration
           </h1>
-          <p className="text-gray-400 mb-8">
+          <p className="text-[var(--color-text-secondary)] mb-8">
             Gestion des univers et playlists
           </p>
 
           {error && (
-            <div className="bg-red-500/20 border border-red-500 rounded-lg p-4 mb-6">
-              <p className="text-red-300 text-sm">{error}</p>
-              <p className="text-red-400 text-xs mt-2">
-                Contact administrateur : {ADMIN_EMAIL}
+            <div className="bg-[#FFE5E5] border-[3px] border-[#1B1B1B] rounded-2xl p-4 mb-6 shadow-[3px_3px_0_#1B1B1B]">
+              <p className="text-red-700 text-sm">{error}</p>
+              <p className="text-[var(--color-text-secondary)] text-xs mt-2">
+                Contact admin: {ADMIN_EMAIL}
               </p>
             </div>
           )}
 
           {!user ? (
-            <div>
-              <button
-                onClick={handleGoogleSignIn}
-                disabled={loading}
-                className="w-full bg-white hover:bg-gray-100 text-gray-900 font-semibold py-3 px-6 rounded-xl flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-4"
-              >
-                <GoogleIcon />
-                Se connecter avec Google
-              </button>
-            </div>
+            <button
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className={`${actionButton} bg-white hover:bg-[var(--color-surface-overlay)] flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              <GoogleIcon />
+              Se connecter avec Google
+            </button>
           ) : (
             <div className="text-center">
               <div className="flex items-center justify-center mb-6">
@@ -159,45 +156,45 @@ export default function AdminLoginPage() {
                     alt={user.displayName || "Photo de profil"}
                     width={64}
                     height={64}
-                    className="w-16 h-16 rounded-full border-2 border-yellow-400"
+                    className="w-16 h-16 rounded-full border-[3px] border-[#1B1B1B]"
                   />
                 )}
               </div>
-              <h2 className="text-xl font-semibold text-white mb-2">
+              <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
                 Bienvenue, {user.displayName}
               </h2>
-              <p className="text-gray-400 mb-2">{user.email}</p>
-              <div className="bg-green-500/20 border border-green-500 rounded-lg p-2 mb-6">
-                <p className="text-green-300 text-xs font-medium">
-                  ✓ Administrateur autorisé
+              <p className="text-[var(--color-text-secondary)] mb-2">{user.email}</p>
+              <div className="bg-[#ECFDF5] border-2 border-[#1B1B1B] rounded-xl p-2 mb-6 shadow-[2px_2px_0_#1B1B1B]">
+                <p className="text-[#166534] text-xs font-bold">
+                  Admin autorise
                 </p>
               </div>
 
               <div className="space-y-4">
                 <button
                   onClick={() => router.push("/admin/dashboard")}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+                  className={`${actionButton} bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-light)]`}
                 >
-                  Accéder au Dashboard
+                  Acceder au dashboard
                 </button>
 
                 <button
                   onClick={handleSignOut}
-                  className="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center gap-3 transition-colors"
+                  className={`${actionButton} bg-[#fca5a5] hover:bg-[#f87171] flex items-center justify-center gap-3`}
                 >
                   <LogOut className="w-4 h-4" />
-                  Se déconnecter
+                  Se deconnecter
                 </button>
               </div>
             </div>
           )}
 
-          <div className="mt-8 pt-6 border-t border-gray-700">
+          <div className="mt-8 pt-6 border-t-2 border-[#1B1B1B]/20">
             <button
               onClick={() => router.push("/")}
-              className="text-gray-400 hover:text-white transition-colors text-sm"
+              className={`px-4 py-2 text-sm font-semibold bg-white hover:bg-[var(--color-surface-overlay)] ${pressable}`}
             >
-              ← Retour au blind test
+              Retour au blind test
             </button>
           </div>
         </div>

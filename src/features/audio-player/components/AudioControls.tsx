@@ -80,21 +80,19 @@ const AudioControlsComponent = ({
         onClick={togglePlay}
         disabled={disabled || isLoading}
         className={cn(
-          "flex items-center justify-center w-12 h-12 rounded-full",
-          "bg-gradient-to-r from-purple-500 to-pink-500",
-          "hover:from-purple-600 hover:to-pink-600",
+          "magic-button flex items-center justify-center w-12 h-12 rounded-full",
           "disabled:opacity-50 disabled:cursor-not-allowed",
-          "transition-all shadow-lg hover:shadow-xl",
+          "transition-all",
           className
         )}
         aria-label={isPlaying ? "Pause" : "Play"}
       >
         {isLoading ? (
-          <Loader2 className="w-6 h-6 text-white animate-spin" />
+          <Loader2 className="w-6 h-6 text-[#1B1B1B] animate-spin" />
         ) : isPlaying ? (
-          <Pause className="w-6 h-6 text-white" />
+          <Pause className="w-6 h-6 text-[#1B1B1B]" />
         ) : (
-          <Play className="w-6 h-6 text-white ml-1" />
+          <Play className="w-6 h-6 text-[#1B1B1B] ml-1" />
         )}
       </button>
     );
@@ -129,21 +127,19 @@ const AudioControlsComponent = ({
           onClick={togglePlay}
           disabled={disabled || isLoading}
           className={cn(
-            "flex items-center justify-center w-14 h-14 rounded-full",
-            "bg-gradient-to-r from-purple-500 to-pink-500",
-            "hover:from-purple-600 hover:to-pink-600",
+            "magic-button flex items-center justify-center w-14 h-14 rounded-full",
             "disabled:opacity-50 disabled:cursor-not-allowed",
-            "transition-all shadow-lg hover:shadow-xl",
-            "focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-[var(--color-surface-elevated)]"
+            "transition-all",
+            "focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 focus:ring-offset-[var(--color-surface-base)]"
           )}
           aria-label={isPlaying ? "Pause" : "Play"}
         >
           {isLoading ? (
-            <Loader2 className="w-7 h-7 text-white animate-spin" />
+            <Loader2 className="w-7 h-7 text-[#1B1B1B] animate-spin" />
           ) : isPlaying ? (
-            <Pause className="w-7 h-7 text-white" />
+            <Pause className="w-7 h-7 text-[#1B1B1B]" />
           ) : (
-            <Play className="w-7 h-7 text-white ml-1" />
+            <Play className="w-7 h-7 text-[#1B1B1B] ml-1" />
           )}
         </button>
 
@@ -161,7 +157,7 @@ const AudioControlsComponent = ({
 
       {/* Note no-seek */}
       {noSeek && showProgressBar && (
-        <p className="mt-3 text-xs text-gray-500 text-center">
+        <p className="mt-3 text-xs text-[var(--color-text-secondary)] text-center">
           Mode découverte : le curseur de lecture est désactivé
         </p>
       )}

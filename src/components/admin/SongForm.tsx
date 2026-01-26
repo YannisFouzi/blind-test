@@ -136,78 +136,78 @@ export const SongForm = ({
   return (
     <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
           Titre de la chanson *
         </label>
         <input
           type="text"
           {...register("title")}
           className={`
-            w-full px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
-            ${errors.title ? "border-red-500" : "border-gray-600"}
-            focus:outline-none focus:border-blue-500 transition-colors
+            w-full px-4 py-3 rounded-lg border-2 bg-white text-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]
+            ${errors.title ? "border-red-500" : "border-[#1B1B1B]"}
+            focus:outline-none focus:border-[#1B1B1B] transition-colors
           `}
           placeholder="Ex: Hedwig's Theme"
         />
         {errors.title && (
-          <p className="text-red-400 text-sm mt-1">{errors.title.message}</p>
+          <p className="text-red-600 text-sm mt-1">{errors.title.message}</p>
         )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
           URL audio (Cloudflare) *
         </label>
         <input
           type="url"
           {...register("audioUrl")}
           className={`
-            w-full px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
-            ${errors.audioUrl ? "border-red-500" : "border-gray-600"}
-            focus:outline-none focus:border-blue-500 transition-colors
+            w-full px-4 py-3 rounded-lg border-2 bg-white text-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]
+            ${errors.audioUrl ? "border-red-500" : "border-[#1B1B1B]"}
+            focus:outline-none focus:border-[#1B1B1B] transition-colors
           `}
           placeholder="https://cdn.mon-cloud.com/musiques/track.mp3"
         />
         {errors.audioUrl ? (
-          <p className="text-red-400 text-sm mt-1">
+          <p className="text-red-600 text-sm mt-1">
             {errors.audioUrl.message}
           </p>
         ) : (
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-[var(--color-text-secondary)] text-sm mt-1">
             URL signée ou publique pointant vers votre MP3 Cloudflare/S3.
           </p>
         )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
           Artiste/Compositeur *
         </label>
         <input
           type="text"
           {...register("artist")}
           className={`
-            w-full px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
-            ${errors.artist ? "border-red-500" : "border-gray-600"}
-            focus:outline-none focus:border-blue-500 transition-colors
+            w-full px-4 py-3 rounded-lg border-2 bg-white text-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]
+            ${errors.artist ? "border-red-500" : "border-[#1B1B1B]"}
+            focus:outline-none focus:border-[#1B1B1B] transition-colors
           `}
           placeholder="Ex: John Williams"
         />
         {errors.artist && (
-          <p className="text-red-400 text-sm mt-1">{errors.artist.message}</p>
+          <p className="text-red-600 text-sm mt-1">{errors.artist.message}</p>
         )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
           Œuvre *
         </label>
         <select
           {...register("workId")}
           className={`
-            w-full px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
-            ${errors.workId ? "border-red-500" : "border-gray-600"}
-            focus:outline-none focus:border-blue-500 transition-colors
+            w-full px-4 py-3 rounded-lg border-2 bg-white text-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]
+            ${errors.workId ? "border-red-500" : "border-[#1B1B1B]"}
+            focus:outline-none focus:border-[#1B1B1B] transition-colors
           `}
         >
           <option value="">Sélectionnez une œuvre</option>
@@ -218,12 +218,12 @@ export const SongForm = ({
           ))}
         </select>
         {errors.workId && (
-          <p className="text-red-400 text-sm mt-1">{errors.workId.message}</p>
+          <p className="text-red-600 text-sm mt-1">{errors.workId.message}</p>
         )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
           Vidéo YouTube *
         </label>
         <div className="flex gap-2">
@@ -231,9 +231,9 @@ export const SongForm = ({
             type="url"
             {...register("youtubeUrl")}
             className={`
-              flex-1 px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
-              ${errors.youtubeUrl ? "border-red-500" : "border-gray-600"}
-              focus:outline-none focus:border-blue-500 transition-colors
+              flex-1 px-4 py-3 rounded-lg border-2 bg-white text-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]
+              ${errors.youtubeUrl ? "border-red-500" : "border-[#1B1B1B]"}
+              focus:outline-none focus:border-[#1B1B1B] transition-colors
             `}
             placeholder="https://www.youtube.com/watch?v=..."
           />
@@ -247,19 +247,19 @@ export const SongForm = ({
           </Button>
         </div>
         {errors.youtubeUrl && (
-          <p className="text-red-400 text-sm mt-1">
+          <p className="text-red-600 text-sm mt-1">
             {errors.youtubeUrl.message}
           </p>
         )}
         {youtubeId && (
-          <p className="text-green-400 text-sm mt-1">
+          <p className="text-green-700 text-sm mt-1">
             ? Vidéo validée: {youtubeId}
           </p>
         )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
           Durée (en secondes)
         </label>
         <input
@@ -267,18 +267,18 @@ export const SongForm = ({
           min="0"
           placeholder="Ex: 180"
           className={`
-            w-full px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
-            ${errors.duration ? "border-red-500" : "border-gray-600"}
-            focus:outline-none focus:border-blue-500 transition-colors
+            w-full px-4 py-3 rounded-lg border-2 bg-white text-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]
+            ${errors.duration ? "border-red-500" : "border-[#1B1B1B]"}
+            focus:outline-none focus:border-[#1B1B1B] transition-colors
           `}
           {...register("duration", { valueAsNumber: true })}
         />
         {errors.duration ? (
-          <p className="text-red-400 text-sm mt-1">
+          <p className="text-red-600 text-sm mt-1">
             {errors.duration.message}
           </p>
         ) : (
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-[var(--color-text-secondary)] text-sm mt-1">
             Sera automatiquement rempli lors de la validation YouTube
           </p>
         )}

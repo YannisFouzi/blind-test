@@ -44,7 +44,7 @@ const SoloGameClient = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-surface-base)] text-[var(--color-text-primary)]">
         <LoadingSpinner />
       </div>
     ),
@@ -59,7 +59,7 @@ const MultiGameClient = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-surface-base)] text-[var(--color-text-primary)]">
         <LoadingSpinner />
       </div>
     ),
@@ -128,7 +128,7 @@ export function GameClient({ universeId }: GameClientProps) {
   // Multiplayer: attendre que l'identity soit prête
   if (mode === "multi" && (!identityReady || !playerId)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-surface-base)] text-[var(--color-text-primary)]">
         <LoadingSpinner />
       </div>
     );

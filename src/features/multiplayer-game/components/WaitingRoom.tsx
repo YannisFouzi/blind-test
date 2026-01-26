@@ -7,59 +7,18 @@ import { Users, Crown, Copy, Check } from "lucide-react";
 import type { RoomPlayer } from "@/types";
 import { memo, useCallback, useMemo, useState } from "react";
 
-/**
- * Props du WaitingRoom
- */
 export interface WaitingRoomProps {
-  /** ID de la room */
   roomId: string;
-
-  /** Liste des joueurs dans la room */
   players: RoomPlayer[];
-
-  /** ID du joueur actuel */
   currentPlayerId: string;
-
-  /** Le joueur actuel est-il l'hôte ? */
   isHost: boolean;
-
-  /** Callback pour démarrer la partie (host only) */
   onStartGame?: () => void;
-
-  /** Callback pour copier le lien d'invitation */
   onCopyInvite?: () => void;
-
-  /** Nombre minimum de joueurs pour démarrer */
   minPlayers?: number;
-
-  /** Nom de l'univers (optionnel) */
   universeName?: string;
-
-  /** Nombre de chansons configurées */
   songsCount?: number;
 }
 
-/**
- * WaitingRoom
- *
- * Écran de lobby multiplayer avant que la partie démarre.
- * Affiche les joueurs connectés, permet de copier le lien d'invitation,
- * et permet à l'hôte de démarrer la partie.
- *
- * @example
- * ```tsx
- * <WaitingRoom
- *   roomId="abc123"
- *   players={players}
- *   currentPlayerId="player-1"
- *   isHost={true}
- *   onStartGame={() => startGame()}
- *   onCopyInvite={() => copyToClipboard(inviteLink)}
- *   universeName="Disney"
- *   songsCount={10}
- * />
- * ```
- */
 const WaitingRoomComponent = ({
   roomId,
   players,
@@ -91,12 +50,18 @@ const WaitingRoomComponent = ({
   }, [onCopyInvite]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900 flex items-center justify-center p-6">
-      <Card surface="elevated" glow="purple" size="lg" className="w-full max-w-2xl">
+    <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center p-6">
+      <Card
+        surface="elevated"
+        size="lg"
+        className="w-full max-w-2xl border-[3px] border-[#1B1B1B] shadow-[6px_6px_0_#1B1B1B]"
+      >
         <CardHeader>
-          <CardTitle className="text-center text-3xl">Salle d&apos;attente</CardTitle>
+          <CardTitle className="text-center text-3xl font-extrabold">
+            Salle d&apos;attente
+          </CardTitle>
           <div className="flex justify-center mt-4">
-            <Badge variant="magic" size="lg" glow pulse>
+            <Badge variant="primary" size="lg">
               Room: {roomId}
             </Badge>
           </div>
@@ -104,28 +69,30 @@ const WaitingRoomComponent = ({
 
         <CardContent>
           <div className="space-y-6">
-            {/* Informations univers */}
             {universeName && (
               <div className="text-center">
-                <p className="text-gray-300 text-sm mb-2">Univers sélectionné</p>
+                <p className="text-[var(--color-text-secondary)] text-sm mb-2">
+                  Univers selectionne
+                </p>
                 <Badge variant="primary" size="lg">
                   {universeName}
                 </Badge>
                 {songsCount !== undefined && (
-                  <p className="text-gray-400 text-xs mt-2">{songsCount} chansons</p>
+                  <p className="text-[var(--color-text-secondary)] text-xs mt-2">
+                    {songsCount} chansons
+                  </p>
                 )}
               </div>
             )}
 
-            {/* Liste des joueurs */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-white font-semibold flex items-center gap-2">
+                <h3 className="text-[var(--color-text-primary)] font-bold flex items-center gap-2">
                   <Users className="w-5 h-5" />
                   Joueurs ({connectedPlayers.length})
                 </h3>
                 {minPlayers > 1 && (
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-[var(--color-text-secondary)]">
                     Min: {minPlayers} joueurs
                   </span>
                 )}
@@ -138,21 +105,19 @@ const WaitingRoomComponent = ({
                   return (
                     <div
                       key={player.id}
-                      className={`
-                        flex items-center justify-between px-4 py-3 rounded-xl
-                        ${isCurrentPlayer
-                          ? "bg-purple-500/20 border border-purple-500/40"
-                          : "bg-slate-800/50 border border-slate-700/50"
-                        }
-                      `}
+                      className={`flex items-center justify-between px-4 py-3 rounded-2xl border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] ${
+                        isCurrentPlayer
+                          ? "bg-[var(--color-brand-primary-light)]"
+                          : "bg-white"
+                      }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">
+                        <div className="w-10 h-10 rounded-full bg-[var(--color-brand-primary)] border-2 border-[#1B1B1B] flex items-center justify-center text-[#1B1B1B] font-black">
                           {player.displayName[0].toUpperCase()}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-white font-medium">
+                            <span className="text-[var(--color-text-primary)] font-bold">
                               {player.displayName}
                             </span>
                             {isCurrentPlayer && (
@@ -161,13 +126,13 @@ const WaitingRoomComponent = ({
                               </Badge>
                             )}
                             {player.isHost && (
-                              <Badge variant="magic" size="sm" leftIcon={<Crown className="w-3 h-3" />}>
-                                Hôte
+                              <Badge variant="warning" size="sm" leftIcon={<Crown className="w-3 h-3" />}>
+                                Hote
                               </Badge>
                             )}
                           </div>
-                          <p className="text-xs text-gray-400">
-                            {player.connected ? "Connecté" : "Déconnecté"}
+                          <p className="text-xs text-[var(--color-text-secondary)]">
+                            {player.connected ? "Connecte" : "Deconnecte"}
                           </p>
                         </div>
                       </div>
@@ -176,49 +141,45 @@ const WaitingRoomComponent = ({
                 })}
               </div>
 
-              {/* Message si pas assez de joueurs */}
               {connectedPlayers.length < minPlayers && (
-                <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
-                  <p className="text-yellow-300 text-sm text-center">
-                    En attente de {minPlayers - connectedPlayers.length} joueur(s) supplémentaire(s)...
+                <div className="mt-4 p-3 bg-[#FFF1C9] border-2 border-[#1B1B1B] rounded-xl shadow-[2px_2px_0_#1B1B1B]">
+                  <p className="text-[#92400E] text-sm text-center font-semibold">
+                    En attente de {minPlayers - connectedPlayers.length} joueur(s)
+                    supplementaire(s)...
                   </p>
                 </div>
               )}
             </div>
 
-            {/* Actions */}
             <div className="space-y-3">
-              {/* Bouton copier invitation */}
-              {onCopyInvite && (
+                  {onCopyInvite && (
                 <Button
                   variant="outline"
                   fullWidth
                   leftIcon={copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   onClick={handleCopyInvite}
                 >
-                  {copied ? "Lien copié !" : "Copier le lien d'invitation"}
+                  {copied ? "Lien copie !" : "Copier le lien d&apos;invitation"}
                 </Button>
               )}
 
-              {/* Bouton démarrer (host only) */}
               {isHost && (
                 <Button
-                  variant="magic"
+                  variant="primary"
                   fullWidth
                   size="lg"
                   glow
                   disabled={!canStart}
                   onClick={onStartGame}
                 >
-                  {canStart ? "Démarrer la partie" : `En attente de ${minPlayers} joueurs`}
+                  {canStart ? "Demarrer la partie" : `En attente de ${minPlayers} joueurs`}
                 </Button>
               )}
 
-              {/* Message pour les non-hôtes */}
               {!isHost && (
-                <div className="p-3 bg-slate-800/50 border border-slate-700/50 rounded-xl">
-                  <p className="text-gray-300 text-sm text-center">
-                    En attente que l&apos;hôte démarre la partie...
+                <div className="p-3 bg-white border-2 border-[#1B1B1B] rounded-xl shadow-[2px_2px_0_#1B1B1B]">
+                  <p className="text-[var(--color-text-secondary)] text-sm text-center font-semibold">
+                    En attente que l&apos;hote demarre la partie...
                   </p>
                 </div>
               )}

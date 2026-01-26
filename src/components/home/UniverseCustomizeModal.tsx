@@ -3,7 +3,8 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import type { Work } from "@/types";
 import { useGameConfiguration, useCanSelectMoreWorks } from "@/stores";
-import { getWorksByUniverse, getSongsByWork } from "@/services/firebase";
+import { getAllWorks, getSongsByWork, getWorksByUniverse } from "@/services/firebase";
+import { pressable } from "@/styles/ui";
 
 /**
  * Props pour UniverseCustomizeModal
@@ -64,8 +65,10 @@ const UniverseCustomizeModalComponent = ({
       setError(null);
 
       try {
-        // Charger les works de l'univers
-        const worksResult = await getWorksByUniverse(customizingUniverse.id);
+        // Charger les works de l'univers (ou toutes les oeuvres en mode custom)
+        const worksResult = isCustomMode
+          ? await getAllWorks()
+          : await getWorksByUniverse(customizingUniverse.id);
 
         if (!worksResult.success || !worksResult.data) {
           throw new Error("Impossible de charger les œuvres");
@@ -98,7 +101,7 @@ const UniverseCustomizeModalComponent = ({
     };
 
     loadWorksAndCounts();
-  }, [customizingUniverse]);
+  }, [customizingUniverse, isCustomMode]);
 
   // ========== COMPUTED VALUES ==========
   const totalSongsAvailable = useMemo(() => {
@@ -108,6 +111,12 @@ const UniverseCustomizeModalComponent = ({
   }, [allowedWorks, songCountByWork]);
 
   const effectiveMaxSongs = maxSongs ?? totalSongsAvailable;
+  const sliderMin = totalSongsAvailable === 0 ? 0 : 1;
+  const sliderMax = totalSongsAvailable === 0 ? 0 : totalSongsAvailable;
+  const sliderValue = totalSongsAvailable === 0
+    ? 0
+    : Math.min(sliderMax, Math.max(1, effectiveMaxSongs));
+  const sliderDisabled = loading || totalSongsAvailable === 0;
 
   // ========== HANDLERS ==========
   const handleMaxSongsChange = useCallback(
@@ -128,15 +137,22 @@ const UniverseCustomizeModalComponent = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur">
-      <div className="w-full max-w-3xl bg-slate-900/90 border border-purple-500/40 rounded-2xl p-6 space-y-4 mx-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={closeCustomize}
+    >
+      <div
+        className="w-full max-w-3xl bg-white border-[3px] border-black rounded-3xl p-6 space-y-4 mx-4 shadow-[6px_6px_0_#1B1B1B]"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-white">
-            Paramètres avancés – {customizingUniverse.name}
+          <h3 className="text-xl font-extrabold text-[var(--color-text-primary)]">
+            {customizingUniverse.name}
           </h3>
           <button
+            type="button"
             onClick={closeCustomize}
-            className="text-slate-300 hover:text-white text-sm"
+            className="magic-button px-3 py-2 text-xs font-bold bg-[#fca5a5] hover:bg-[#f87171]"
           >
             Fermer
           </button>
@@ -144,62 +160,31 @@ const UniverseCustomizeModalComponent = ({
 
         <div className="space-y-4">
           {/* Mode sans avance */}
-          <label className="flex items-center gap-2 text-white text-sm">
-            <input
-              type="checkbox"
-              checked={noSeek}
-              onChange={(e) => setNoSeek(e.target.checked)}
-              className="w-4 h-4 rounded"
-            />
-            Activer le mode sans avance (timeline non cliquable)
-          </label>
-
-          {/* Nombre de musiques */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-white text-sm font-semibold">Nombre de musiques</span>
-              <span className="text-slate-300 text-xs">
-                {totalSongsAvailable} disponible{totalSongsAvailable > 1 ? "s" : ""}
-              </span>
-            </div>
-
-            {!loading && totalSongsAvailable > 0 && (
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min={1}
-                  max={totalSongsAvailable}
-                  value={effectiveMaxSongs}
-                  onChange={(e) => handleMaxSongsChange(Number(e.target.value))}
-                  className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
-                />
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={1}
-                    max={totalSongsAvailable}
-                    value={effectiveMaxSongs}
-                    onChange={(e) => handleMaxSongsChange(Number(e.target.value))}
-                    className="w-16 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-sm text-center"
-                  />
-                  <span className="text-slate-400 text-xs">
-                    {maxSongs === null ? "(toutes)" : ""}
-                  </span>
-                </div>
-              </div>
-            )}
+          <div className="space-y-1">
+            <label className="flex items-center gap-2 text-[var(--color-text-primary)] text-sm font-semibold">
+              <input
+                type="checkbox"
+                checked={noSeek}
+                onChange={(e) => setNoSeek(e.target.checked)}
+                className="w-4 h-4 rounded border-2 border-black accent-yellow-400"
+              />
+              Mode sans avance rapide
+            </label>
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              Impossible de se déplacer pendant la lecture du morceau.
+            </p>
           </div>
 
           {/* Œuvres incluses */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-white text-sm font-semibold">Oeuvres incluses</span>
+              <span className="text-[var(--color-text-primary)] text-sm font-semibold">Oeuvres incluses</span>
               {isCustomMode && maxWorksAllowed && (
                 <span
                   className={`text-xs ${
                     allowedWorks.length >= maxWorksAllowed
-                      ? "text-orange-400"
-                      : "text-slate-400"
+                      ? "text-orange-600"
+                      : "text-[var(--color-text-secondary)]"
                   }`}
                 >
                   {allowedWorks.length}/{maxWorksAllowed} sélectionnées
@@ -208,9 +193,9 @@ const UniverseCustomizeModalComponent = ({
             </div>
 
             {loading ? (
-              <div className="text-slate-200 text-sm">Chargement des oeuvres...</div>
+              <div className="text-[var(--color-text-secondary)] text-sm">Chargement des oeuvres...</div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-2 pb-2 pt-1">
                 {works.map((work) => {
                   const songCount = songCountByWork[work.id] || 0;
                   const isSelected = allowedWorks.includes(work.id);
@@ -219,10 +204,10 @@ const UniverseCustomizeModalComponent = ({
                   return (
                     <label
                       key={work.id}
-                      className={`flex items-center gap-2 text-sm px-2 py-1.5 rounded transition-colors ${
+                      className={`flex items-center gap-2 text-sm px-2 py-1.5 rounded ${
                         isDisabled
-                          ? "bg-slate-800/30 text-slate-500 cursor-not-allowed"
-                          : "bg-slate-800/60 text-white cursor-pointer hover:bg-slate-700/60"
+                          ? "bg-[var(--color-surface-overlay)]/70 text-[var(--color-text-secondary)] border-2 border-black/30 cursor-not-allowed"
+                          : "bg-[var(--color-surface-overlay)] text-[var(--color-text-primary)] border-2 border-black cursor-pointer shadow-[2px_2px_0_#1B1B1B]"
                       }`}
                     >
                       <input
@@ -230,10 +215,10 @@ const UniverseCustomizeModalComponent = ({
                         checked={isSelected}
                         onChange={() => !isDisabled && toggleWork(work.id)}
                         disabled={isDisabled}
-                        className="w-4 h-4 rounded"
+                        className="w-4 h-4 rounded border-2 border-black accent-yellow-400"
                       />
                       <span className="flex-1 truncate">{work.title}</span>
-                      <span className="text-slate-400 text-xs">({songCount})</span>
+                      <span className="text-[var(--color-text-secondary)] text-xs">({songCount})</span>
                     </label>
                   );
                 })}
@@ -241,20 +226,51 @@ const UniverseCustomizeModalComponent = ({
             )}
           </div>
 
-          {error && <div className="text-xs text-red-300">{error}</div>}
+          {/* Nombre de musiques */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[var(--color-text-primary)] text-sm font-semibold">Nombre de musiques</span>
+              <span className="text-[var(--color-text-secondary)] text-xs">
+                {totalSongsAvailable} disponible{totalSongsAvailable > 1 ? "s" : ""}
+              </span>
+            </div>
+
+            <div className={`flex items-center gap-4 min-h-[52px] ${sliderDisabled ? "opacity-60" : ""}`}>
+              <input
+                type="range"
+                min={sliderMin}
+                max={sliderMax}
+                value={sliderValue}
+                onChange={(e) => handleMaxSongsChange(Number(e.target.value))}
+                disabled={sliderDisabled}
+                className="flex-1 h-2 bg-white border-2 border-black rounded-full appearance-none cursor-pointer accent-yellow-400 shadow-[2px_2px_0_#1B1B1B] disabled:cursor-not-allowed"
+              />
+              <input
+                type="number"
+                min={sliderMin}
+                max={sliderMax}
+                value={sliderValue}
+                onChange={(e) => handleMaxSongsChange(Number(e.target.value))}
+                disabled={sliderDisabled}
+                className="w-16 px-2 py-1 bg-white border-2 border-black rounded text-[var(--color-text-primary)] text-sm text-center shadow-[2px_2px_0_#1B1B1B] disabled:cursor-not-allowed"
+              />
+            </div>
+          </div>
+
+          {error && <div className="text-xs text-red-600">{error}</div>}
         </div>
 
         <div className="flex justify-end gap-3 pt-2">
           <button
             onClick={closeCustomize}
-            className="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm hover:bg-slate-600 transition-colors"
+            className={`px-4 py-2 text-sm font-bold bg-white hover:bg-[var(--color-surface-overlay)] ${pressable}`}
           >
             Annuler
           </button>
           <button
             onClick={onApply}
-            className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm transition-colors"
-            disabled={isApplying || allowedWorks.length === 0 || totalSongsAvailable === 0}
+            className="magic-button px-4 py-2 text-sm font-bold"
+            disabled={isApplying || allowedWorks.length < 2 || totalSongsAvailable === 0}
           >
             {isApplying ? "Patiente..." : "Appliquer et jouer"}
           </button>

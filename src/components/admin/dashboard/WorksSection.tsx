@@ -35,8 +35,8 @@ export const WorksSection = ({
   return (
     <section>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-white">
-          Œuvres - {universeName || "Sélection"}
+        <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">
+          Oeuvres - {universeName || "Selection"}
         </h2>
         <div className="flex space-x-2">
           <Button variant="secondary" onClick={onBack}>
@@ -48,7 +48,7 @@ export const WorksSection = ({
             className="flex items-center space-x-2"
           >
             <Plus className="w-4 h-4" />
-            <span>Nouvelle œuvre</span>
+            <span>Nouvelle oeuvre</span>
           </Button>
         </div>
       </div>

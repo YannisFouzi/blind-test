@@ -24,7 +24,7 @@ import type { InputHTMLAttributes, ReactNode } from "react";
 
 const inputVariants = cva(
   // Base styles
-  "flex w-full rounded-md border bg-transparent px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+  "flex w-full rounded-xl border-2 border-[var(--color-text-primary)] bg-white px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-secondary)] focus:ring-offset-2 focus:ring-offset-[var(--color-surface-base)] disabled:cursor-not-allowed disabled:opacity-50 transition-all",
   {
     variants: {
       /**
@@ -32,9 +32,9 @@ const inputVariants = cva(
        */
       variant: {
         default:
-          "border-[rgba(255,255,255,0.1)] focus:border-[var(--color-brand-primary)] focus:ring-[var(--color-brand-primary)]",
+          "focus:border-[var(--color-text-primary)]",
         filled:
-          "bg-[var(--color-surface-elevated)] border-transparent focus:border-[var(--color-brand-primary)] focus:ring-[var(--color-brand-primary)]",
+          "bg-[var(--color-surface-overlay)]",
         flushed:
           "border-b-2 border-t-0 border-x-0 rounded-none px-0 focus:border-[var(--color-brand-primary)] focus:ring-0",
       },
@@ -133,7 +133,7 @@ export const Input = ({
     <div className={cn("w-full", wrapperClassName)}>
       {/* Label */}
       {label && (
-        <label className="block text-sm font-medium text-white mb-2">
+        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
           {label}
         </label>
       )}
@@ -142,7 +142,7 @@ export const Input = ({
       <div className="relative">
         {/* Left Icon */}
         {leftIcon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
             {leftIcon}
           </div>
         )}
@@ -160,7 +160,7 @@ export const Input = ({
 
         {/* Right Icon */}
         {rightIcon && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
             {rightIcon}
           </div>
         )}
@@ -171,7 +171,7 @@ export const Input = ({
         <p
           className={cn(
             "mt-2 text-sm",
-            hasError ? "text-red-400" : "text-gray-400"
+            hasError ? "text-red-600" : "text-[var(--color-text-secondary)]"
           )}
         >
           {errorMessage || helperText}
@@ -185,14 +185,14 @@ export const Input = ({
  * Textarea Component
  */
 const textareaVariants = cva(
-  "flex w-full rounded-md border bg-transparent px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all resize-y",
+  "flex w-full rounded-xl border-2 border-[var(--color-text-primary)] bg-white px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-secondary)] focus:ring-offset-2 focus:ring-offset-[var(--color-surface-base)] disabled:cursor-not-allowed disabled:opacity-50 transition-all resize-y",
   {
     variants: {
       variant: {
         default:
-          "border-[rgba(255,255,255,0.1)] focus:border-[var(--color-brand-primary)] focus:ring-[var(--color-brand-primary)]",
+          "focus:border-[var(--color-text-primary)]",
         filled:
-          "bg-[var(--color-surface-elevated)] border-transparent focus:border-[var(--color-brand-primary)] focus:ring-[var(--color-brand-primary)]",
+          "bg-[var(--color-surface-overlay)]",
       },
       error: {
         true: "border-red-500 focus:border-red-500 focus:ring-red-500",
@@ -231,7 +231,7 @@ export const Textarea = ({
   return (
     <div className={cn("w-full", wrapperClassName)}>
       {label && (
-        <label className="block text-sm font-medium text-white mb-2">
+        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
           {label}
         </label>
       )}
@@ -245,7 +245,7 @@ export const Textarea = ({
         <p
           className={cn(
             "mt-2 text-sm",
-            hasError ? "text-red-400" : "text-gray-400"
+            hasError ? "text-red-600" : "text-[var(--color-text-secondary)]"
           )}
         >
           {errorMessage || helperText}

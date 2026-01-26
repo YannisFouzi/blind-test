@@ -230,34 +230,34 @@ export const WorkForm = ({
   return (
     <form onSubmit={submitOnly} className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
           Titre de l&apos;œuvre *
         </label>
         <input
           type="text"
           {...register("title")}
           className={`
-            w-full px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
-            ${errors.title ? "border-red-500" : "border-gray-600"}
-            focus:outline-none focus:border-blue-500 transition-colors
+            w-full px-4 py-3 rounded-lg border-2 bg-white text-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]
+            ${errors.title ? "border-red-500" : "border-[#1B1B1B]"}
+            focus:outline-none focus:border-[#1B1B1B] transition-colors
           `}
           placeholder="Ex: Harry Potter à l'école des Sorciers"
         />
         {errors.title && (
-          <p className="text-red-400 text-sm mt-1">{errors.title.message}</p>
+          <p className="text-red-600 text-sm mt-1">{errors.title.message}</p>
         )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
           Univers *
         </label>
         <select
           {...register("universeId")}
           className={`
-            w-full px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
-            ${errors.universeId ? "border-red-500" : "border-gray-600"}
-            focus:outline-none focus:border-blue-500 transition-colors
+            w-full px-4 py-3 rounded-lg border-2 bg-white text-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]
+            ${errors.universeId ? "border-red-500" : "border-[#1B1B1B]"}
+            focus:outline-none focus:border-[#1B1B1B] transition-colors
           `}
         >
           <option value="">Sélectionnez un univers</option>
@@ -268,17 +268,17 @@ export const WorkForm = ({
           ))}
         </select>
         {errors.universeId && (
-          <p className="text-red-400 text-sm mt-1">{errors.universeId.message}</p>
+          <p className="text-red-600 text-sm mt-1">{errors.universeId.message}</p>
         )}
         {!work && defaultUniverseId && universeValue === defaultUniverseId && (
-          <p className="text-blue-400 text-sm mt-1">
+          <p className="text-[var(--color-brand-secondary)] text-sm mt-1">
             ? Univers présélectionné automatiquement
           </p>
         )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
           Playlist YouTube (optionnel)
         </label>
         <div className="flex gap-2">
@@ -286,9 +286,9 @@ export const WorkForm = ({
             type="text"
             {...register("playlistUrl")}
             className={`
-              flex-1 px-4 py-3 rounded-lg border-2 bg-gray-800 text-white
-              ${errors.playlistUrl ? "border-red-500" : "border-gray-600"}
-              focus:outline-none focus:border-blue-500 transition-colors
+              flex-1 px-4 py-3 rounded-lg border-2 bg-white text-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]
+              ${errors.playlistUrl ? "border-red-500" : "border-[#1B1B1B]"}
+              focus:outline-none focus:border-[#1B1B1B] transition-colors
             `}
             placeholder="URL complète ou ID (ex: PLsYgm6hOXgDToCj9jZ80rUUXVH93EDyHM)"
           />
@@ -302,18 +302,18 @@ export const WorkForm = ({
           </Button>
         </div>
         {errors.playlistUrl && (
-          <p className="text-red-400 text-sm mt-1">
+          <p className="text-red-600 text-sm mt-1">
             {errors.playlistUrl.message}
           </p>
         )}
         {!errors.playlistUrl && !playlistId && playlistUrl && (
-          <p className="text-gray-400 text-xs mt-1">
+          <p className="text-[var(--color-text-secondary)] text-xs mt-1">
             Accepte : URL complète (https://youtube.com/playlist?list=...) ou ID seul (PLxxxxx)
           </p>
         )}
         {playlistId && (
           <div className="mt-2 space-y-2">
-            <p className="text-green-400 text-sm">✓ Playlist validée: {playlistId}</p>
+            <p className="text-green-700 text-sm">✓ Playlist validée: {playlistId}</p>
             {work?.id && onImportSongs && (
               <div className="flex items-center space-x-2">
                 <Button
@@ -325,7 +325,7 @@ export const WorkForm = ({
                 >
                   {importing ? "Import en cours..." : "Importer les chansons"}
                 </Button>
-                <p className="text-gray-400 text-xs">
+                <p className="text-[var(--color-text-secondary)] text-xs">
                   Ajoute automatiquement toutes les chansons de la playlist
                 </p>
               </div>
@@ -345,13 +345,13 @@ export const WorkForm = ({
               >
                 {resuming ? "Reprise..." : "Reprendre l'import"}
               </Button>
-              <p className="text-yellow-400 text-xs">
+              <p className="text-yellow-700 text-xs">
                 Import en attente (jobId: {pendingImportJob.jobId})
               </p>
             </div>
           )}
         {errors.playlistId && (
-          <p className="text-red-400 text-sm mt-1">
+          <p className="text-red-600 text-sm mt-1">
             {errors.playlistId.message}
           </p>
         )}

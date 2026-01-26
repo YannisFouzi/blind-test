@@ -72,28 +72,28 @@ const ProgressBarComponent = ({
       {/* Barre de progression */}
       <div
         className={cn(
-          "relative h-2 rounded-full bg-white/10 overflow-hidden",
-          !disabled && "cursor-pointer hover:h-3 transition-all"
+          "relative h-2 rounded-full bg-white border-2 border-black shadow-[2px_2px_0_#1B1B1B] overflow-hidden",
+          !disabled && "cursor-pointer"
         )}
         onClick={handleClick}
       >
         {/* Fill */}
         <div
-          className="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all"
+          className="absolute inset-y-0 left-0 bg-gradient-to-r from-yellow-400 to-yellow-300 rounded-full transition-all"
           style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
         />
 
         {/* Glow effect */}
         {progress > 0 && (
           <div
-            className="absolute inset-y-0 right-0 w-2 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+            className="absolute inset-y-0 right-0 w-2 bg-black/20 rounded-full"
             style={{ transform: `translateX(-${100 - progress}%)` }}
           />
         )}
       </div>
 
       {/* Time display */}
-      <div className="flex justify-between text-sm text-gray-400">
+      <div className="flex justify-between text-sm text-[var(--color-text-secondary)]">
         <span>{formatTime(currentTime)}</span>
         <span>{formatTime(duration)}</span>
       </div>

@@ -300,7 +300,7 @@ export default function WaitingRoomPage() {
 
   if (!roomId || !identityReady || !playerId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-surface-base)] text-[var(--color-text-primary)]">
         {!identityReady ? <LoadingSpinner /> : <ErrorMessage message="Room introuvable" />}
       </div>
     );
@@ -309,30 +309,30 @@ export default function WaitingRoomPage() {
   // Si le HOST : afficher la sélection d'univers
   if (isHost && !room?.universeId) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900">
+      <div className="min-h-screen bg-[var(--color-surface-base)]">
         <div className="container mx-auto px-4 py-12 space-y-10">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-white mb-4">
-              Sélectionne un univers
+            <h1 className="text-4xl font-extrabold text-[var(--color-text-primary)] mb-4">
+              Selectionne un univers
             </h1>
           </div>
 
           <div className="p-6 max-w-2xl mx-auto">
-            <div className="bg-slate-800/60 rounded-xl p-4">
-              <p className="text-xs uppercase tracking-[0.15em] text-slate-400 mb-2">
+            <div className="bg-white border-[3px] border-[#1B1B1B] rounded-2xl p-4 shadow-[3px_3px_0_#1B1B1B]">
+              <p className="text-xs uppercase tracking-[0.15em] text-[var(--color-text-secondary)] mb-2">
                 Joueurs connectés
               </p>
               {players.length === 0 ? (
-                <p className="text-slate-300 text-sm">En attente de joueurs...</p>
+                <p className="text-[var(--color-text-secondary)] text-sm">En attente de joueurs...</p>
               ) : (
                 <ul className="space-y-2">
                   {players.map((p) => (
                     <li
                       key={p.id}
-                      className="flex items-center justify-between text-sm bg-slate-900/70 px-3 py-2 rounded-lg border border-slate-700"
+                      className="flex items-center justify-between text-sm bg-white px-3 py-2 rounded-xl border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]"
                     >
                       <span className="font-semibold">{p.displayName}</span>
-                      {p.isHost && <span className="text-xs text-yellow-300">Hôte</span>}
+                      {p.isHost && <span className="text-xs text-[#B45309]">Hôte</span>}
                     </li>
                   ))}
                 </ul>
@@ -347,7 +347,7 @@ export default function WaitingRoomPage() {
           ) : isConfiguringRoom ? (
             <div className="flex flex-col items-center gap-4">
               <LoadingSpinner />
-              <p className="text-white">Configuration de la room...</p>
+              <p className="text-[var(--color-text-primary)]">Configuration de la room...</p>
             </div>
           ) : (
             <UniverseGrid
@@ -360,7 +360,7 @@ export default function WaitingRoomPage() {
           )}
 
           {configError && (
-            <div className="max-w-2xl mx-auto text-center text-red-300 text-sm">
+            <div className="max-w-2xl mx-auto text-center text-red-600 text-sm">
               {configError}
             </div>
           )}
@@ -379,27 +379,27 @@ export default function WaitingRoomPage() {
 
   // Si INVITÉ : afficher page d'attente
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-slate-900 flex items-center justify-center">
-      <div className="p-6 max-w-lg w-full text-white space-y-4">
-        <div className="text-sm text-slate-200">
+    <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center">
+      <div className="p-6 max-w-lg w-full text-[var(--color-text-primary)] space-y-4">
+        <div className="text-sm text-[var(--color-text-secondary)]">
           <p className="font-medium">En attente de l&apos;hôte...</p>
         </div>
 
-        <div className="bg-slate-800/60 rounded-xl p-4">
-          <p className="text-xs uppercase tracking-[0.15em] text-slate-400 mb-2">
+        <div className="bg-white border-[3px] border-[#1B1B1B] rounded-2xl p-4 shadow-[3px_3px_0_#1B1B1B]">
+          <p className="text-xs uppercase tracking-[0.15em] text-[var(--color-text-secondary)] mb-2">
             Joueurs connectés
           </p>
           {players.length === 0 ? (
-            <p className="text-slate-300 text-sm">En attente de joueurs...</p>
+            <p className="text-[var(--color-text-secondary)] text-sm">En attente de joueurs...</p>
           ) : (
             <ul className="space-y-2">
               {players.map((p) => (
                 <li
                   key={p.id}
-                  className="flex items-center justify-between text-sm bg-slate-900/70 px-3 py-2 rounded-lg border border-slate-700"
+                  className="flex items-center justify-between text-sm bg-white px-3 py-2 rounded-xl border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]"
                 >
                   <span className="font-semibold">{p.displayName}</span>
-                  {p.isHost && <span className="text-xs text-yellow-300">Hôte</span>}
+                  {p.isHost && <span className="text-xs text-[#B45309]">Hôte</span>}
                 </li>
               ))}
             </ul>

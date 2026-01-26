@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { pressable } from "@/styles/ui";
 import { Volume2, VolumeX } from "lucide-react";
 import { memo, useCallback, type HTMLAttributes } from "react";
 
@@ -56,7 +57,10 @@ const VolumeControlComponent = ({
       {/* Bouton Mute/Unmute */}
       <button
         onClick={onToggleMute}
-        className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white"
+        className={cn(
+          "p-2 rounded-lg text-[var(--color-text-primary)] bg-white hover:bg-[var(--color-surface-overlay)]",
+          pressable
+        )}
         aria-label={isMuted ? "Activer le son" : "Couper le son"}
       >
         {isMuted ? (
@@ -76,18 +80,18 @@ const VolumeControlComponent = ({
           onChange={handleSliderChange}
           className={cn(
             "w-full h-2 rounded-full appearance-none cursor-pointer",
-            "bg-white/10",
+            "bg-white border-2 border-black shadow-[2px_2px_0_#1B1B1B]",
             "[&::-webkit-slider-thumb]:appearance-none",
             "[&::-webkit-slider-thumb]:w-4",
             "[&::-webkit-slider-thumb]:h-4",
             "[&::-webkit-slider-thumb]:rounded-full",
-            "[&::-webkit-slider-thumb]:bg-white",
+            "[&::-webkit-slider-thumb]:bg-black",
             "[&::-webkit-slider-thumb]:cursor-pointer",
-            "[&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(255,255,255,0.5)]",
+            "[&::-webkit-slider-thumb]:shadow-[2px_2px_0_#1B1B1B]",
             "[&::-moz-range-thumb]:w-4",
             "[&::-moz-range-thumb]:h-4",
             "[&::-moz-range-thumb]:rounded-full",
-            "[&::-moz-range-thumb]:bg-white",
+            "[&::-moz-range-thumb]:bg-black",
             "[&::-moz-range-thumb]:border-0",
             "[&::-moz-range-thumb]:cursor-pointer"
           )}
@@ -96,13 +100,13 @@ const VolumeControlComponent = ({
 
         {/* Visual fill */}
         <div
-          className="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full pointer-events-none"
+          className="absolute inset-y-0 left-0 bg-gradient-to-r from-yellow-400 to-yellow-300 rounded-full pointer-events-none"
           style={{ width: `${displayVolume}%` }}
         />
       </div>
 
       {/* Volume percentage */}
-      <span className="text-sm text-gray-400 w-8 text-right">
+      <span className="text-sm text-[var(--color-text-secondary)] w-8 text-right">
         {Math.round(displayVolume)}
       </span>
     </div>

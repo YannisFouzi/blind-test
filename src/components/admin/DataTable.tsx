@@ -37,45 +37,49 @@ export function DataTable<T extends { id: string }>({
 
   if (data.length === 0) {
     return (
-      <div className="bg-slate-800/50 rounded-lg p-8 text-center border border-gray-700/50">
-        <p className="text-gray-400 text-lg">{emptyMessage}</p>
+      <div className="bg-white rounded-2xl p-8 text-center border-[3px] border-[#1B1B1B] shadow-[4px_4px_0_#1B1B1B]">
+        <p className="text-[var(--color-text-secondary)] text-lg">
+          {emptyMessage}
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-800/50 rounded-lg border border-gray-700/50 overflow-hidden">
+    <div className="bg-white rounded-2xl border-[3px] border-[#1B1B1B] overflow-hidden shadow-[4px_4px_0_#1B1B1B]">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-slate-700/50">
+          <thead className="bg-[var(--color-surface-overlay)]">
             <tr>
               {columns.map((column) => (
                 <th
                   key={String(column.key)}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
+                  className="px-6 py-3 text-left text-xs font-extrabold text-[var(--color-text-primary)] uppercase tracking-wider"
                 >
                   {column.label}
                 </th>
               ))}
               {(onEdit || onDelete || actions) && (
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-extrabold text-[var(--color-text-primary)] uppercase tracking-wider">
                   Actions
                 </th>
               )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-700/50">
+          <tbody className="divide-y divide-black/10">
             {data.map((item, index) => (
               <tr
                 key={item.id}
                 className={`${
-                  index % 2 === 0 ? "bg-slate-800/30" : "bg-slate-800/10"
-                } hover:bg-slate-700/30 transition-colors`}
+                  index % 2 === 0
+                    ? "bg-white"
+                    : "bg-[var(--color-surface-overlay)]"
+                }`}
               >
                 {columns.map((column) => (
                   <td
                     key={String(column.key)}
-                    className="px-6 py-4 whitespace-nowrap text-sm text-gray-300"
+                    className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-primary)]"
                   >
                     {column.render
                       ? column.render(item[column.key], item)

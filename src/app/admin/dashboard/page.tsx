@@ -138,7 +138,7 @@ export default function AdminDashboard() {
   // État de chargement initial
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center">
         <LoadingSpinner message="Vérification des droits..." />
       </div>
     );
@@ -415,8 +415,8 @@ export default function AdminDashboard() {
       {/* Modales de formulaires */}
       {activeModal === "universe" && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold text-white mb-4">
+          <div className="bg-white border-[3px] border-[#1B1B1B] rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[6px_6px_0_#1B1B1B]">
+            <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-4">
               {editingItem ? "Modifier l'univers" : "Créer un nouvel univers"}
             </h3>
             <UniverseForm
@@ -431,8 +431,8 @@ export default function AdminDashboard() {
 
       {activeModal === "work" && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold text-white mb-4">
+          <div className="bg-white border-[3px] border-[#1B1B1B] rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[6px_6px_0_#1B1B1B]">
+            <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-4">
               {editingItem ? "Modifier l'œuvre" : "Créer une nouvelle œuvre"}
             </h3>
             <WorkForm
@@ -454,8 +454,8 @@ export default function AdminDashboard() {
 
       {activeModal === "song" && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold text-white mb-4">
+          <div className="bg-white border-[3px] border-[#1B1B1B] rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[6px_6px_0_#1B1B1B]">
+            <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-4">
               {editingItem
                 ? "Modifier la chanson"
                 : "Créer une nouvelle chanson"}

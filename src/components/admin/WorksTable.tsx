@@ -68,8 +68,8 @@ const SortableWorkRow = ({
     <tr
       ref={setNodeRef}
       style={style}
-      className={`border-b border-gray-700 ${
-        isDragging ? "bg-gray-700" : "hover:bg-gray-800"
+      className={`border-b border-black/10 ${
+        isDragging ? "bg-[var(--color-surface-overlay)]" : ""
       }`}
     >
       {/* Colonne drag handle */}
@@ -77,7 +77,7 @@ const SortableWorkRow = ({
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-white p-1"
+          className="cursor-grab active:cursor-grabbing text-[var(--color-text-secondary)] p-1"
         >
           <GripVertical className="w-4 h-4" />
         </div>
@@ -85,16 +85,16 @@ const SortableWorkRow = ({
 
       {/* Colonne ordre */}
       <td className="px-4 py-3">
-        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-bold">
+        <span className="bg-[var(--color-brand-primary)] text-[#1B1B1B] px-2 py-1 rounded border-2 border-[#1B1B1B] text-sm font-bold shadow-[2px_2px_0_#1B1B1B]">
           {work.order || 0}
         </span>
       </td>
 
       {/* Colonne titre */}
-      <td className="px-4 py-3 text-white">{work.title}</td>
+      <td className="px-4 py-3 text-[var(--color-text-primary)] font-semibold">{work.title}</td>
 
       {/* Colonne playlist */}
-      <td className="px-4 py-3 text-gray-300">
+      <td className="px-4 py-3 text-[var(--color-text-secondary)]">
         {work.playlistId || "Non définie"}
       </td>
 
@@ -196,7 +196,9 @@ export const WorksTable = ({
 
   if (works.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-400">Aucune Å“uvre crÃ©Ã©e</div>
+      <div className="text-center py-8 text-[var(--color-text-secondary)]">
+        Aucune oeuvre creee
+      </div>
     );
   }
 
@@ -206,23 +208,23 @@ export const WorksTable = ({
   );
 
   return (
-    <div className="bg-gray-800 rounded-lg overflow-hidden">
+    <div className="bg-white rounded-2xl overflow-hidden border-[3px] border-[#1B1B1B] shadow-[4px_4px_0_#1B1B1B]">
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-700">
+            <thead className="bg-[var(--color-surface-overlay)]">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"></th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-extrabold text-[var(--color-text-primary)] uppercase tracking-wider"></th>
+                <th className="px-4 py-3 text-left text-xs font-extrabold text-[var(--color-text-primary)] uppercase tracking-wider">
                   Ordre
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-extrabold text-[var(--color-text-primary)] uppercase tracking-wider">
                   Titre
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-extrabold text-[var(--color-text-primary)] uppercase tracking-wider">
                   Playlist ID
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-extrabold text-[var(--color-text-primary)] uppercase tracking-wider">
                   Actions
                 </th>
               </tr>

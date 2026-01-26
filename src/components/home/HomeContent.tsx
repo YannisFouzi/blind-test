@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HeroSection } from "@/components/home/HeroSection";
 import { UniverseGrid } from "@/components/home/UniverseGrid";
 import { UniverseCustomizeModal } from "@/components/home/UniverseCustomizeModal";
@@ -76,6 +76,18 @@ export const HomeContent = () => {
   }, [openCustomizeStore]);
 
   const isHost = useMemo(() => mode === "multi" && Boolean(hostRoomId), [mode, hostRoomId]);
+  const handleToggleMode = useCallback(() => {
+    setMode((prev) => (prev === "solo" ? "multi" : "solo"));
+  }, []);
+  const handleToggleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        handleToggleMode();
+      }
+    },
+    [handleToggleMode]
+  );
 
   // Adapter PartyKit RoomMetadata vers le type Room pour compatibilité JSX
   const adaptedRooms = useMemo<Room[]>(() => {
@@ -351,8 +363,38 @@ export const HomeContent = () => {
     return <HomePageSkeleton />;
   }
 
-  const containerClass =
-    "bg-slate-900/60 border border-purple-500/30 rounded-3xl p-6 md:p-8 backdrop-blur space-y-6 shadow-2xl shadow-purple-900/20";
+  const modeToggle = (
+    <div
+      role="switch"
+      aria-checked={mode === "multi"}
+      aria-label="Mode de jeu"
+      tabIndex={0}
+      onClick={handleToggleMode}
+      onKeyDown={handleToggleKeyDown}
+      className="relative inline-flex items-center w-44 sm:w-52 h-12 rounded-full border-[3px] border-black bg-white shadow-[6px_6px_0_#0A0B0E] cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+    >
+      <span
+        aria-hidden="true"
+        className={`absolute top-1 bottom-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-[var(--color-brand-primary)] border-2 border-black transition-transform duration-300 ease-out ${
+          mode === "multi" ? "translate-x-full" : "translate-x-0"
+        }`}
+      />
+      <span
+        className={`relative z-10 flex-1 text-center text-xs sm:text-sm font-extrabold tracking-wide ${
+          mode === "solo" ? "text-black" : "text-black/60"
+        }`}
+      >
+        Solo
+      </span>
+      <span
+        className={`relative z-10 flex-1 text-center text-xs sm:text-sm font-extrabold tracking-wide ${
+          mode === "multi" ? "text-black" : "text-black/60"
+        }`}
+      >
+        Multi
+      </span>
+    </div>
+  );
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12 space-y-10">
@@ -361,93 +403,82 @@ export const HomeContent = () => {
         onAdminClick={() => router.push("/admin")}
         showSubtitle
       />
+      
+      <div>
+        <div className="flex justify-center">{modeToggle}</div>
+        <div
+          aria-hidden={mode !== "multi"}
+          className={`overflow-hidden transition-[max-height,opacity,transform,margin] duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)] origin-top ${
+            mode === "multi"
+              ? "max-h-[1600px] opacity-100 translate-y-0 mt-6"
+              : "max-h-0 opacity-0 -translate-y-6 mt-0 pointer-events-none"
+          }`}
+        >
+          <div className="pr-2 pb-2">
+            <div className="magic-card p-6 md:p-8 space-y-6">
+              <div className="flex flex-col gap-2 items-center text-center">
+                <div className="w-full flex justify-center">
+                  <input
+                    {...form.register("displayName")}
+                    placeholder="Votre pseudo"
+                    className="w-full max-w-md bg-[var(--color-surface-overlay)] text-[var(--color-text-primary)] text-sm px-4 py-3 rounded-xl border-2 border-black focus:outline-none focus:border-black shadow-[3px_3px_0_#1B1B1B]"
+                  />
+                </div>
+                {form.formState.errors.displayName && (
+                  <p className="text-xs text-red-300">{form.formState.errors.displayName.message}</p>
+                )}
+              </div>
 
-      <div className={containerClass}>
-        <div className="flex justify-center">
-          <div className="inline-flex rounded-3xl bg-slate-800/80 p-1.5 shadow-inner shadow-black/30">
-            <button
-              onClick={() => setMode("solo")}
-              className={`px-8 py-3 rounded-2xl text-base font-bold tracking-wide transition-all ${
-                mode === "solo"
-                  ? "bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 text-white shadow-xl shadow-purple-500/50"
-                  : "text-slate-200 hover:text-white hover:bg-slate-700/60"
-              }`}
-            >
-              Solo
-            </button>
-            <button
-              onClick={() => setMode("multi")}
-              className={`px-8 py-3 rounded-2xl text-base font-bold tracking-wide transition-all ${
-                mode === "multi"
-                  ? "bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 text-white shadow-xl shadow-purple-500/50"
-                  : "text-slate-200 hover:text-white hover:bg-slate-700/60"
-              }`}
-            >
-              Multi
-            </button>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.4fr)] md:items-center">
+                <div className="flex justify-center">
+                  <button
+                    onClick={handleCreateRoom}
+                    disabled={isCreatingRoom || Boolean(hostRoomId)}
+                    className="magic-button px-6 py-2 text-sm font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {hostRoomId ? "Room créée" : isCreatingRoom ? "Création..." : "Créer une room"}
+                  </button>
+                </div>
+
+                <div className="hidden md:block w-px self-stretch bg-black/15" aria-hidden="true" />
+
+                <div className="space-y-3">
+                  <div className="text-xs uppercase tracking-[0.25em] text-[var(--color-text-secondary)]">Rooms disponibles</div>
+                  {adaptedRooms.length === 0 && (
+                    <div className="text-sm text-[var(--color-text-secondary)]">
+                      {lobbyError ? `Erreur lobby: ${lobbyError}` : "Aucune room disponible pour le moment."}
+                    </div>
+                  )}
+                  {adaptedRooms.length > 0 && (
+                    <div className="grid grid-cols-1 gap-3">
+                      {adaptedRooms.map((room) => (
+                        <div
+                          key={room.id}
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-black bg-[var(--color-surface-elevated)] px-4 py-3 shadow-[3px_3px_0_#1B1B1B]"
+                        >
+                          <div className="text-sm font-semibold text-[var(--color-text-primary)]">
+                            Hôte: {room.hostName || "Inconnu"}
+                          </div>
+                          <button
+                            onClick={() => handleJoinRoom(room.id)}
+                            className="magic-button px-4 py-2 text-xs font-bold"
+                          >
+                            Rejoindre
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {homeError && <div className="text-xs text-red-600">{homeError}</div>}
+              {homeInfo && <div className="text-xs text-green-700">{homeInfo}</div>}
+              {!lobbyConnected && <div className="text-xs text-amber-700">Connexion au lobby...</div>}
+            </div>
           </div>
         </div>
-
-        {mode === "multi" && (
-          <div className="space-y-6">
-            <div className="flex flex-col gap-2 items-center text-center">
-              <div className="w-full flex justify-center">
-                <input
-                  {...form.register("displayName")}
-                  placeholder="Votre pseudo"
-                  className="w-full max-w-md bg-slate-800/80 text-white text-sm px-4 py-3 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-400 shadow-inner shadow-black/30"
-                />
-              </div>
-              {form.formState.errors.displayName && (
-                <p className="text-xs text-red-300">{form.formState.errors.displayName.message}</p>
-              )}
-            </div>
-
-            <div className="flex justify-center">
-              <button
-                onClick={handleCreateRoom}
-                disabled={isCreatingRoom || Boolean(hostRoomId)}
-                className="w-full max-w-md px-4 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/40 hover:shadow-purple-500/50 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {hostRoomId ? "Room créée" : isCreatingRoom ? "Création..." : "Créer une room"}
-              </button>
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-3 shadow-lg shadow-purple-900/20">
-              <div className="text-xs uppercase tracking-[0.25em] text-slate-300">Rooms disponibles</div>
-              {adaptedRooms.length === 0 && (
-                <div className="text-sm text-slate-200">
-                  {lobbyError ? `Erreur lobby: ${lobbyError}` : "Aucune room disponible pour le moment."}
-                </div>
-              )}
-              {adaptedRooms.length > 0 && (
-                <div className="grid grid-cols-1 gap-2">
-                  {adaptedRooms.map((room) => (
-                    <button
-                      key={room.id}
-                      onClick={() => handleJoinRoom(room.id)}
-                      className="w-full text-left rounded-xl border border-slate-800 bg-slate-800/70 hover:bg-slate-800/90 transition-all px-4 py-3 shadow-inner shadow-black/30"
-                    >
-                      <div className="flex items-center justify-between text-sm text-white">
-                        <div>
-                          <div className="font-semibold">Room {room.id}</div>
-                          <div className="text-xs text-slate-300">Hôte: {room.hostName || room.hostId}</div>
-                        </div>
-                        <span className="text-xs text-purple-200">Rejoindre</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {homeError && <div className="text-xs text-red-300">{homeError}</div>}
-            {homeInfo && <div className="text-xs text-green-300">{homeInfo}</div>}
-            {!lobbyConnected && <div className="text-xs text-yellow-300">Connexion au lobby...</div>}
-          </div>
-        )}
       </div>
-
       {mode === "solo" && (
         <UniverseGrid
           universes={universes}

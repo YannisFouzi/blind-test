@@ -1,4 +1,4 @@
-import { darken, lighten, rgba, saturate } from "polished";
+import { lighten, rgba } from "polished";
 
 // Interface pour les styles générés
 export interface GeneratedStyles {
@@ -42,21 +42,16 @@ export const generateStylesFromColor = (hexColor: string): GeneratedStyles => {
 
   try {
     // Générer des variations de la couleur avec polished
-    const lighterColor = lighten(0.15, hexColor); // +15% lightness
-    const veryDarkColor = darken(0.40, hexColor); // -40% lightness
-
-    // Couleurs pour les gradients de fond
-    const bgColor1 = "#1c1c35"; // Couleur sombre de base
-    const bgColor2 = darken(0.30, saturate(0.10, hexColor)); // +10% saturation, -30% lightness
-    const bgColor3 = veryDarkColor;
+    const lighterColor = lighten(0.25, hexColor);
+    const softColor = lighten(0.4, hexColor);
 
     return {
       // Classes Tailwind statiques (pour rétrocompatibilité)
-      gradient: `from-slate-800/80 via-slate-700/80 to-slate-600/40`,
-      border: `border-slate-600/20`,
-      borderHover: `hover:border-slate-400/60`,
-      shadow: `hover:shadow-xl`,
-      overlay: `from-white/10 via-transparent to-black/10`,
+      gradient: `from-white via-white to-white`,
+      border: `border-black`,
+      borderHover: `hover:border-black`,
+      shadow: `hover:shadow-[6px_6px_0_#1B1B1B]`,
+      overlay: `from-transparent via-transparent to-transparent`,
       iconGradient: `from-blue-500 to-blue-400`,
       textGradient: `from-blue-500 to-blue-400`,
       particles: `bg-blue-500`,
@@ -65,22 +60,18 @@ export const generateStylesFromColor = (hexColor: string): GeneratedStyles => {
 
       // Styles inline fonctionnels
       inlineStyles: {
-        background: `linear-gradient(135deg,
-          ${rgba(bgColor1, 0.8)} 0%,
-          ${rgba(bgColor2, 0.8)} 35%,
-          ${rgba(bgColor3, 0.4)} 100%
+        background: `linear-gradient(180deg,
+          ${rgba(softColor, 0.65)} 0%,
+          rgba(255, 255, 255, 0.95) 55%,
+          rgba(255, 255, 255, 1) 100%
         )`,
-        borderColor: rgba(hexColor, 0.2),
-        boxShadow: `0 10px 30px ${rgba(hexColor, 0.25)}, 0 0 0 1px ${rgba(
-          hexColor,
-          0.125
-        )}`,
+        borderColor: "#1B1B1B",
+        boxShadow: "4px 4px 0 #1B1B1B",
       },
       overlayStyles: {
-        background: `linear-gradient(135deg,
-          ${rgba(hexColor, 0.1)} 0%,
-          transparent 50%,
-          ${rgba(veryDarkColor, 0.1)} 100%
+        background: `radial-gradient(circle at top,
+          ${rgba(hexColor, 0.25)} 0%,
+          transparent 65%
         )`,
       },
       iconStyles: {

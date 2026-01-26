@@ -20,7 +20,7 @@ const buildUniverseColumns = () => [
   { key: "description" as keyof Universe, label: "Description" },
   {
     key: "color" as keyof Universe,
-    label: "Thème",
+    label: "Theme",
     render: (value: unknown, universe: Universe) => {
       const colorValue = String(value);
       const color = colorValue.startsWith("#") ? colorValue : "#3B82F6";
@@ -38,12 +38,12 @@ const buildUniverseColumns = () => [
             )}
           </div>
           <div>
-            <div className="text-white font-medium">
-              {universe.name || "Couleur personnalisée"}
+            <div className="text-[var(--color-text-primary)] font-medium">
+              {universe.name || "Couleur personnalisee"}
             </div>
-            <div className="text-gray-400 text-xs">{color}</div>
+            <div className="text-[var(--color-text-secondary)] text-xs">{color}</div>
             {!colorValue.startsWith("#") && (
-              <div className="text-red-400 text-xs">⚠️ Format invalide</div>
+              <div className="text-red-600 text-xs">Format invalide</div>
             )}
           </div>
         </div>
@@ -56,7 +56,9 @@ const buildUniverseColumns = () => [
     render: (value: unknown) => (
       <span
         className={`px-2 py-1 rounded text-xs ${
-          Boolean(value) ? "bg-green-600 text-white" : "bg-red-600 text-white"
+          Boolean(value)
+            ? "bg-[#86efac] text-[#1B1B1B] border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]"
+            : "bg-[#fca5a5] text-[#1B1B1B] border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]"
         }`}
       >
         {Boolean(value) ? "Actif" : "Inactif"}
@@ -78,7 +80,9 @@ export const UniverseSection = ({
   return (
     <section>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-white">Univers</h2>
+        <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">
+          Univers
+        </h2>
         <Button variant="primary" onClick={onCreate} className="flex items-center space-x-2">
           <Plus className="w-4 h-4" />
           <span>Nouveau</span>
@@ -89,7 +93,7 @@ export const UniverseSection = ({
         data={universes}
         columns={universeColumns}
         loading={loading}
-        emptyMessage="Aucun univers créé"
+        emptyMessage="Aucun univers cree"
         onEdit={onEdit}
         onDelete={onDelete}
         actions={(universe) => (
@@ -98,7 +102,7 @@ export const UniverseSection = ({
             size="sm"
             onClick={() => onManageWorks(universe)}
           >
-            Gérer les œuvres
+            Gerer les oeuvres
           </Button>
         )}
       />

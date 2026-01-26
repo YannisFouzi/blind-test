@@ -16,11 +16,11 @@ export const LoadingSpinner = ({
   };
 
   return (
-    <div className={`text-white text-center ${className}`}>
+    <div className={`text-[var(--color-text-primary)] text-center ${className}`}>
       <div
-        className={`animate-spin rounded-full border-b-2 border-white mx-auto mb-4 ${sizeClasses[size]}`}
+        className={`animate-spin rounded-full border-4 border-[#1B1B1B] border-t-transparent mx-auto mb-4 ${sizeClasses[size]}`}
       ></div>
-      {message && <p className="text-xl">{message}</p>}
+      {message && <p className="text-lg font-semibold">{message}</p>}
     </div>
   );
 };

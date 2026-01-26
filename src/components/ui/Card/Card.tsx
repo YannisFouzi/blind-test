@@ -18,16 +18,16 @@ import type { HTMLAttributes } from "react";
 
 const cardVariants = cva(
   // Base styles - appliqués à tous les variants
-  "relative rounded-lg border overflow-hidden transition-all duration-300",
+  "relative rounded-2xl border-2 border-[var(--color-text-primary)] overflow-hidden transition-all duration-200",
   {
     variants: {
       /**
        * Surface variant - Niveau de profondeur visuelle
        */
       surface: {
-        base: "bg-[var(--color-surface-base)] border-[rgba(255,255,255,0.05)]",
-        elevated: "bg-[var(--color-surface-elevated)] border-[rgba(255,255,255,0.1)]",
-        overlay: "bg-[var(--color-surface-overlay)] border-[rgba(255,255,255,0.2)]",
+        base: "bg-[var(--color-surface-base)]",
+        elevated: "bg-[var(--color-surface-elevated)]",
+        overlay: "bg-[var(--color-surface-overlay)]",
       },
 
       /**
@@ -54,7 +54,7 @@ const cardVariants = cva(
        * Interactive variant - Effets hover/active
        */
       interactive: {
-        true: "cursor-pointer hover:scale-[1.02] hover:border-[rgba(255,255,255,0.3)] active:scale-[0.98]",
+        true: "cursor-pointer",
         false: "",
       },
 
@@ -70,23 +70,7 @@ const cardVariants = cva(
     },
 
     // Compound variants - Combinaisons spéciales
-    compoundVariants: [
-      {
-        interactive: true,
-        glow: "purple",
-        className: "hover:shadow-[0_12px_48px_rgba(139,92,246,0.5)]",
-      },
-      {
-        interactive: true,
-        glow: "pink",
-        className: "hover:shadow-[0_12px_48px_rgba(236,72,153,0.5)]",
-      },
-      {
-        interactive: true,
-        glow: "gold",
-        className: "hover:shadow-[0_12px_48px_rgba(245,158,11,0.5)]",
-      },
-    ],
+    compoundVariants: [],
 
     // Default variants
     defaultVariants: {
@@ -140,7 +124,7 @@ export const Card = ({
       className={cn(
         cardVariants({ surface, glow, size, interactive, rounded }),
         blur && "backdrop-blur-sm",
-        animatedBorder && "before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-r before:from-purple-500 before:via-pink-500 before:to-purple-500 before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500 before:-z-10",
+        animatedBorder && "before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-r before:from-purple-500 before:via-pink-500 before:to-purple-500 before:opacity-100 before:transition-opacity before:duration-500 before:-z-10",
         className
       )}
       {...props}
@@ -183,7 +167,7 @@ export const CardTitle = ({
 }: CardTitleProps) => {
   return (
     <Component
-      className={cn("text-2xl font-semibold leading-none tracking-tight text-white", className)}
+      className={cn("text-2xl font-bold leading-none tracking-tight text-[var(--color-text-primary)]", className)}
       {...props}
     >
       {children}
@@ -206,7 +190,7 @@ export const CardDescription = ({
 }: CardDescriptionProps) => {
   return (
     <p
-      className={cn("text-sm text-gray-400", className)}
+      className={cn("text-sm text-[var(--color-text-secondary)]", className)}
       {...props}
     >
       {children}

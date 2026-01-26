@@ -152,6 +152,15 @@ export const useMultiplayerGame = ({
   }, [currentSong?.id]);
 
   /**
+   * Masquer l'animation des points apres 1s
+   */
+  useEffect(() => {
+    if (!lastGain) return;
+    const timeoutId = setTimeout(() => setLastGain(null), 2000);
+    return () => clearTimeout(timeoutId);
+  }, [lastGain]);
+
+  /**
    * Reset la sélection si l'œuvre n'est plus autorisée
    */
   useEffect(() => {

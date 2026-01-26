@@ -37,17 +37,17 @@ export const ConfirmModal = ({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-white">
+          <DialogTitle className="flex items-center gap-3 text-[var(--color-text-primary)]">
             <span
               className={
-                variant === "danger" ? "text-red-400" : "text-amber-400"
+                variant === "danger" ? "text-red-600" : "text-amber-600"
               }
             >
               {variant === "danger" ? "⚠️" : "⚡"}
             </span>
             {title}
           </DialogTitle>
-          <DialogDescription className="text-slate-300">
+          <DialogDescription className="text-[var(--color-text-secondary)]">
             {message}
           </DialogDescription>
         </DialogHeader>

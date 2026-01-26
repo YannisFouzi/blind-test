@@ -1,26 +1,26 @@
 ﻿import type { Metadata } from "next";
-import { Cinzel, Geist, Geist_Mono } from "next/font/google";
+import { Baloo_2, JetBrains_Mono, Nunito } from "next/font/google";
 import "./globals.css";
 import { ProvidersWithAuth } from "./providers";
 import { Toaster } from "@/components/ui";
 import { PartyKitProvider } from "@/context/PartyKitProvider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const displayFont = Baloo_2({
+  variable: "--font-display",
   subsets: ["latin"],
   display: "swap",
   preload: true,
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const bodyFont = Nunito({
+  variable: "--font-body",
   subsets: ["latin"],
   display: "swap",
   preload: true,
 });
 
-const cinzel = Cinzel({
-  variable: "--font-cinzel",
+const monoFont = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
   preload: true,
@@ -40,7 +40,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} antialiased`}
+        className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable} antialiased`}
       >
         <ProvidersWithAuth>
           <PartyKitProvider>{children}</PartyKitProvider>
