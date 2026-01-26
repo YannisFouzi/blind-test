@@ -5,6 +5,15 @@
  * Affiche une structure de chargement qui correspond au layout final
  * Réduit le CLS (Cumulative Layout Shift) et améliore l'UX
  */
+const SKELETON_CARD_KEYS = [
+  "skeleton-1",
+  "skeleton-2",
+  "skeleton-3",
+  "skeleton-4",
+  "skeleton-5",
+  "skeleton-6",
+];
+
 export function HomePageSkeleton() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-purple-800 flex flex-col items-center justify-center p-4 relative overflow-hidden">
@@ -18,9 +27,9 @@ export function HomePageSkeleton() {
 
       {/* Grid de cards skeleton */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl w-full px-4">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
+        {SKELETON_CARD_KEYS.map((key) => (
           <div
-            key={i}
+            key={key}
             className="relative p-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 animate-pulse"
           >
             {/* Icon skeleton */}

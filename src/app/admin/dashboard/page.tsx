@@ -1,20 +1,78 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Song, Universe, Work } from "@/types";
 import { AdminLayout } from "../../../components/admin/AdminLayout";
-import { SongForm } from "../../../components/admin/SongForm";
-import { UniverseForm } from "../../../components/admin/UniverseForm";
-import { WorkForm } from "../../../components/admin/WorkForm";
-import { ConfirmModal } from "../../../components/ui/ConfirmModal";
 import { LoadingSpinner } from "../../../components/ui/LoadingSpinner";
 import { useAdmin } from "../../../hooks/useAdmin";
 import { useAuth } from "../../../hooks/useAuth";
-import { UniverseSection } from "@/components/admin/dashboard/UniverseSection";
-import { WorksSection } from "@/components/admin/dashboard/WorksSection";
-import { SongsSection } from "@/components/admin/dashboard/SongsSection";
-import { CookieStatus } from "@/components/admin/CookieStatus";
+
+const UniverseSection = dynamic(
+  () =>
+    import("@/components/admin/dashboard/UniverseSection").then(
+      (mod) => mod.UniverseSection
+    ),
+  {
+    loading: () => <LoadingSpinner size="large" />,
+  }
+);
+
+const WorksSection = dynamic(
+  () =>
+    import("@/components/admin/dashboard/WorksSection").then(
+      (mod) => mod.WorksSection
+    ),
+  {
+    loading: () => <LoadingSpinner size="large" />,
+  }
+);
+
+const SongsSection = dynamic(
+  () =>
+    import("@/components/admin/dashboard/SongsSection").then(
+      (mod) => mod.SongsSection
+    ),
+  {
+    loading: () => <LoadingSpinner size="large" />,
+  }
+);
+
+const CookieStatus = dynamic(
+  () => import("@/components/admin/CookieStatus").then((mod) => mod.CookieStatus),
+  {
+    loading: () => <LoadingSpinner size="large" />,
+  }
+);
+
+const UniverseForm = dynamic(
+  () => import("@/components/admin/UniverseForm").then((mod) => mod.UniverseForm),
+  {
+    loading: () => <LoadingSpinner size="large" />,
+  }
+);
+
+const WorkForm = dynamic(
+  () => import("@/components/admin/WorkForm").then((mod) => mod.WorkForm),
+  {
+    loading: () => <LoadingSpinner size="large" />,
+  }
+);
+
+const SongForm = dynamic(
+  () => import("@/components/admin/SongForm").then((mod) => mod.SongForm),
+  {
+    loading: () => <LoadingSpinner size="large" />,
+  }
+);
+
+const ConfirmModal = dynamic(
+  () => import("@/components/ui/ConfirmModal").then((mod) => mod.ConfirmModal),
+  {
+    loading: () => null,
+  }
+);
 
 type ModalType = "universe" | "work" | "song" | null;
 

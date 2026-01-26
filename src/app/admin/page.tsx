@@ -127,7 +127,7 @@ export default function AdminLoginPage() {
             Administration
           </h1>
           <p className="text-gray-400 mb-8">
-            Gestion des univers et playlists de blind test
+            Gestion des univers et playlists
           </p>
 
           {error && (
@@ -149,11 +149,6 @@ export default function AdminLoginPage() {
                 <GoogleIcon />
                 Se connecter avec Google
               </button>
-
-              <div className="text-xs text-gray-500">
-                <p>Accès réservé aux administrateurs</p>
-                <p>Email autorisé : {ADMIN_EMAIL}</p>
-              </div>
             </div>
           ) : (
             <div className="text-center">

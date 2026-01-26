@@ -558,6 +558,12 @@ export default class BlindTestRoom implements Party.Server {
       songs: this.state.songs, // Ajouter pour que les clients aient la liste
       totalSongs: this.state.songs.length,
     });
+
+    // ✅ FIX: Envoyer players_update pour initialiser hasAnsweredCurrentSong
+    this.broadcast({
+      type: "players_update",
+      players: this.getPlayersArray(),
+    });
   }
 
   /**
@@ -773,6 +779,12 @@ export default class BlindTestRoom implements Party.Server {
       type: "song_changed",
       currentSongIndex: this.state.currentSongIndex,
       currentSong: nextSong,
+    });
+
+    // ✅ FIX: Envoyer players_update pour réinitialiser hasAnsweredCurrentSong
+    this.broadcast({
+      type: "players_update",
+      players: this.getPlayersArray(),
     });
   }
 

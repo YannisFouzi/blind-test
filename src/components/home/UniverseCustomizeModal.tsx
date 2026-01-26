@@ -1,71 +1,141 @@
 "use client";
 
-import { memo, useCallback } from "react";
-import type { Universe, Work } from "@/types";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import type { Work } from "@/types";
+import { useGameConfiguration, useCanSelectMoreWorks } from "@/stores";
+import { getWorksByUniverse, getSongsByWork } from "@/services/firebase";
 
+/**
+ * Props pour UniverseCustomizeModal
+ *
+ * AVANT : 17 props ❌
+ * APRÈS : 2 props ✅ (-88% de props!)
+ */
 interface UniverseCustomizeModalProps {
-  universe: Universe;
-  works: Work[];
-  allowedWorks: string[];
-  noSeek: boolean;
-  maxSongs: number | null;
-  totalSongsAvailable: number;
-  songCountByWork: Record<string, number>;
-  loading: boolean;
-  error: string | null;
-  isApplying?: boolean;
-  isCustomMode?: boolean; // Mode custom = toutes les œuvres avec limite
-  maxWorksAllowed?: number | null; // Limite d'œuvres sélectionnables (mode custom)
-  onToggleWork: (workId: string) => void;
-  onSetNoSeek: (value: boolean) => void;
-  onSetMaxSongs: (value: number | null) => void;
+  /**
+   * Callback appelé quand on clique sur "Appliquer et jouer"
+   * Contient la logique de navigation (solo vs multi)
+   */
   onApply: () => void;
-  onClose: () => void;
+
+  /**
+   * Indique si l'application est en cours (création de room, etc.)
+   */
+  isApplying?: boolean;
 }
 
 const UniverseCustomizeModalComponent = ({
-  universe,
-  works,
-  allowedWorks,
-  noSeek,
-  maxSongs,
-  totalSongsAvailable,
-  songCountByWork,
-  loading,
-  error,
-  isApplying = false,
-  isCustomMode = false,
-  maxWorksAllowed = null,
-  onToggleWork,
-  onSetNoSeek,
-  onSetMaxSongs,
   onApply,
-  onClose,
+  isApplying = false,
 }: UniverseCustomizeModalProps) => {
-  // En mode custom, vérifier si on a atteint la limite
-  const canSelectMoreWorks = !maxWorksAllowed || allowedWorks.length < maxWorksAllowed;
-  // Valeur effective du slider (si null = toutes les musiques = totalSongsAvailable)
-  const effectiveMaxSongs = maxSongs ?? totalSongsAvailable;
-  
-  // Gérer le changement du slider/input
-  const handleMaxSongsChange = useCallback((value: number) => {
-    // Si la valeur est égale au total, on met null (= toutes)
-    if (value >= totalSongsAvailable) {
-      onSetMaxSongs(null);
-    } else {
-      onSetMaxSongs(Math.max(1, Math.min(value, totalSongsAvailable)));
+  // ========== STATE DEPUIS ZUSTAND ==========
+  const {
+    customizingUniverse,
+    allowedWorks,
+    noSeek,
+    maxSongs,
+    isCustomMode,
+    maxWorksAllowed,
+    toggleWork,
+    setNoSeek,
+    setMaxSongs,
+    closeCustomize,
+  } = useGameConfiguration();
+
+  const canSelectMoreWorks = useCanSelectMoreWorks();
+
+  // ========== DATA FETCHING LOCAL ==========
+  const [works, setWorks] = useState<Work[]>([]);
+  const [songCountByWork, setSongCountByWork] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Charger les works quand l'univers change
+  useEffect(() => {
+    if (!customizingUniverse) {
+      setWorks([]);
+      setSongCountByWork({});
+      setError(null);
+      return;
     }
-  }, [totalSongsAvailable, onSetMaxSongs]);
+
+    const loadWorksAndCounts = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Charger les works de l'univers
+        const worksResult = await getWorksByUniverse(customizingUniverse.id);
+
+        if (!worksResult.success || !worksResult.data) {
+          throw new Error("Impossible de charger les œuvres");
+        }
+
+        const loadedWorks = worksResult.data;
+        setWorks(loadedWorks);
+
+        // Charger le nombre de songs par work
+        const songCounts = await Promise.all(
+          loadedWorks.map(async (work) => {
+            const songsResult = await getSongsByWork(work.id);
+            const count = songsResult.success && songsResult.data
+              ? songsResult.data.length
+              : 0;
+            return { workId: work.id, count };
+          })
+        );
+
+        const counts: Record<string, number> = {};
+        for (const { workId, count } of songCounts) {
+          counts[workId] = count;
+        }
+        setSongCountByWork(counts);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Erreur inconnue");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadWorksAndCounts();
+  }, [customizingUniverse]);
+
+  // ========== COMPUTED VALUES ==========
+  const totalSongsAvailable = useMemo(() => {
+    return allowedWorks.reduce((total, workId) => {
+      return total + (songCountByWork[workId] || 0);
+    }, 0);
+  }, [allowedWorks, songCountByWork]);
+
+  const effectiveMaxSongs = maxSongs ?? totalSongsAvailable;
+
+  // ========== HANDLERS ==========
+  const handleMaxSongsChange = useCallback(
+    (value: number) => {
+      // Si la valeur est égale au total, on met null (= toutes)
+      if (value >= totalSongsAvailable) {
+        setMaxSongs(null);
+      } else {
+        setMaxSongs(Math.max(1, Math.min(value, totalSongsAvailable)));
+      }
+    },
+    [totalSongsAvailable, setMaxSongs]
+  );
+
+  // Si pas d'univers, ne rien afficher
+  if (!customizingUniverse) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur">
       <div className="w-full max-w-3xl bg-slate-900/90 border border-purple-500/40 rounded-2xl p-6 space-y-4 mx-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-semibold text-white">
-            Paramètres avancés – {universe.name}
+            Paramètres avancés – {customizingUniverse.name}
           </h3>
           <button
-            onClick={onClose}
+            onClick={closeCustomize}
             className="text-slate-300 hover:text-white text-sm"
           >
             Fermer
@@ -78,7 +148,7 @@ const UniverseCustomizeModalComponent = ({
             <input
               type="checkbox"
               checked={noSeek}
-              onChange={(e) => onSetNoSeek(e.target.checked)}
+              onChange={(e) => setNoSeek(e.target.checked)}
               className="w-4 h-4 rounded"
             />
             Activer le mode sans avance (timeline non cliquable)
@@ -92,7 +162,7 @@ const UniverseCustomizeModalComponent = ({
                 {totalSongsAvailable} disponible{totalSongsAvailable > 1 ? "s" : ""}
               </span>
             </div>
-            
+
             {!loading && totalSongsAvailable > 0 && (
               <div className="flex items-center gap-4">
                 <input
@@ -125,7 +195,13 @@ const UniverseCustomizeModalComponent = ({
             <div className="flex items-center justify-between">
               <span className="text-white text-sm font-semibold">Oeuvres incluses</span>
               {isCustomMode && maxWorksAllowed && (
-                <span className={`text-xs ${allowedWorks.length >= maxWorksAllowed ? "text-orange-400" : "text-slate-400"}`}>
+                <span
+                  className={`text-xs ${
+                    allowedWorks.length >= maxWorksAllowed
+                      ? "text-orange-400"
+                      : "text-slate-400"
+                  }`}
+                >
                   {allowedWorks.length}/{maxWorksAllowed} sélectionnées
                 </span>
               )}
@@ -139,7 +215,7 @@ const UniverseCustomizeModalComponent = ({
                   const songCount = songCountByWork[work.id] || 0;
                   const isSelected = allowedWorks.includes(work.id);
                   const isDisabled = !isSelected && !canSelectMoreWorks;
-                  
+
                   return (
                     <label
                       key={work.id}
@@ -152,7 +228,7 @@ const UniverseCustomizeModalComponent = ({
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        onChange={() => !isDisabled && onToggleWork(work.id)}
+                        onChange={() => !isDisabled && toggleWork(work.id)}
                         disabled={isDisabled}
                         className="w-4 h-4 rounded"
                       />
@@ -170,7 +246,7 @@ const UniverseCustomizeModalComponent = ({
 
         <div className="flex justify-end gap-3 pt-2">
           <button
-            onClick={onClose}
+            onClick={closeCustomize}
             className="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm hover:bg-slate-600 transition-colors"
           >
             Annuler

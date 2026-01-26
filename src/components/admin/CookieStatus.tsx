@@ -162,8 +162,8 @@ export const CookieStatus = () => {
 
       {!status?.valid && (
         <p className="text-xs text-gray-400 mt-3">
-          1. Cliquer "Ouvrir YouTube" → 2. Se connecter (idéalement en incognito) →
-          3. Exporter via extension "Get cookies.txt LOCALLY" → 4. Uploader ici
+          1. Cliquer &quot;Ouvrir YouTube&quot; → 2. Se connecter (idéalement en incognito) →
+          3. Exporter via extension &quot;Get cookies.txt LOCALLY&quot; → 4. Uploader ici
         </p>
       )}
     </div>

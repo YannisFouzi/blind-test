@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import bundleAnalyzer from "@next/bundle-analyzer";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -150,8 +151,12 @@ const nextConfig: NextConfig = {
     contentSecurityPolicy:
       "default-src 'self'; img-src 'self' data: https:; script-src 'none'; style-src 'unsafe-inline'; sandbox;",
     formats: ["image/avif", "image/webp"],
-    minimumCacheTTL: 60 * 60 * 24,
+    minimumCacheTTL: 60 * 60 * 24 * 7,
   },
 };
 
-export default nextConfig;
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
+
+export default withBundleAnalyzer(nextConfig);

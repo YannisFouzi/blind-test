@@ -95,7 +95,7 @@ export const GameSessionSchema = z.object({
   createdAt: timestampSchema,
 });
 
-const RoomStateSchema = z.enum(["idle", "playing", "results"]);
+const RoomStateSchema = z.enum(["idle", "configured", "playing", "results"]);
 
 export const RoomPlayerSchema = z.object({
   id: z.string().min(1),

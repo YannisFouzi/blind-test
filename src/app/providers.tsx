@@ -1,5 +1,6 @@
 "use client";
 
+import "@/lib/wdyr";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ReactNode, useEffect, useState } from "react";
@@ -15,8 +16,8 @@ export function Providers({ children }: { children: ReactNode }) {
         defaultOptions: {
           queries: {
             // Configurations par défaut professionnelles
-            staleTime: 60 * 1000, // Les données sont considérées fraîches pendant 1 minute
-            gcTime: 5 * 60 * 1000, // Garbage collection après 5 minutes (anciennement cacheTime)
+            staleTime: 5 * 60 * 1000, // Données fraîches pendant 5 minutes
+            gcTime: 10 * 60 * 1000, // Garbage collection après 10 minutes
             retry: 1, // Retry 1 fois en cas d'échec (ajusté pour éviter trop de retries)
             retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
             refetchOnWindowFocus: false, // Pas de refetch automatique au focus (configurable par query)

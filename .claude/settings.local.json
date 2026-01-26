@@ -30,7 +30,13 @@
       "Bash(rm:*)",
       "Bash(if exist \"src\\app\\test-partykit\" rd /s /q srcapptest-partykit)",
       "Bash(Get-ChildItem -Recurse party/ -Include *.ts,*.json)",
-      "Bash(ForEach-Object { Write-Host $_ullName })"
+      "Bash(ForEach-Object { Write-Host $_ullName })",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(dir:*)",
+      "Bash(if exist \".next\" rd /s /q .next)",
+      "Bash(rd /s /q .next)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

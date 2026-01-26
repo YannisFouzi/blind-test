@@ -1,6 +1,14 @@
 @import "tailwindcss";
 
+/**
+ * ========================================
+ * DESIGN TOKENS - Tailwind CSS v4
+ * ========================================
+ * Configuration centralisée des tokens de design
+ */
+
 :root {
+  /* Legacy variables (à migrer progressivement) */
   --background: #ffffff;
   --foreground: #171717;
   --magic-gold: #ffd700;
@@ -14,13 +22,46 @@
   --dark-card: #1a1b3a;
   --glow-color: rgba(255, 215, 0, 0.5);
   --shadow-magic: 0 0 30px rgba(123, 58, 237, 0.3);
+
+  /* Design Tokens (depuis config/design-tokens.ts) */
+  --color-brand-primary: #8B5CF6;
+  --color-brand-primary-light: #A78BFA;
+  --color-brand-primary-dark: #7C3AED;
+  --color-brand-secondary: #EC4899;
+  --color-brand-accent: #F59E0B;
+
+  --color-surface-base: #0F0F23;
+  --color-surface-elevated: #1A1B3A;
+  --color-surface-overlay: #2D2E4E;
+
+  --shadow-glow-purple: 0 8px 32px rgba(139, 92, 246, 0.3);
+  --shadow-glow-pink: 0 8px 32px rgba(236, 72, 153, 0.3);
+  --shadow-glow-gold: 0 8px 32px rgba(245, 158, 11, 0.3);
 }
 
 @theme inline {
+  /* Couleurs de base */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Couleurs de marque (accessibles via Tailwind) */
+  --color-brand-primary*: var(--color-brand-primary);
+  --color-brand-secondary*: var(--color-brand-secondary);
+  --color-brand-accent*: var(--color-brand-accent);
+
+  /* Surfaces */
+  --color-surface-base*: var(--color-surface-base);
+  --color-surface-elevated*: var(--color-surface-elevated);
+  --color-surface-overlay*: var(--color-surface-overlay);
+
+  /* Ombres avec glow */
+  --shadow-glow-purple*: var(--shadow-glow-purple);
+  --shadow-glow-pink*: var(--shadow-glow-pink);
+  --shadow-glow-gold*: var(--shadow-glow-gold);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -30,26 +71,156 @@
   }
 }
 
-/* Empêcher la sélection de texte sur les pages de jeu */
-.select-none {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
+/**
+ * ========================================
+ * ANIMATIONS KEYFRAMES
+ * ========================================
+ * Remplace framer-motion avec des animations CSS natives
+ */
+
+/* Animation fade-in-up (remplace framer-motion fadeInUp) */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* Curseur par défaut pour les éléments non-interactifs */
-.cursor-default {
-  cursor: default;
+/* Animation slide-in-left (remplace framer-motion slideInLeft) */
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-/* Curseur pointer pour les éléments interactifs */
-.cursor-pointer {
-  cursor: pointer;
+/* Animation slide-in-right */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-/* Import des animations magiques */
-/* Styles de base pour l'application */
+/* Animation scale-in (pour modals, popovers) */
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Animation scale-out */
+@keyframes scale-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* Animation glow-pulse (effet pulsation avec glow) */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 12px 48px rgba(139, 92, 246, 0.6);
+  }
+}
+
+/* Animation holographic-shift (effet holographique) */
+@keyframes holographic-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Animation shine-sweep (balayage de lumière) */
+@keyframes shine-sweep {
+  0% {
+    left: -100%;
+  }
+  50% {
+    left: 100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Animation holographic-text-shift */
+@keyframes holographic-text-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Animation bounce-in (entrée avec rebond) */
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Animation spin (rotation) */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/**
+ * ========================================
+ * STYLES DE BASE
+ * ========================================
+ */
+
 body {
   font-family: var(--font-cinzel), "Cinzel", serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -122,76 +293,14 @@ a:focus-visible {
   }
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-50px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(50px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes holographic-shift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-@keyframes shine-sweep {
-  0% {
-    left: -100%;
-  }
-  50% {
-    left: 100%;
-  }
-  100% {
-    left: 100%;
-  }
-}
-
-@keyframes holographic-text-shift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
+/**
+ * ========================================
+ * COMPOSANTS RÉUTILISABLES
+ * ========================================
+ */
 
 @layer components {
+  /* Bouton magique */
   .magic-button {
     position: relative;
     overflow: hidden;
@@ -236,6 +345,7 @@ a:focus-visible {
     left: 100%;
   }
 
+  /* Texte fantasy */
   .fantasy-text {
     font-family: var(--font-cinzel), "Cinzel", serif;
     background: linear-gradient(45deg, var(--magic-gold), var(--magic-cyan));
@@ -245,6 +355,7 @@ a:focus-visible {
     text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
   }
 
+  /* Particule */
   .particle {
     position: absolute;
     width: 4px;
@@ -255,6 +366,7 @@ a:focus-visible {
     opacity: 0.6;
   }
 
+  /* Barre de progression magique */
   .magic-progress-bar {
     position: relative;
     background: rgba(255, 255, 255, 0.1);
@@ -282,6 +394,7 @@ a:focus-visible {
     );
   }
 
+  /* Carte magique */
   .magic-card {
     position: relative;
     border-radius: 20px;
@@ -322,6 +435,7 @@ a:focus-visible {
     );
   }
 
+  /* Grille de cartes uniformes */
   .uniform-card-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -342,24 +456,7 @@ a:focus-visible {
     overflow: hidden;
   }
 
-  @media (max-width: 768px) {
-    .uniform-card-grid {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.75rem;
-    }
-
-    .uniform-card {
-      height: 120px;
-      min-height: 120px;
-      max-height: 120px;
-    }
-
-  .uniform-card-title {
-      font-size: 0.875rem;
-      line-height: 1.1;
-    }
-  }
-
+  /* Carte de work */
   .work-card {
     position: relative;
     border-radius: 18px;
@@ -423,18 +520,7 @@ a:focus-visible {
     color: transparent;
   }
 
-  @media (min-width: 769px) and (max-width: 1024px) {
-    .uniform-card-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
-  @media (min-width: 1025px) {
-    .uniform-card-grid {
-      grid-template-columns: repeat(3, 1fr);
-    }
-  }
-
+  /* Carte holographique */
   .holographic-card {
     position: relative;
     border: 2px solid transparent;
@@ -473,6 +559,7 @@ a:focus-visible {
     z-index: -1;
   }
 
+  /* Effet de brillance */
   .shine-effect {
     position: relative;
     overflow: hidden;
@@ -494,6 +581,7 @@ a:focus-visible {
     animation: shine-sweep 2s ease-in-out infinite;
   }
 
+  /* Texte holographique */
   .holographic-text {
     background: linear-gradient(
       45deg,
@@ -512,16 +600,100 @@ a:focus-visible {
   }
 }
 
+/**
+ * ========================================
+ * UTILITIES (Classes utilitaires)
+ * ========================================
+ */
+
 @layer utilities {
-  .fade-in-up {
-    animation: fadeInUp 0.8s ease-out;
+  /* Animations - Remplacent framer-motion */
+  .animate-fade-in-up {
+    animation: fade-in-up 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
-  .slide-in-left {
-    animation: slideInLeft 0.8s ease-out;
+  .animate-slide-in-left {
+    animation: slide-in-left 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
-  .slide-in-right {
-    animation: slideInRight 0.8s ease-out;
+  .animate-slide-in-right {
+    animation: slide-in-right 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  .animate-scale-out {
+    animation: scale-out 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  .animate-glow-pulse {
+    animation: glow-pulse 2s infinite;
+  }
+
+  .animate-bounce-in {
+    animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+
+  /* Delays pour stagger animations */
+  .animation-delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animation-delay-300 {
+    animation-delay: 300ms;
+  }
+
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+
+  .animation-delay-500 {
+    animation-delay: 500ms;
+  }
+}
+
+/**
+ * ========================================
+ * RESPONSIVE
+ * ========================================
+ */
+
+@media (max-width: 768px) {
+  .uniform-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .uniform-card {
+    height: 120px;
+    min-height: 120px;
+    max-height: 120px;
+  }
+
+  .uniform-card-title {
+    font-size: 0.875rem;
+    line-height: 1.1;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .uniform-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1025px) {
+  .uniform-card-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Work } from "@/types";
 
 interface WorkSelectorProps {
@@ -14,7 +14,7 @@ interface WorkSelectorProps {
   onNextSong: () => void;
 }
 
-export const WorkSelector = ({
+const WorkSelectorComponent = ({
   works,
   currentSongWorkId,
   selectedWork,
@@ -79,7 +79,7 @@ export const WorkSelector = ({
     };
   }, [canValidate, showAnswer, canGoNext, isCurrentSongAnswered]);
 
-  const handleCardClick = (workId: string) => {
+  const handleCardClick = useCallback((workId: string) => {
     if (showAnswer || isCurrentSongAnswered) return;
 
     // Animation de clic
@@ -89,9 +89,9 @@ export const WorkSelector = ({
     }, 300);
 
     onWorkSelection(workId);
-  };
+  }, [showAnswer, isCurrentSongAnswered, onWorkSelection]);
 
-  const getWorkCardClassName = (work: Work) => {
+  const getWorkCardClassName = useCallback((work: Work) => {
     let className =
       "relative group cursor-pointer transform transition-all duration-300 ease-out";
 
@@ -119,7 +119,80 @@ export const WorkSelector = ({
     }
 
     return className;
-  };
+  }, [showAnswer, isCurrentSongAnswered, currentSongWorkId, selectedWork]);
+
+  const workCards = useMemo(() => {
+    return works.map((work, index) => {
+      const isCorrect = work.id === currentSongWorkId;
+      const isSelected = work.id === selectedWork;
+      const isWrong =
+        isSelected &&
+        !isCorrect &&
+        (showAnswer || isCurrentSongAnswered);
+      const isAnimating = cardAnimations[work.id];
+
+      return (
+        <div
+          key={work.id}
+          className={getWorkCardClassName(work)}
+          onClick={() => handleCardClick(work.id)}
+          style={{
+            animationDelay: `${index * 0.1}s`,
+          }}
+        >
+          <div className="relative overflow-hidden uniform-card">
+            {/* Carte principale avec hauteur fixe */}
+            <div
+              className={`relative work-card h-full flex flex-col justify-center items-center p-4 transform transition-all duration-300 ${
+                isAnimating ? "scale-95" : ""
+              } ${
+                isSelected && !(showAnswer || isCurrentSongAnswered)
+                  ? "work-card--active"
+                  : ""
+              }`}
+              style={{
+                background:
+                  isCorrect && (showAnswer || isCurrentSongAnswered)
+                    ? "linear-gradient(135deg, rgba(234, 179, 8, 0.25), rgba(251, 146, 60, 0.25))"
+                    : isWrong
+                    ? "linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(244, 63, 94, 0.25))"
+                    : undefined,
+              }}
+            >
+              {/* Contenu centré */}
+              <div className="relative z-10 text-center w-full flex flex-col justify-center h-full">
+                {/* Titre avec gestion intelligente du débordement */}
+                <h3
+                  className={`uniform-card-title font-bold text-base transition-all duration-300 px-2 ${
+                    isCorrect && (showAnswer || isCurrentSongAnswered)
+                      ? "text-yellow-300"
+                      : isWrong
+                      ? "text-red-300"
+                      : isSelected &&
+                        !(showAnswer || isCurrentSongAnswered)
+                      ? "work-card-title--active"
+                      : "text-white group-hover:text-purple-300"
+                  }`}
+                  title={work.title} // Tooltip pour voir le titre complet
+                >
+                  {work.title}
+                </h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    });
+  }, [
+    works,
+    currentSongWorkId,
+    selectedWork,
+    showAnswer,
+    isCurrentSongAnswered,
+    cardAnimations,
+    getWorkCardClassName,
+    handleCardClick,
+  ]);
 
   return (
     <>
@@ -138,69 +211,7 @@ export const WorkSelector = ({
           </div> */}
 
           {/* Grille de cartes responsive avec tailles uniformes */}
-          <div className="uniform-card-grid mb-8">
-            {works.map((work, index) => {
-              const isCorrect = work.id === currentSongWorkId;
-              const isSelected = work.id === selectedWork;
-              const isWrong =
-                isSelected &&
-                !isCorrect &&
-                (showAnswer || isCurrentSongAnswered);
-              const isAnimating = cardAnimations[work.id];
-
-              return (
-                <div
-                  key={work.id}
-                  className={getWorkCardClassName(work)}
-                  onClick={() => handleCardClick(work.id)}
-                  style={{
-                    animationDelay: `${index * 0.1}s`,
-                  }}
-                >
-                  <div className="relative overflow-hidden uniform-card">
-                    {/* Carte principale avec hauteur fixe */}
-                    <div
-                      className={`relative work-card h-full flex flex-col justify-center items-center p-4 transform transition-all duration-300 ${
-                        isAnimating ? "scale-95" : ""
-                      } ${
-                        isSelected && !(showAnswer || isCurrentSongAnswered)
-                          ? "work-card--active"
-                          : ""
-                      }`}
-                      style={{
-                        background:
-                          isCorrect && (showAnswer || isCurrentSongAnswered)
-                            ? "linear-gradient(135deg, rgba(234, 179, 8, 0.25), rgba(251, 146, 60, 0.25))"
-                            : isWrong
-                            ? "linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(244, 63, 94, 0.25))"
-                            : undefined,
-                      }}
-                    >
-                      {/* Contenu centré */}
-                      <div className="relative z-10 text-center w-full flex flex-col justify-center h-full">
-                        {/* Titre avec gestion intelligente du débordement */}
-                        <h3
-                          className={`uniform-card-title font-bold text-base transition-all duration-300 px-2 ${
-                            isCorrect && (showAnswer || isCurrentSongAnswered)
-                              ? "text-yellow-300"
-                              : isWrong
-                              ? "text-red-300"
-                              : isSelected &&
-                                !(showAnswer || isCurrentSongAnswered)
-                              ? "work-card-title--active"
-                              : "text-white group-hover:text-purple-300"
-                          }`}
-                          title={work.title} // Tooltip pour voir le titre complet
-                        >
-                          {work.title}
-                        </h3>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <div className="uniform-card-grid mb-8">{workCards}</div>
 
           {/* Bouton valider avec nouveau design */}
           {canValidate && !isCurrentSongAnswered && (
@@ -267,3 +278,6 @@ export const WorkSelector = ({
     </>
   );
 };
+
+export const WorkSelector = memo(WorkSelectorComponent);
+WorkSelector.displayName = "WorkSelector";

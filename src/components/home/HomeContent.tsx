@@ -5,15 +5,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HeroSection } from "@/components/home/HeroSection";
 import { UniverseGrid } from "@/components/home/UniverseGrid";
 import { UniverseCustomizeModal } from "@/components/home/UniverseCustomizeModal";
-import { HomePageSkeleton } from "@/components/HomePage/HomePageSkeleton";
+import { HomePageSkeleton } from "@/components/home/HomePageSkeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useUniverses } from "@/hooks/useUniverses";
-import { useUniverseCustomization, CUSTOM_UNIVERSE } from "@/hooks/useUniverseCustomization";
+import { CUSTOM_UNIVERSE, MAX_WORKS_CUSTOM_MODE } from "@/hooks/useUniverseCustomization";
+import { useGameConfiguration } from "@/stores";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePartyKitLobby } from "@/hooks/usePartyKitLobby";
-import { Room } from "@/types";
+import { Room, Universe } from "@/types";
 import { useIdentity } from "@/hooks/useIdentity";
 
 type Mode = "solo" | "multi";
@@ -50,27 +51,29 @@ export const HomeContent = () => {
   const [homeError, setHomeError] = useState<string | null>(null);
   const [homeInfo, setHomeInfo] = useState<string | null>(null);
 
-  // Hook de personnalisation (partagé avec la page room)
+  // Hook de configuration du jeu (Zustand store)
   const {
     customizingUniverse,
-    works: customWorks,
     allowedWorks: customAllowedWorks,
     noSeek: customNoSeek,
     maxSongs: customMaxSongs,
-    totalSongsAvailable: customTotalSongs,
-    songCountByWork: customSongCountByWork,
-    loading: customLoadingWorks,
-    error: customError,
-    isCustomMode,
-    maxWorksAllowed,
-    openCustomize,
-    openCustomMode,
+    openCustomize: openCustomizeStore,
     closeCustomize,
-    toggleWork,
-    setNoSeek: setCustomNoSeek,
-    setMaxSongs: setCustomMaxSongs,
     reset: resetCustomization,
-  } = useUniverseCustomization();
+  } = useGameConfiguration();
+
+  // Wrapper pour openCustomize (compatible avec l'ancien hook)
+  const openCustomize = useCallback(async (universe: Universe) => {
+    openCustomizeStore(universe);
+  }, [openCustomizeStore]);
+
+  // Mode custom : toutes les œuvres de tous les univers
+  const openCustomMode = useCallback(async () => {
+    openCustomizeStore(CUSTOM_UNIVERSE, {
+      isCustomMode: true,
+      maxWorksAllowed: MAX_WORKS_CUSTOM_MODE,
+    });
+  }, [openCustomizeStore]);
 
   const isHost = useMemo(() => mode === "multi" && Boolean(hostRoomId), [mode, hostRoomId]);
 
@@ -231,7 +234,7 @@ export const HomeContent = () => {
       try {
         // PartyKit gère la configuration via WebSocket dans GameClient
         if (customNoSeek) baseParams.set("noseek", "1");
-        if (customAllowedWorks.length && customAllowedWorks.length !== customWorks.length) {
+        if (customAllowedWorks.length > 0) {
           baseParams.set("works", customAllowedWorks.join(","));
         }
         baseParams.set("room", hostRoomId);
@@ -252,7 +255,6 @@ export const HomeContent = () => {
       router,
       customAllowedWorks,
       customNoSeek,
-      customWorks.length,
       ensurePlayerId,
       identityReady,
     ]
@@ -283,15 +285,14 @@ export const HomeContent = () => {
     if (mode === "solo") {
       const params = new URLSearchParams();
       if (customNoSeek) params.set("noseek", "1");
-      
-      // En mode custom, on passe TOUJOURS les works sélectionnés
-      if (isCustomModeActive) {
-        params.set("works", customAllowedWorks.join(","));
-      } else if (customAllowedWorks.length && customAllowedWorks.length !== customWorks.length) {
+
+      // Passer les works sélectionnés si nécessaire
+      if (customAllowedWorks.length > 0) {
         params.set("works", customAllowedWorks.join(","));
       }
-      
-      if (customMaxSongs !== null && customMaxSongs < customTotalSongs) {
+
+      // Passer le nombre max de songs si spécifié
+      if (customMaxSongs !== null) {
         params.set("maxsongs", String(customMaxSongs));
       }
       router.push(`/game/${universeId}?${params.toString()}`);
@@ -313,15 +314,14 @@ export const HomeContent = () => {
         room: hostRoomId,
       });
       if (customNoSeek) params.set("noseek", "1");
-      
-      // En mode custom, on passe TOUJOURS les works sélectionnés
-      if (isCustomModeActive) {
-        params.set("works", customAllowedWorks.join(","));
-      } else if (customAllowedWorks.length && customAllowedWorks.length !== customWorks.length) {
+
+      // Passer les works sélectionnés si nécessaire
+      if (customAllowedWorks.length > 0) {
         params.set("works", customAllowedWorks.join(","));
       }
-      
-      if (customMaxSongs !== null && customMaxSongs < customTotalSongs) {
+
+      // Passer le nombre max de songs si spécifié
+      if (customMaxSongs !== null) {
         params.set("maxsongs", String(customMaxSongs));
       }
       hasUsedRoomRef.current = true;
@@ -338,10 +338,8 @@ export const HomeContent = () => {
     isHost,
     hostRoomId,
     customAllowedWorks,
-    customWorks.length,
     customNoSeek,
     customMaxSongs,
-    customTotalSongs,
     router,
     displayName,
     ensurePlayerId,
@@ -462,23 +460,8 @@ export const HomeContent = () => {
 
       {customizingUniverse && (
         <UniverseCustomizeModal
-          universe={customizingUniverse}
-          works={customWorks}
-          allowedWorks={customAllowedWorks}
-          noSeek={customNoSeek}
-          maxSongs={customMaxSongs}
-          totalSongsAvailable={customTotalSongs}
-          songCountByWork={customSongCountByWork}
-          loading={customLoadingWorks}
-          error={customError || homeError}
-          isApplying={isCreatingRoom}
-          isCustomMode={isCustomMode}
-          maxWorksAllowed={maxWorksAllowed}
-          onToggleWork={toggleWork}
-          onSetNoSeek={setCustomNoSeek}
-          onSetMaxSongs={setCustomMaxSongs}
           onApply={applyCustomizeAndPlay}
-          onClose={closeCustomize}
+          isApplying={isCreatingRoom}
         />
       )}
     </div>

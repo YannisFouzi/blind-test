@@ -1,8 +1,9 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useCallback, useMemo, useRef } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Play as PlayIcon, Star as StarIcon, Shuffle } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Universe } from "@/types";
 import { AVAILABLE_ICONS } from "@/constants/icons";
 import { generateStylesFromColor } from "@/utils/colorGenerator";
@@ -48,6 +49,9 @@ const UniverseGridComponent = ({
   onCustomize,
   onCustomMode,
 }: UniverseGridProps) => {
+  const router = useRouter();
+  const prefetchedUniversesRef = useRef<Set<string>>(new Set());
+
   const styleCache = useMemo(() => {
     const cache = new Map<string, ReturnType<typeof buildUniverseStyles>>();
     universes.forEach((universe) => {
@@ -55,6 +59,18 @@ const UniverseGridComponent = ({
     });
     return cache;
   }, [universes]);
+
+  const handlePrefetch = useCallback(
+    (universeId: string) => {
+      if (prefetchedUniversesRef.current.has(universeId)) {
+        return;
+      }
+
+      prefetchedUniversesRef.current.add(universeId);
+      router.prefetch(`/game/${universeId}`);
+    },
+    [router]
+  );
 
   if (error) {
     return (
@@ -95,7 +111,11 @@ const UniverseGridComponent = ({
         const IconComponent = getIconComponent(universe.icon);
 
         return (
-          <article key={universe.id}>
+          <article
+            key={universe.id}
+            onMouseEnter={() => handlePrefetch(universe.id)}
+            onFocus={() => handlePrefetch(universe.id)}
+          >
             <div
               className="group relative w-full overflow-hidden rounded-2xl md:rounded-3xl border border-white/10 bg-slate-900/40 p-5 md:p-8 text-left transition-transform duration-300 hover:-translate-y-1 hover:border-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
               style={{
