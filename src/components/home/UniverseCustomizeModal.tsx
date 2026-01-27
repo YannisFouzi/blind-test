@@ -3,7 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import type { Work } from "@/types";
 import { useGameConfiguration, useCanSelectMoreWorks } from "@/stores";
-import { getAllWorks, getSongsByWork, getWorksByUniverse } from "@/services/firebase";
+import { getAllWorks, getSongsByWork, getWorksByUniverse, getUniverses } from "@/services/firebase";
 import { pressable } from "@/styles/ui";
 
 /**
@@ -38,6 +38,7 @@ const UniverseCustomizeModalComponent = ({
     isCustomMode,
     maxWorksAllowed,
     toggleWork,
+    setAllowedWorks,
     setNoSeek,
     setMaxSongs,
     closeCustomize,
@@ -48,6 +49,7 @@ const UniverseCustomizeModalComponent = ({
   // ========== DATA FETCHING LOCAL ==========
   const [works, setWorks] = useState<Work[]>([]);
   const [songCountByWork, setSongCountByWork] = useState<Record<string, number>>({});
+  const [universesById, setUniversesById] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +58,7 @@ const UniverseCustomizeModalComponent = ({
     if (!customizingUniverse) {
       setWorks([]);
       setSongCountByWork({});
+      setUniversesById({});
       setError(null);
       return;
     }
@@ -66,16 +69,36 @@ const UniverseCustomizeModalComponent = ({
 
       try {
         // Charger les works de l'univers (ou toutes les oeuvres en mode custom)
-        const worksResult = isCustomMode
-          ? await getAllWorks()
-          : await getWorksByUniverse(customizingUniverse.id);
+        const [worksResult, universesResult] = await Promise.all([
+          isCustomMode
+            ? getAllWorks()
+            : getWorksByUniverse(customizingUniverse.id),
+          isCustomMode
+            ? getUniverses()
+            : Promise.resolve({ success: true, data: [] }),
+        ]);
 
         if (!worksResult.success || !worksResult.data) {
-          throw new Error("Impossible de charger les œuvres");
+          throw new Error("Impossible de charger les oeuvres");
         }
 
         const loadedWorks = worksResult.data;
         setWorks(loadedWorks);
+
+        if (isCustomMode) {
+          if (universesResult.success && universesResult.data) {
+            const nextUniverses: Record<string, string> = {};
+            for (const universe of universesResult.data) {
+              nextUniverses[universe.id] = universe.name;
+            }
+            setUniversesById(nextUniverses);
+          } else {
+            setUniversesById({});
+          }
+        } else {
+          setUniversesById({});
+        }
+
 
         // Charger le nombre de songs par work
         const songCounts = await Promise.all(
@@ -117,6 +140,51 @@ const UniverseCustomizeModalComponent = ({
     ? 0
     : Math.min(sliderMax, Math.max(1, effectiveMaxSongs));
   const sliderDisabled = loading || totalSongsAvailable === 0;
+  const allWorkIds = useMemo(() => works.map((work) => work.id), [works]);
+  const allSelectableWorkIds = useMemo(() => {
+    if (!maxWorksAllowed || allWorkIds.length <= maxWorksAllowed) {
+      return allWorkIds;
+    }
+    return allWorkIds.slice(0, maxWorksAllowed);
+  }, [allWorkIds, maxWorksAllowed]);
+  const allWorksSelected = useMemo(() => {
+    if (allSelectableWorkIds.length === 0) return false;
+    return allSelectableWorkIds.every((workId) => allowedWorks.includes(workId));
+  }, [allSelectableWorkIds, allowedWorks]);
+  const selectAllDisabled = loading || allSelectableWorkIds.length === 0;
+  const groupedWorks = useMemo(() => {
+    if (!isCustomMode) return [];
+    const groups = new Map<string, Work[]>();
+
+    for (const work of works) {
+      const group = groups.get(work.universeId);
+      if (group) {
+        group.push(work);
+      } else {
+        groups.set(work.universeId, [work]);
+      }
+    }
+
+    const sortedGroups = Array.from(groups.entries()).map(([universeId, groupWorks]) => {
+      const sortedWorks = [...groupWorks].sort((a, b) => {
+        const orderDiff = (a.order ?? 0) - (b.order ?? 0);
+        if (orderDiff !== 0) return orderDiff;
+        return a.title.localeCompare(b.title, "fr", { sensitivity: "base" });
+      });
+
+      return {
+        universeId,
+        universeName: universesById[universeId] || "Univers inconnu",
+        works: sortedWorks,
+      };
+    });
+
+    sortedGroups.sort((a, b) =>
+      a.universeName.localeCompare(b.universeName, "fr", { sensitivity: "base" })
+    );
+
+    return sortedGroups;
+  }, [isCustomMode, works, universesById]);
 
   // ========== HANDLERS ==========
   const handleMaxSongsChange = useCallback(
@@ -130,6 +198,46 @@ const UniverseCustomizeModalComponent = ({
     },
     [totalSongsAvailable, setMaxSongs]
   );
+  const handleSelectAllWorks = useCallback(
+    (nextChecked: boolean) => {
+      if (allSelectableWorkIds.length === 0) return;
+      setAllowedWorks(nextChecked ? allSelectableWorkIds : []);
+    },
+    [allSelectableWorkIds, setAllowedWorks]
+  );
+  const renderWorkItem = useCallback(
+    (work: Work) => {
+      const songCount = songCountByWork[work.id] || 0;
+      const isSelected = allowedWorks.includes(work.id);
+      const isDisabled = !isSelected && !canSelectMoreWorks;
+
+      return (
+        <label
+          key={work.id}
+          className={`flex items-start gap-2 text-sm px-2 py-2 rounded ${
+            isDisabled
+              ? "bg-[var(--color-surface-overlay)]/70 text-[var(--color-text-secondary)] border-2 border-black/30 cursor-not-allowed"
+              : "bg-[var(--color-surface-overlay)] text-[var(--color-text-primary)] border-2 border-black cursor-pointer shadow-[2px_2px_0_#1B1B1B]"
+          }`}
+        >
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => !isDisabled && toggleWork(work.id)}
+            disabled={isDisabled}
+            className="w-4 h-4 mt-0.5 rounded border-2 border-black accent-yellow-400"
+          />
+          <span className="flex-1 min-w-0 leading-snug break-words">
+            {work.title}
+          </span>
+          <span className="text-[var(--color-text-secondary)] text-xs shrink-0">
+            ({songCount})
+          </span>
+        </label>
+      );
+    },
+    [allowedWorks, canSelectMoreWorks, songCountByWork, toggleWork]
+  );
 
   // Si pas d'univers, ne rien afficher
   if (!customizingUniverse) {
@@ -142,7 +250,9 @@ const UniverseCustomizeModalComponent = ({
       onClick={closeCustomize}
     >
       <div
-        className="w-full max-w-3xl bg-white border-[3px] border-black rounded-3xl p-6 space-y-4 mx-4 shadow-[6px_6px_0_#1B1B1B]"
+        className={`w-full max-w-3xl bg-white border-[3px] border-black rounded-3xl p-6 mx-4 shadow-[6px_6px_0_#1B1B1B] flex flex-col ${
+          isCustomMode ? "min-h-[70vh] max-h-[85vh]" : "space-y-4"
+        }`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -158,7 +268,7 @@ const UniverseCustomizeModalComponent = ({
           </button>
         </div>
 
-        <div className="space-y-4">
+        <div className={isCustomMode ? "flex flex-col gap-4 flex-1 min-h-0" : "space-y-4"}>
           {/* Mode sans avance */}
           <div className="space-y-1">
             <label className="flex items-center gap-2 text-[var(--color-text-primary)] text-sm font-semibold">
@@ -176,7 +286,7 @@ const UniverseCustomizeModalComponent = ({
           </div>
 
           {/* Œuvres incluses */}
-          <div className="space-y-2">
+          <div className={`space-y-2 ${isCustomMode ? "flex flex-col flex-1 min-h-0" : ""}`}>
             <div className="flex items-center justify-between">
               <span className="text-[var(--color-text-primary)] text-sm font-semibold">Oeuvres incluses</span>
               {isCustomMode && maxWorksAllowed && (
@@ -191,37 +301,65 @@ const UniverseCustomizeModalComponent = ({
                 </span>
               )}
             </div>
+            {!isCustomMode && (
+              <div className="flex items-center">
+                <label
+                  className={`flex items-center gap-2 text-xs font-bold ${
+                    selectAllDisabled
+                      ? "text-[var(--color-text-secondary)] cursor-not-allowed"
+                      : "text-[var(--color-text-primary)] cursor-pointer"
+                  }`}
+                >
+                  <span>Toutes</span>
+                  <span
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full border-2 border-black transition-colors ${
+                      allWorksSelected ? "bg-[#FDE68A]" : "bg-white"
+                    } ${selectAllDisabled ? "opacity-60" : ""}`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={allWorksSelected}
+                      onChange={(event) => handleSelectAllWorks(event.target.checked)}
+                      disabled={selectAllDisabled}
+                      aria-label="Selectionner toutes les oeuvres"
+                    />
+                    <span
+                      className={`inline-block h-3.5 w-3.5 transform rounded-full border-2 border-black bg-white transition-transform ${
+                        allWorksSelected ? "translate-x-4" : "translate-x-0.5"
+                      }`}
+                    />
+                  </span>
+                </label>
+              </div>
+            )}
+
+
 
             {loading ? (
               <div className="text-[var(--color-text-secondary)] text-sm">Chargement des oeuvres...</div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-2 pb-2 pt-1">
-                {works.map((work) => {
-                  const songCount = songCountByWork[work.id] || 0;
-                  const isSelected = allowedWorks.includes(work.id);
-                  const isDisabled = !isSelected && !canSelectMoreWorks;
-
-                  return (
-                    <label
-                      key={work.id}
-                      className={`flex items-center gap-2 text-sm px-2 py-1.5 rounded ${
-                        isDisabled
-                          ? "bg-[var(--color-surface-overlay)]/70 text-[var(--color-text-secondary)] border-2 border-black/30 cursor-not-allowed"
-                          : "bg-[var(--color-surface-overlay)] text-[var(--color-text-primary)] border-2 border-black cursor-pointer shadow-[2px_2px_0_#1B1B1B]"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => !isDisabled && toggleWork(work.id)}
-                        disabled={isDisabled}
-                        className="w-4 h-4 rounded border-2 border-black accent-yellow-400"
-                      />
-                      <span className="flex-1 truncate">{work.title}</span>
-                      <span className="text-[var(--color-text-secondary)] text-xs">({songCount})</span>
-                    </label>
-                  );
-                })}
+              <div
+                className={`overflow-y-auto pr-2 pb-2 pt-1 space-y-4 scrollbar-dark ${
+                  isCustomMode ? "flex-1 min-h-0" : "max-h-48"
+                }`}
+              >
+                {isCustomMode ? (
+                  groupedWorks.map((group) => (
+                    <div key={group.universeId} className="space-y-2">
+                      <div className="text-xs font-bold uppercase tracking-[0.25em] text-[var(--color-text-secondary)]">
+                        {group.universeName}
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {group.works.map(renderWorkItem)}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {works.map(renderWorkItem)}
+                  </div>
+                )}
               </div>
             )}
           </div>

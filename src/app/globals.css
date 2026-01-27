@@ -261,6 +261,20 @@ body {
   background: #FFE88A;
 }
 
+/* Scrollbar plus foncee (scope via classe) */
+.scrollbar-dark {
+  scrollbar-width: thin;
+  scrollbar-color: #C59A00 #FFF9E6;
+}
+
+.scrollbar-dark::-webkit-scrollbar-thumb {
+  background: #C59A00;
+}
+
+.scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: #B07E00;
+}
+
 /* Amélioration des transitions globales */
 * {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
