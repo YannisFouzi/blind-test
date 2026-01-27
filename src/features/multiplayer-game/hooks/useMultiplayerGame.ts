@@ -188,18 +188,22 @@ export const useMultiplayerGame = ({
    * Log state snapshot (debug)
    */
   useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.info("[useMultiplayerGame] state snapshot", {
-        roomId: room?.id,
-        state,
-        songs: room?.songs?.length ?? 0,
-        currentSongId: currentSong?.id,
-        players: players.length,
-        isHost,
-        isConnected,
-      });
-    }
-  }, [room?.id, state, room?.songs?.length, currentSong?.id, players.length, isHost, isConnected]);
+    console.log("[useMultiplayerGame] 🔍 STATE SNAPSHOT", {
+      roomId: room?.id,
+      state,
+      songs: room?.songs?.length ?? 0,
+      currentSongId: currentSong?.id,
+      currentSongTitle: currentSong?.title,
+      players: players.length,
+      isHost,
+      isConnected,
+      works: works.length,
+      filteredWorks: filteredWorks.length,
+      isLoadingWorks,
+      allowedWorks: allowedWorks?.length ?? 0,
+      timestamp: Date.now(),
+    });
+  }, [room?.id, state, room?.songs?.length, currentSong?.id, currentSong?.title, players.length, isHost, isConnected, works.length, filteredWorks.length, isLoadingWorks, allowedWorks?.length]);
 
   // ============================================================
   // Actions

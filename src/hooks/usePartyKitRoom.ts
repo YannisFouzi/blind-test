@@ -173,6 +173,14 @@ export const usePartyKitRoom = ({
 
   const handleMessage = useCallback(
     (message: IncomingMessage) => {
+      console.log("[usePartyKitRoom] 📨 MESSAGE RECEIVED", {
+        type: message.type,
+        hasSongs: (message as any).songs?.length ?? (message as any).state?.songs?.length ?? 0,
+        songsCount: (message as any).songs?.length ?? (message as any).state?.songs?.length ?? 0,
+        currentSongIndex: (message as any).currentSongIndex ?? (message as any).state?.currentSongIndex,
+        state: (message as any).state ?? (message as any).state?.state,
+        timestamp: Date.now(),
+      });
       switch (message.type) {
         case "password_required": {
           clearSessionToken();

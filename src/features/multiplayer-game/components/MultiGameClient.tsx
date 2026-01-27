@@ -121,6 +121,8 @@ export const MultiGameClient = ({
     currentSongIndex,
     totalSongs,
     isHost,
+    allowedWorks,
+    isLoadingWorks,
   } = game;
 
   useEffect(() => {
@@ -257,7 +259,23 @@ export const MultiGameClient = ({
       </div>
     ) : null;
 
+  // Log render state pour debug
+  useEffect(() => {
+    console.log("[MultiGameClient] 🎨 RENDER STATE", {
+      isConnected,
+      hasCurrentSong: !!currentSong,
+      currentSongId: currentSong?.id,
+      worksCount: works.length,
+      isLoadingWorks,
+      state,
+      roomSongsCount: room?.songs?.length ?? 0,
+      allowedWorksCount: allowedWorks?.length ?? 0,
+      timestamp: Date.now(),
+    });
+  }, [isConnected, currentSong?.id, works.length, isLoadingWorks, state, room?.songs?.length, allowedWorks?.length]);
+
   if (!isConnected) {
+    console.log("[MultiGameClient] ⚠️ RENDERING: Connexion au serveur...");
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center">
         <div className="text-center">
@@ -271,6 +289,11 @@ export const MultiGameClient = ({
   }
 
   if (!currentSong) {
+    console.log("[MultiGameClient] ⚠️ RENDERING: En attente de la playlist...", {
+      roomSongsCount: room?.songs?.length ?? 0,
+      state,
+      isHost: playerId === room?.hostId,
+    });
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center">
         <div className="text-center">
@@ -288,7 +311,13 @@ export const MultiGameClient = ({
     );
   }
 
-  if (works.length === 0) {
+  // Attendre que les works soient chargés avant de vérifier s'ils sont vides
+  if (!isLoadingWorks && works.length === 0) {
+    console.log("[MultiGameClient] ⚠️ RENDERING: Aucune oeuvre trouvée", {
+      isLoadingWorks,
+      filteredWorksCount: works.length,
+      allowedWorks: allowedWorks?.length ?? 0,
+    });
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center p-6">
         <div className="text-center">
@@ -301,6 +330,30 @@ export const MultiGameClient = ({
       </div>
     );
   }
+
+  // Si les works sont en cours de chargement, afficher un loader
+  if (isLoadingWorks) {
+    console.log("[MultiGameClient] ⚠️ RENDERING: Chargement des oeuvres...", {
+      isLoadingWorks,
+      hasCurrentSong: !!currentSong,
+    });
+    return (
+      <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner />
+          <p className="text-[var(--color-text-primary)] mt-4 font-semibold">
+            Chargement des oeuvres...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  console.log("[MultiGameClient] ✅ RENDERING: Game UI", {
+    currentSongId: currentSong?.id,
+    worksCount: works.length,
+    state,
+  });
 
   return (
     <div className="min-h-screen bg-[var(--color-surface-base)] relative overflow-hidden">
