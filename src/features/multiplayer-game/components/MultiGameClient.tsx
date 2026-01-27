@@ -307,7 +307,7 @@ export const MultiGameClient = ({
           <PlayersScoreboard players={players} currentPlayerId={playerId} />
         </div>
 
-        <div className="flex flex-col items-center justify-center gap-5 min-h-[60vh] md:min-h-[65vh]">
+        <div className="flex flex-col items-center justify-center gap-4 min-h-[calc(100svh-220px)] sm:min-h-[calc(100svh-240px)] md:min-h-[calc(100svh-280px)]">
           <div className="w-full flex justify-center">
             <WorkSelector
               works={works}

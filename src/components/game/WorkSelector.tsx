@@ -173,7 +173,7 @@ const WorkSelectorComponent = ({
           {/* Zone d'actions réservée (valider ou résultat) */}
           <div
             ref={validateButtonRef}
-            className="flex items-center justify-center min-h-[120px] sm:min-h-[140px]"
+            className="flex items-center justify-center min-h-[120px] sm:min-h-[124px]"
           >
             {!showAnswer && !isCurrentSongAnswered ? (
               canValidate ? (
