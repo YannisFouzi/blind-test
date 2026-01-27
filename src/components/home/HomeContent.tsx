@@ -464,7 +464,7 @@ export const HomeContent = () => {
 
                 <div className="hidden md:block w-px self-stretch bg-black/15" aria-hidden="true" />
 
-                <div className="space-y-3">
+                <div className="flex flex-col items-center justify-center text-center space-y-3">
                   <div className="text-xs uppercase tracking-[0.25em] text-[var(--color-text-secondary)]">Rooms disponibles</div>
                   {adaptedRooms.length === 0 && (
                     <div className="text-sm text-[var(--color-text-secondary)]">
@@ -472,7 +472,7 @@ export const HomeContent = () => {
                     </div>
                   )}
                   {adaptedRooms.length > 0 && (
-                    <div className="grid grid-cols-1 gap-3">
+                    <div className="grid grid-cols-1 gap-3 w-full">
                       {adaptedRooms.map((room) => (
                         <div
                           key={room.id}
@@ -504,7 +504,7 @@ export const HomeContent = () => {
                           <button
                             onClick={() => handleJoinRoom(room.id, joinPasswords[room.id])}
                             disabled={Boolean(room.hasPassword) && !(joinPasswords[room.id]?.trim())}
-                            className="magic-button px-4 py-2 text-xs font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="magic-button ml-auto px-4 py-2 text-xs font-bold disabled:opacity-60 disabled:cursor-not-allowed"
                           >
                             Rejoindre
                           </button>
