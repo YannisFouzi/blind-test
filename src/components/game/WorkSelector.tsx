@@ -170,13 +170,13 @@ const WorkSelectorComponent = ({
           {/* Grille de cartes responsive avec tailles uniformes */}
           <div className="uniform-card-grid">{workCards}</div>
 
-          {/* Bouton valider avec nouveau design */}
-          {!showAnswer && !isCurrentSongAnswered && (
-            <div
-              ref={validateButtonRef}
-              className="flex items-center justify-center min-h-[56px] sm:min-h-[64px]"
-            >
-              {canValidate && (
+          {/* Zone d'actions réservée (valider ou résultat) */}
+          <div
+            ref={validateButtonRef}
+            className="flex items-center justify-center min-h-[120px] sm:min-h-[140px]"
+          >
+            {!showAnswer && !isCurrentSongAnswered ? (
+              canValidate ? (
                 <button
                   onClick={onValidateAnswer}
                   className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
@@ -185,10 +185,11 @@ const WorkSelectorComponent = ({
                     Valider ma reponse
                   </span>
                 </button>
-              )}
-            </div>
-          )}
-          {footer && <div className="flex justify-center">{footer}</div>}
+              ) : null
+            ) : (
+              footer
+            )}
+          </div>
 
         </div>
       </div>
