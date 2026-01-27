@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Home as HomeIcon } from "lucide-react";
 import { usePartyKitRoom } from "@/hooks/usePartyKitRoom";
 import { useIdentity } from "@/hooks/useIdentity";
@@ -20,14 +20,11 @@ export default function MultiScoresPage() {
   const queryDisplayName = searchParams?.get("name");
 
   const {
-    room,
     players,
     state,
     isConnected,
-    isHost,
     authRequired,
     authError,
-    submitPassword,
   } = usePartyKitRoom(
     identityReady && playerId && roomId
       ? {

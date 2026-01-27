@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { Home as HomeIcon } from "lucide-react";
 import { SoloScoreDisplay } from "@/components/scores/SoloScoreDisplay";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
-export default function SoloScoresPage() {
+function SoloScoresContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -74,5 +75,19 @@ export default function SoloScoresPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SoloScoresPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center">
+          <LoadingSpinner />
+        </div>
+      }
+    >
+      <SoloScoresContent />
+    </Suspense>
   );
 }
