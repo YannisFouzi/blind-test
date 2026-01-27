@@ -1,4 +1,4 @@
-﻿import type * as Party from "partykit/server";
+import type * as Party from "partykit/server";
 import { z } from "zod";
 
 // ============================================================================
@@ -149,6 +149,10 @@ const MessageSchema = z.discriminatedUnion("type", [
     type: z.literal("next"),
     hostId: z.string().min(1),
   }),
+  z.object({
+    type: z.literal("show_scores"),
+    hostId: z.string().min(1),
+  }),
 ]);
 
 type Message = z.infer<typeof MessageSchema>;
@@ -159,7 +163,8 @@ type Message = z.infer<typeof MessageSchema>;
 interface Player {
   id: string;
   displayName: string;
-  score: number;
+  score: number; // Points totaux (pour le classement)
+  correct: number; // Nombre de bonnes réponses (1 par bonne réponse)
   incorrect: number;
   isHost: boolean;
   connected: boolean;
@@ -324,6 +329,9 @@ export default class BlindTestRoom implements Party.Server {
           break;
         case "next":
           this.handleNext(parsed, sender);
+          break;
+        case "show_scores":
+          this.handleShowScores(parsed, sender);
           break;
       }
     } catch (error) {
@@ -629,6 +637,7 @@ export default class BlindTestRoom implements Party.Server {
         id: playerId,
         displayName,
         score: 0,
+        correct: 0,
         incorrect: 0,
         isHost: isFirstPlayer,
         connected: true,
@@ -963,8 +972,10 @@ export default class BlindTestRoom implements Party.Server {
     this.state.responses.set(responseKey, response);
 
     // Mettre Ã  jour le score du joueur
-    player.score += points;
-    if (!isCorrect) {
+    if (isCorrect) {
+      player.score += points; // Points totaux selon le rang
+      player.correct += 1; // Nombre de bonnes réponses (1 par bonne réponse)
+    } else {
       player.incorrect += 1;
     }
 
@@ -1079,6 +1090,98 @@ export default class BlindTestRoom implements Party.Server {
     });
   }
 
+  /**
+   * Handler: SHOW_SCORES - Rediriger tous les joueurs vers la page scores
+   */
+  private handleShowScores(msg: Extract<Message, { type: "show_scores" }>, sender: Party.Connection) {
+    const { hostId } = msg;
+    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+
+    // Validation: est-ce bien le host ?
+    if (hostId !== this.state.hostId) {
+      sender.send(
+        JSON.stringify({
+          type: "error",
+          message: "Only the host can show scores",
+        })
+      );
+      return;
+    }
+
+    // Validation: on doit être en mode playing ou results
+    if (this.state.state !== "playing" && this.state.state !== "results") {
+      sender.send(
+        JSON.stringify({
+          type: "error",
+          message: "Game must be playing or finished to show scores",
+        })
+      );
+      return;
+    }
+
+    // Si on est encore en mode "playing", vérifier si on peut terminer la partie
+    if (this.state.state === "playing") {
+      const isLastSong = this.state.currentSongIndex >= this.state.songs.length - 1;
+      
+      if (!isLastSong) {
+        sender.send(
+          JSON.stringify({
+            type: "error",
+            message: "Can only show scores at the end of the game",
+          })
+        );
+        return;
+      }
+
+      // Vérifier si tous les joueurs ont répondu au dernier morceau
+      const currentSong = this.state.songs[this.state.currentSongIndex];
+      if (!currentSong) {
+        sender.send(
+          JSON.stringify({
+            type: "error",
+            message: "No current song found",
+          })
+        );
+        return;
+      }
+
+      const connectedPlayers = Array.from(this.state.players.values()).filter((p) => p.connected);
+      const currentSongResponses = Array.from(this.state.responses.values()).filter(
+        (r) => r.songId === currentSong.id
+      );
+
+      if (currentSongResponses.length < connectedPlayers.length) {
+        sender.send(
+          JSON.stringify({
+            type: "error",
+            message: "All players must answer before showing scores",
+          })
+        );
+        return;
+      }
+
+      // Tous les joueurs ont répondu au dernier morceau : terminer la partie automatiquement
+      console.log(`[${this.room.id}] All players answered last song, ending game automatically`);
+      this.state.state = "results";
+
+      this.broadcast({
+        type: "game_ended",
+        state: "results",
+        players: this.getPlayersArray(),
+        finalScores: this.getFinalScores(),
+      });
+    }
+
+    console.log(`[${this.room.id}] Host requested to show scores`);
+
+    // Broadcaster le message à tous les joueurs pour qu'ils redirigent
+    this.broadcast({
+      type: "show_scores",
+      roomId: this.state.roomId,
+      finalScores: this.getFinalScores(),
+    });
+  }
+
   // ==========================================================================
   // MÃ‰THODES UTILITAIRES
   // ==========================================================================
@@ -1133,6 +1236,7 @@ export default class BlindTestRoom implements Party.Server {
         id: p.id,
         displayName: p.displayName,
         score: p.score,
+        correct: p.correct,
         incorrect: p.incorrect,
         isHost: p.isHost,
         connected: p.connected,

@@ -108,6 +108,7 @@ export const MultiGameClient = ({
     handleAnswer,
     validateAnswer,
     nextSong,
+    showScores,
     room,
     players,
     state,
@@ -116,6 +117,10 @@ export const MultiGameClient = ({
     authRequired,
     authError,
     submitPassword,
+    allPlayersAnswered,
+    currentSongIndex,
+    totalSongs,
+    isHost,
   } = game;
 
   useEffect(() => {
@@ -172,6 +177,10 @@ export const MultiGameClient = ({
     nextSong();
   }, [nextSong]);
 
+  const handleShowScores = useCallback(() => {
+    showScores();
+  }, [showScores]);
+
   const handleGoHome = useCallback(() => {
     router.push("/");
   }, [router]);
@@ -194,11 +203,24 @@ export const MultiGameClient = ({
   );
   const currentPlayerScore = useMemo(
     () => ({
-      correct: currentPlayer?.score ?? 0,
+      correct: currentPlayer?.correct ?? 0,
       incorrect: currentPlayer?.incorrect ?? 0,
     }),
     [currentPlayer]
   );
+
+  // Vérifier si on est au dernier morceau
+  const isLastSong = useMemo(
+    () => currentSongIndex >= totalSongs - 1,
+    [currentSongIndex, totalSongs]
+  );
+
+  // Déterminer si on doit afficher "Voir les scores" ou "Morceau suivant"
+  const shouldShowScoresButton = useMemo(
+    () => isHost && isLastSong && allPlayersAnswered && showAnswer,
+    [isHost, isLastSong, allPlayersAnswered, showAnswer]
+  );
+
   const answerFooter =
     game.showAnswer &&
     game.currentSongAnswer &&
@@ -211,15 +233,26 @@ export const MultiGameClient = ({
             <span className="text-[#B45309]">{game.currentSong.title}</span>
           </p>
         </div>
-        {canGoNext && game.isHost && (
+        {shouldShowScoresButton ? (
           <button
-            onClick={handleNextSong}
+            onClick={handleShowScores}
             className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
           >
             <span className="relative z-10 flex items-center gap-2">
-              Morceau suivant
+              Voir les scores
             </span>
           </button>
+        ) : (
+          canGoNext && isHost && (
+            <button
+              onClick={handleNextSong}
+              className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                Morceau suivant
+              </span>
+            </button>
+          )
         )}
       </div>
     ) : null;

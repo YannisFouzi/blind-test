@@ -73,6 +73,7 @@ export const useMultiplayerGame = ({
     state,
     canGoNext,
     goNextSong,
+    showScores,
     submitAnswer,
     startGame,
     options,
@@ -83,6 +84,7 @@ export const useMultiplayerGame = ({
     authRequired,
     authError,
     submitPassword,
+    allPlayersAnswered,
   } = usePartyKitRoom({ roomId, playerId, displayName });
 
   // ============================================================
@@ -268,6 +270,14 @@ export const useMultiplayerGame = ({
   };
 
   /**
+   * Afficher les scores (host only)
+   */
+  const handleShowScores = async () => {
+    if (!isHost) return;
+    await showScores();
+  };
+
+  /**
    * Démarrer la partie (host only)
    */
   const handleStartGame = async () => {
@@ -329,10 +339,12 @@ export const useMultiplayerGame = ({
     handleAnswer,
     validateAnswer,
     nextSong,
+    showScores: handleShowScores,
     startGame: handleStartGame,
     configureRoom: handleConfigureRoom,
     authRequired,
     authError,
     submitPassword,
+    allPlayersAnswered,
   };
 };

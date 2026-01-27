@@ -47,6 +47,7 @@ type IncomingMessage =
   | { type: "configure_success" }
   | { type: "song_changed"; currentSongIndex?: number; currentSong?: Song }
   | { type: "game_ended"; state?: "results"; players?: RoomPlayer[]; finalScores?: unknown }
+  | { type: "show_scores"; roomId?: string; finalScores?: Array<RoomPlayer & { rank: number }> }
   | { type: "answer_recorded"; rank: number; points: number; isCorrect: boolean; duplicate: boolean }
   | { type: "player_answered"; playerId: string; songId: string }
   | { type: "all_players_answered" }
@@ -242,6 +243,14 @@ export const usePartyKitRoom = ({
           return;
         }
 
+        case "show_scores": {
+          // Rediriger vers la page scores
+          if (message.roomId && typeof window !== "undefined") {
+            window.location.href = `/scores/${message.roomId}`;
+          }
+          return;
+        }
+
         case "unknown":
           console.warn(
             "[usePartyKitRoom] Unknown message type:",
@@ -394,6 +403,19 @@ export const usePartyKitRoom = ({
     return { success: true };
   }, [playerId]);
 
+  const showScores = useCallback(async () => {
+    if (!socketRef.current || !playerId) {
+      return { success: false, error: "Not connected" };
+    }
+    socketRef.current.send(
+      JSON.stringify({
+        type: "show_scores",
+        hostId: playerId,
+      })
+    );
+    return { success: true };
+  }, [playerId]);
+
   const configureRoom = useCallback(
     async (
       universeId: string,
@@ -487,6 +509,7 @@ export const usePartyKitRoom = ({
 
     startGame,
     goNextSong,
+    showScores,
     submitAnswer,
     configureRoom,
 

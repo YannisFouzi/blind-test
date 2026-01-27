@@ -106,7 +106,31 @@ export const SoloGameClient = ({
     validateAnswer,
     nextSong,
     prevSong,
+    currentSongIndex,
+    totalSongs,
+    score,
   } = game;
+
+  // Vérifier si on est au dernier morceau
+  const isLastSong = useMemo(
+    () => currentSongIndex >= totalSongs - 1,
+    [currentSongIndex, totalSongs]
+  );
+
+  // Déterminer si on doit afficher "Voir les scores" ou "Morceau suivant"
+  const shouldShowScoresButton = useMemo(
+    () => isLastSong && isCurrentSongAnswered && showAnswer,
+    [isLastSong, isCurrentSongAnswered, showAnswer]
+  );
+
+  const handleShowScores = useCallback(() => {
+    const params = new URLSearchParams({
+      correct: String(score.correct),
+      incorrect: String(score.incorrect),
+    });
+    router.push(`/scores/solo?${params.toString()}`);
+  }, [score, router]);
+
   const answerFooter =
     showAnswer &&
     game.currentSongAnswer &&
@@ -119,15 +143,26 @@ export const SoloGameClient = ({
             <span className="text-[#B45309]">{game.currentSong.title}</span>
           </p>
         </div>
-        {canGoNext && (
+        {shouldShowScoresButton ? (
           <button
-            onClick={nextSong}
+            onClick={handleShowScores}
             className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
           >
             <span className="relative z-10 flex items-center gap-2">
-              Morceau suivant
+              Voir les scores
             </span>
           </button>
+        ) : (
+          canGoNext && (
+            <button
+              onClick={nextSong}
+              className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                Morceau suivant
+              </span>
+            </button>
+          )
         )}
       </div>
     ) : null;
