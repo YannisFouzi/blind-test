@@ -335,8 +335,9 @@ a:focus-visible {
 
   .magic-button:active {
     background: var(--magic-button-bg-active, var(--magic-button-bg-hover, #FFE88A));
-    transform: translate(4px, 4px);
-    box-shadow: 2px 2px 0 #0A0B0E;
+    transform: none;
+    box-shadow:
+      inset 4px 4px 0 rgba(10, 11, 14, 0.45);
   }
 
   .magic-button:disabled {
@@ -438,6 +439,26 @@ a:focus-visible {
     border-color: #1B1B1B;
     background: #FFF3B8;
     box-shadow: 6px 6px 0 #1B1B1B;
+  }
+
+  .work-card--interactive:hover {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+  }
+
+  .work-card--interactive:active {
+    box-shadow:
+      inset 4px 4px 0 rgba(10, 11, 14, 0.45);
+  }
+
+  @media (hover: hover) {
+    .magic-button:active {
+      transform: translate(2px, 2px);
+    }
+
+    .work-card--interactive:active {
+      transform: translate(2px, 2px);
+    }
   }
 
 

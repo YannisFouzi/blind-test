@@ -107,6 +107,30 @@ export const SoloGameClient = ({
     nextSong,
     prevSong,
   } = game;
+  const answerFooter =
+    showAnswer &&
+    game.currentSongAnswer &&
+    game.currentSong?.artist &&
+    game.currentSong?.title ? (
+      <div className="flex flex-col items-center justify-center gap-3">
+        <div className="px-5 py-3 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B]">
+          <p className="text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide">
+            {game.currentSong.artist} &mdash;{" "}
+            <span className="text-[#B45309]">{game.currentSong.title}</span>
+          </p>
+        </div>
+        {canGoNext && (
+          <button
+            onClick={nextSong}
+            className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
+          >
+            <span className="relative z-10 flex items-center gap-2">
+              Morceau suivant
+            </span>
+          </button>
+        )}
+      </div>
+    ) : null;
 
   useEffect(() => {
     if (currentSong?.audioUrl) {
@@ -248,36 +272,21 @@ export const SoloGameClient = ({
       </div>
 
       <div className="container mx-auto px-4 py-8 pb-24 relative z-10">
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-7xl mx-auto justify-items-center">
-          <div className="xl:col-span-2 w-full flex justify-center">
+        <div className="flex flex-col items-center justify-center gap-5 min-h-[60vh] md:min-h-[65vh]">
+          <div className="w-full flex justify-center">
             <WorkSelector
               works={works}
               currentSongWorkId={currentSong?.workId}
               selectedWork={selectedWork}
               showAnswer={showAnswer}
               canValidate={!!selectedWork && !showAnswer && gameState === "playing"}
-              canGoNext={canGoNext}
               isCurrentSongAnswered={isCurrentSongAnswered}
               onWorkSelection={handleWorkSelection}
               onValidateAnswer={handleValidateAnswer}
-              onNextSong={handleNextSong}
+              footer={answerFooter}
             />
           </div>
         </div>
-
-        {game.showAnswer &&
-          game.currentSongAnswer &&
-          game.currentSong?.artist &&
-          game.currentSong?.title && (
-            <div className="flex justify-center mt-6">
-              <div className="px-5 py-3 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B]">
-                <p className="text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide">
-                  {game.currentSong.artist} &mdash;{" "}
-                  <span className="text-[#B45309]">{game.currentSong.title}</span>
-                </p>
-              </div>
-            </div>
-          )}
       </div>
 
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none">

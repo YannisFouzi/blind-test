@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Work } from "@/types";
 
 interface WorkSelectorProps {
@@ -7,11 +7,10 @@ interface WorkSelectorProps {
   selectedWork: string | null;
   showAnswer: boolean;
   canValidate: boolean;
-  canGoNext: boolean;
   isCurrentSongAnswered: boolean;
   onWorkSelection: (workId: string) => void;
   onValidateAnswer: () => void;
-  onNextSong: () => void;
+  footer?: ReactNode;
 }
 
 const WorkSelectorComponent = ({
@@ -20,19 +19,13 @@ const WorkSelectorComponent = ({
   selectedWork,
   showAnswer,
   canValidate,
-  canGoNext,
   isCurrentSongAnswered,
   onWorkSelection,
   onValidateAnswer,
-  onNextSong,
+  footer,
 }: WorkSelectorProps) => {
   const [isValidateButtonVisible, setIsValidateButtonVisible] = useState(true);
-  const [isNextButtonVisible, setIsNextButtonVisible] = useState(true);
-  const [cardAnimations, setCardAnimations] = useState<{
-    [key: string]: boolean;
-  }>({});
   const validateButtonRef = useRef<HTMLDivElement>(null);
-  const nextButtonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const observerOptions = {
@@ -49,73 +42,44 @@ const WorkSelectorComponent = ({
       });
     };
 
-    const handleNextButtonVisibility = (
-      entries: IntersectionObserverEntry[]
-    ) => {
-      entries.forEach((entry) => {
-        setIsNextButtonVisible(entry.isIntersecting);
-      });
-    };
-
     const validateObserver = new IntersectionObserver(
       handleValidateButtonVisibility,
-      observerOptions
-    );
-    const nextObserver = new IntersectionObserver(
-      handleNextButtonVisibility,
       observerOptions
     );
 
     if (validateButtonRef.current && canValidate && !isCurrentSongAnswered) {
       validateObserver.observe(validateButtonRef.current);
     }
-    if (nextButtonRef.current && showAnswer && canGoNext) {
-      nextObserver.observe(nextButtonRef.current);
-    }
 
     return () => {
       validateObserver.disconnect();
-      nextObserver.disconnect();
     };
-  }, [canValidate, showAnswer, canGoNext, isCurrentSongAnswered]);
+  }, [canValidate, isCurrentSongAnswered]);
 
-  const handleCardClick = useCallback((workId: string) => {
-    if (showAnswer || isCurrentSongAnswered) return;
+  const handleCardClick = useCallback(
+    (workId: string) => {
+      if (showAnswer || isCurrentSongAnswered) return;
 
-    // Animation de clic
-    setCardAnimations((prev) => ({ ...prev, [workId]: true }));
-    setTimeout(() => {
-      setCardAnimations((prev) => ({ ...prev, [workId]: false }));
-    }, 300);
-
-    onWorkSelection(workId);
-  }, [showAnswer, isCurrentSongAnswered, onWorkSelection]);
+      onWorkSelection(workId);
+    },
+    [showAnswer, isCurrentSongAnswered, onWorkSelection]
+  );
 
   const getWorkCardClassName = useCallback((work: Work) => {
-    let className =
-      "relative cursor-pointer transform transition-all duration-300 ease-out";
+    const isInteractive = !(showAnswer || isCurrentSongAnswered);
+    let className = "relative transition-all duration-200 ease-out";
 
-    if (showAnswer || isCurrentSongAnswered) {
+    if (!isInteractive) {
       className += " cursor-default";
-
       if (work.id === currentSongWorkId) {
-        // Bonne réponse - effet doré magique
-        className += " scale-105";
+        className += "";
       } else if (work.id === selectedWork) {
-        // Mauvaise réponse - effet rouge
-        className += " scale-95";
+        className += "";
       } else {
-        // Autres options - effet fade
         className += " opacity-50 scale-95";
       }
     } else {
-      if (work.id === selectedWork) {
-        // Sélectionné
-        className += " scale-105";
-      } else {
-        // Non sélectionné
-        className += "";
-      }
+      className += " cursor-pointer";
     }
 
     return className;
@@ -129,8 +93,6 @@ const WorkSelectorComponent = ({
         isSelected &&
         !isCorrect &&
         (showAnswer || isCurrentSongAnswered);
-      const isAnimating = cardAnimations[work.id];
-
       return (
         <div
           key={work.id}
@@ -143,8 +105,8 @@ const WorkSelectorComponent = ({
           <div className="relative uniform-card">
             {/* Carte principale avec hauteur fixe */}
             <div
-              className={`relative work-card h-full flex flex-col justify-center items-center p-4 transform transition-all duration-300 ${
-                isAnimating ? "scale-95" : ""
+              className={`relative work-card h-full flex flex-col justify-center items-center p-4 ${
+                !(showAnswer || isCurrentSongAnswered) ? "work-card--interactive" : ""
               } ${
                 isSelected && !(showAnswer || isCurrentSongAnswered)
                   ? "work-card--active"
@@ -189,7 +151,6 @@ const WorkSelectorComponent = ({
     selectedWork,
     showAnswer,
     isCurrentSongAnswered,
-    cardAnimations,
     getWorkCardClassName,
     handleCardClick,
   ]);
@@ -197,7 +158,7 @@ const WorkSelectorComponent = ({
   return (
     <>
       <div className="relative">
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Titre avec effet magique */}
           {/* <div className="text-center mb-8">
             <h2 className="fantasy-text text-4xl md:text-5xl font-bold mb-4">
@@ -210,32 +171,25 @@ const WorkSelectorComponent = ({
           <div className="uniform-card-grid">{workCards}</div>
 
           {/* Bouton valider avec nouveau design */}
-          {canValidate && !isCurrentSongAnswered && (
-            <div ref={validateButtonRef} className="text-center mb-6">
-              <button
-                onClick={onValidateAnswer}
-                className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
-              >
-                <span className="relative z-10 flex items-center gap-2">
-                  Valider ma réponse
-                </span>
-              </button>
+          {!showAnswer && !isCurrentSongAnswered && (
+            <div
+              ref={validateButtonRef}
+              className="flex items-center justify-center min-h-[56px] sm:min-h-[64px]"
+            >
+              {canValidate && (
+                <button
+                  onClick={onValidateAnswer}
+                  className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    Valider ma reponse
+                  </span>
+                </button>
+              )}
             </div>
           )}
+          {footer && <div className="flex justify-center">{footer}</div>}
 
-          {/* Bouton suivant avec nouveau design */}
-          {showAnswer && canGoNext && (
-            <div ref={nextButtonRef} className="text-center">
-              <button
-                onClick={onNextSong}
-                className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
-              >
-                <span className="relative z-10 flex items-center gap-2">
-                  Morceau suivant
-                </span>
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -247,20 +201,7 @@ const WorkSelectorComponent = ({
             className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
           >
             <span className="relative z-10 flex items-center gap-2">
-              Valider ma réponse
-            </span>
-          </button>
-        </div>
-      )}
-
-      {showAnswer && canGoNext && !isNextButtonVisible && (
-        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
-          <button
-            onClick={onNextSong}
-            className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
-          >
-            <span className="relative z-10 flex items-center gap-2">
-              Morceau suivant
+              Valider ma reponse
             </span>
           </button>
         </div>

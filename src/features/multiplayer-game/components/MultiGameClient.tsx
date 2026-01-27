@@ -199,6 +199,30 @@ export const MultiGameClient = ({
     }),
     [currentPlayer]
   );
+  const answerFooter =
+    game.showAnswer &&
+    game.currentSongAnswer &&
+    game.currentSong?.artist &&
+    game.currentSong?.title ? (
+      <div className="flex flex-col items-center justify-center gap-3">
+        <div className="px-5 py-3 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B]">
+          <p className="text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide">
+            {game.currentSong.artist} &mdash;{" "}
+            <span className="text-[#B45309]">{game.currentSong.title}</span>
+          </p>
+        </div>
+        {canGoNext && game.isHost && (
+          <button
+            onClick={handleNextSong}
+            className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
+          >
+            <span className="relative z-10 flex items-center gap-2">
+              Morceau suivant
+            </span>
+          </button>
+        )}
+      </div>
+    ) : null;
 
   if (!isConnected) {
     return (
@@ -283,44 +307,27 @@ export const MultiGameClient = ({
           <PlayersScoreboard players={players} currentPlayerId={playerId} />
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 max-w-7xl mx-auto justify-items-center">
-          <div className="xl:col-span-2 w-full flex justify-center">
+        <div className="flex flex-col items-center justify-center gap-5 min-h-[60vh] md:min-h-[65vh]">
+          <div className="w-full flex justify-center">
             <WorkSelector
               works={works}
               currentSongWorkId={currentSong?.workId}
               selectedWork={selectedWork}
               showAnswer={showAnswer}
               canValidate={!!selectedWork && !showAnswer && state === "playing"}
-              canGoNext={canGoNext && game.isHost}
               isCurrentSongAnswered={isCurrentSongAnswered}
               onWorkSelection={handleWorkSelection}
               onValidateAnswer={handleValidateAnswer}
-              onNextSong={handleNextSong}
+              footer={answerFooter}
             />
           </div>
-        </div>
-
-        {game.showAnswer &&
-          game.currentSongAnswer &&
-          game.currentSong?.artist &&
-          game.currentSong?.title && (
-            <div className="flex justify-center mt-6">
-              <div className="px-5 py-3 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B]">
-                <p className="text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide">
-                  {game.currentSong.artist} &mdash;{" "}
-                  <span className="text-[#B45309]">{game.currentSong.title}</span>
-                </p>
-              </div>
-            </div>
-          )}
-
-        {game.submitError && (
-          <div className="flex justify-center mt-3">
+          {game.submitError && (
             <div className="px-4 py-2 rounded-xl bg-[#FFE5E5] border-2 border-[#1B1B1B] text-center text-xs text-red-700 shadow-[2px_2px_0_#1B1B1B]">
               {game.submitError}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
       </div>
 
 
