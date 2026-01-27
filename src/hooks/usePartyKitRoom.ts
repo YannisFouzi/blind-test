@@ -152,7 +152,15 @@ export const usePartyKitRoom = ({
 
   const sendJoin = useCallback(
     (options?: { password?: string; token?: string }) => {
-      if (!socketRef.current || !playerId || !displayName) return;
+      if (!socketRef.current || !playerId || !displayName) {
+        console.warn("[usePartyKitRoom] ⚠️ sendJoin called but conditions not met", {
+          hasSocket: !!socketRef.current,
+          hasPlayerId: !!playerId,
+          hasDisplayName: !!displayName,
+          timestamp: Date.now(),
+        });
+        return;
+      }
       const storedToken = options?.token ?? getSessionToken();
       const payload = {
         type: "join",
@@ -161,6 +169,13 @@ export const usePartyKitRoom = ({
         ...(options?.password ? { password: options.password } : {}),
         ...(storedToken ? { token: storedToken } : {}),
       };
+      console.log("[usePartyKitRoom] 📤 SENDING join", {
+        playerId,
+        displayName,
+        hasToken: !!storedToken,
+        socketReadyState: socketRef.current.readyState,
+        timestamp: Date.now(),
+      });
       setAuthError(null);
       socketRef.current.send(JSON.stringify(payload));
     },
@@ -318,6 +333,28 @@ export const usePartyKitRoom = ({
           });
 
     const handleOpen = () => {
+      // Éviter le double appel UNIQUEMENT si on a déjà des songs dans le state
+      // (car la socket peut être réutilisée entre la waiting room et la page de jeu)
+      const hasSongs = (room.songs?.length ?? 0) > 0;
+      if ((socket as any).__handleOpenCalled && hasSongs) {
+        console.log("[usePartyKitRoom] ⚠️ handleOpen already called AND has songs, skipping", {
+          roomId,
+          playerId,
+          songsCount: room.songs?.length ?? 0,
+          timestamp: Date.now(),
+        });
+        return;
+      }
+      (socket as any).__handleOpenCalled = true;
+      console.log("[usePartyKitRoom] 🔌 socket_open handler called", {
+        roomId,
+        playerId,
+        displayName,
+        socketReadyState: socket.readyState,
+        hasSongs,
+        songsCount: room.songs?.length ?? 0,
+        timestamp: Date.now(),
+      });
       send({ type: "socket_open" });
       setIsAuthenticated(false);
       setAuthRequired(false);
@@ -361,11 +398,28 @@ export const usePartyKitRoom = ({
     socket.addEventListener("close", handleClose);
     socket.addEventListener("error", handleError);
 
-    if (socket.readyState === WebSocket.OPEN) {
-      handleOpen();
-    }
-
+    // ⚠️ IMPORTANT: Assigner socketRef AVANT d'appeler handleOpen() si la socket est déjà ouverte
+    // Sinon sendJoin() ne trouvera pas socketRef.current et ne pourra pas envoyer le join
     socketRef.current = socket;
+
+    // Si la socket est déjà ouverte (réutilisée), envoyer le join immédiatement
+    if (socket.readyState === WebSocket.OPEN) {
+      console.log("[usePartyKitRoom] 🔌 Socket already OPEN, calling handleOpen immediately", {
+        roomId,
+        playerId,
+        displayName,
+        timestamp: Date.now(),
+      });
+      handleOpen();
+    } else {
+      console.log("[usePartyKitRoom] 🔌 Socket not yet open, waiting for 'open' event", {
+        roomId,
+        playerId,
+        displayName,
+        readyState: socket.readyState,
+        timestamp: Date.now(),
+      });
+    }
 
     return () => {
       socket.removeEventListener("open", handleOpen);
