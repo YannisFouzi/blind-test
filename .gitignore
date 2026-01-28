@@ -60,7 +60,7 @@ next-env.d.ts
 *.txt
 *.jpg
 CLAUDE.md
-*.md
+
 
 
 .claude/settings.local.json

@@ -8,12 +8,15 @@ import {
   type RoomMachineEvent,
   type ServerStateSnapshot,
 } from "@/features/multiplayer-game/machines/roomStateMachine";
+import { navigateToUrl } from "@/hooks/useGameNavigation";
 
 type UsePartyKitRoomOptions = {
   roomId?: string;
   playerId?: string;
   displayName?: string;
   password?: string;
+  /** Callback appelé avant redirection vers waiting room (pour cleanup audio, etc.) */
+  onRedirect?: () => void;
 };
 
 type IncomingMessage =
@@ -52,6 +55,11 @@ type IncomingMessage =
   | { type: "song_changed"; currentSongIndex?: number; currentRoundIndex?: number; currentRound?: import("@/types").GameRound; displayedSongIndex?: number; displayedTotalSongs?: number; currentSong?: Song }
   | { type: "game_ended"; state?: "results"; players?: RoomPlayer[]; finalScores?: unknown }
   | { type: "show_scores"; roomId?: string; finalScores?: Array<RoomPlayer & { rank: number }> }
+  | {
+      type: "redirect_to_waiting_room";
+      roomId: string;
+      players?: Array<{ id: string; displayName: string }>;
+    }
   | { type: "answer_recorded"; rank: number; points: number; isCorrect: boolean; duplicate: boolean }
   | { type: "player_answered"; playerId: string; songId: string }
   | { type: "all_players_answered" }
@@ -64,6 +72,7 @@ export const usePartyKitRoom = ({
   playerId,
   displayName,
   password,
+  onRedirect,
 }: UsePartyKitRoomOptions) => {
   const [machineState, send] = useMachine(roomMachine);
   const { room, players, responses, allPlayersAnswered, isConnected } =
@@ -74,6 +83,8 @@ export const usePartyKitRoom = ({
   const handleMessageRef = useRef<((message: IncomingMessage) => void) | null>(
     null
   );
+  // Flag pour ignorer les state_sync après un redirect_to_waiting_room
+  const isRedirectingToWaitingRef = useRef(false);
 
   type AnswerResult = {
     success: boolean;
@@ -192,12 +203,41 @@ export const usePartyKitRoom = ({
 
   const handleMessage = useCallback(
     (message: IncomingMessage) => {
+      // Helper pour extraire les données de différents types de messages
+      const getSongsCount = (msg: IncomingMessage): number => {
+        if (msg.type === "room_configured" || msg.type === "game_started") {
+          return msg.songs?.length ?? 0;
+        }
+        if (msg.type === "state_sync") {
+          return msg.state.songs?.length ?? 0;
+        }
+        return 0;
+      };
+      const getCurrentSongIndex = (msg: IncomingMessage): number | undefined => {
+        if (msg.type === "game_started" || msg.type === "song_changed") {
+          return msg.currentSongIndex;
+        }
+        if (msg.type === "state_sync") {
+          return msg.state.currentSongIndex;
+        }
+        return undefined;
+      };
+      const getStateValue = (msg: IncomingMessage): string | undefined => {
+        if (msg.type === "game_started" || msg.type === "game_ended") {
+          return msg.state;
+        }
+        if (msg.type === "state_sync") {
+          return msg.state.state;
+        }
+        return undefined;
+      };
+
       console.log("[usePartyKitRoom] 📨 MESSAGE RECEIVED", {
         type: message.type,
-        hasSongs: (message as any).songs?.length ?? (message as any).state?.songs?.length ?? 0,
-        songsCount: (message as any).songs?.length ?? (message as any).state?.songs?.length ?? 0,
-        currentSongIndex: (message as any).currentSongIndex ?? (message as any).state?.currentSongIndex,
-        state: (message as any).state ?? (message as any).state?.state,
+        hasSongs: getSongsCount(message),
+        songsCount: getSongsCount(message),
+        currentSongIndex: getCurrentSongIndex(message),
+        state: getStateValue(message),
         timestamp: Date.now(),
       });
       switch (message.type) {
@@ -273,7 +313,35 @@ export const usePartyKitRoom = ({
         case "show_scores": {
           // Rediriger vers la page scores
           if (message.roomId && typeof window !== "undefined") {
-            window.location.href = `/scores/${message.roomId}`;
+            navigateToUrl(`/scores/${message.roomId}`);
+          }
+          return;
+        }
+
+        case "redirect_to_waiting_room": {
+          // Marquer qu'on est en train de rediriger pour ignorer les state_sync suivants
+          isRedirectingToWaitingRef.current = true;
+
+          // Rediriger vers la waiting room avec les infos du joueur depuis le serveur
+          if (message.roomId && typeof window !== "undefined" && playerId) {
+            // Trouver le displayName du joueur depuis la liste envoyée par le serveur
+            const playerInfo = message.players?.find((p) => p.id === playerId);
+            const playerDisplayName = playerInfo?.displayName || displayName || `Joueur-${playerId.slice(0, 4)}`;
+
+            // Construire l'URL avec les paramètres nécessaires
+            const params = new URLSearchParams({
+              name: playerDisplayName,
+              player: playerId,
+            });
+
+            // Si c'est l'hôte, ajouter le flag host=1
+            if (isHost) {
+              params.set("host", "1");
+            }
+
+            // Utiliser navigateToUrl pour garantir un état propre lors de la redirection
+            // Le callback onRedirect sera appelé automatiquement par navigateToUrl
+            navigateToUrl(`/room/${message.roomId}?${params.toString()}`, onRedirect);
           }
           return;
         }
@@ -286,6 +354,12 @@ export const usePartyKitRoom = ({
           return;
 
         default:
+          // Ignorer state_sync si on est en train de rediriger vers waiting room
+          // (pour éviter que l'ancien état ne déclenche un redirect vers /game)
+          if (message.type === "state_sync" && isRedirectingToWaitingRef.current) {
+            console.log("[usePartyKitRoom] ⚠️ Ignoring state_sync during redirect to waiting room");
+            return;
+          }
           send(message as RoomMachineEvent);
       }
     },
@@ -299,6 +373,8 @@ export const usePartyKitRoom = ({
       send,
       storeSessionToken,
       clearSessionToken,
+      isHost,
+      onRedirect,
     ]
   );
 
@@ -340,7 +416,9 @@ export const usePartyKitRoom = ({
       // Éviter le double appel UNIQUEMENT si on a déjà des songs dans le state
       // (car la socket peut être réutilisée entre la waiting room et la page de jeu)
       const hasSongs = (room.songs?.length ?? 0) > 0;
-      if ((socket as any).__handleOpenCalled && hasSongs) {
+      // Type assertion pour ajouter une propriété custom à la socket
+      const socketWithFlag = socket as PartySocket & { __handleOpenCalled?: boolean };
+      if (socketWithFlag.__handleOpenCalled && hasSongs) {
         console.log("[usePartyKitRoom] ⚠️ handleOpen already called AND has songs, skipping", {
           roomId,
           playerId,
@@ -349,7 +427,7 @@ export const usePartyKitRoom = ({
         });
         return;
       }
-      (socket as any).__handleOpenCalled = true;
+      socketWithFlag.__handleOpenCalled = true;
       console.log("[usePartyKitRoom] 🔌 socket_open handler called", {
         roomId,
         playerId,
@@ -437,7 +515,7 @@ export const usePartyKitRoom = ({
       connectionKeyRef.current = null;
       send({ type: "socket_close" });
     };
-  }, [roomId, playerId, displayName, partyKitProvider, send, sendJoin]);
+  }, [roomId, playerId, displayName, partyKitProvider, send, sendJoin, room.songs?.length]);
 
   // ============================================================================
   // ACTIONS
@@ -481,6 +559,22 @@ export const usePartyKitRoom = ({
     );
     return { success: true };
   }, [playerId]);
+
+  const resetToWaiting = useCallback(async () => {
+    if (!socketRef.current || !playerId) {
+      return { success: false, error: "Not connected" };
+    }
+    if (!isHost) {
+      return { success: false, error: "Only the host can reset the room to waiting" };
+    }
+    socketRef.current.send(
+      JSON.stringify({
+        type: "reset_to_waiting",
+        hostId: playerId,
+      })
+    );
+    return { success: true };
+  }, [playerId, isHost]);
 
   const configureRoom = useCallback(
     async (
@@ -616,6 +710,7 @@ export const usePartyKitRoom = ({
     startGame,
     goNextSong,
     showScores,
+    resetToWaiting,
     submitAnswer,
     configureRoom,
 

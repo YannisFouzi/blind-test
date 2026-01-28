@@ -104,6 +104,13 @@ export const MultiGameClient = ({
     autoPlay: true,
   });
 
+  // Callback stable pour cleanup audio avant redirection
+  const handleRedirect = useCallback(() => {
+    // Cleanup audio avant redirection vers waiting room
+    audioReset();
+    doubleReset();
+  }, [audioReset, doubleReset]);
+
   const game = useMultiplayerGame({
     universeId,
     roomId,
@@ -114,6 +121,7 @@ export const MultiGameClient = ({
         audioPreloadTrack(song.audioUrl);
       }
     },
+    onRedirect: handleRedirect,
   });
 
   const {
@@ -136,14 +144,11 @@ export const MultiGameClient = ({
     authError,
     submitPassword,
     allPlayersAnswered,
-    currentSongIndex,
-    totalSongs,
     isHost,
     allowedWorks,
     isLoadingWorks,
     isReverseMode,
     isDoubleMode,
-    currentRound,
     currentRoundSongs,
     displayedSongIndex,
     displayedTotalSongs,
@@ -279,8 +284,14 @@ export const MultiGameClient = ({
   }, [showScores]);
 
   const handleGoHome = useCallback(() => {
-    router.push("/");
-  }, [router]);
+    // Si c'est l'hôte : reset la room et retourner au lobby (sans quitter la room)
+    // Si c'est un invité : quitter la room et retourner à l'accueil
+    if (game.isHost && game.resetToWaiting) {
+      void game.resetToWaiting();
+    } else {
+      router.push("/");
+    }
+  }, [router, game]);
 
   const formatTime = useCallback((seconds: number): string => {
     if (!isFinite(seconds) || isNaN(seconds)) return "0:00";
@@ -425,7 +436,7 @@ export const MultiGameClient = ({
       allowedWorksCount: allowedWorks?.length ?? 0,
       timestamp: Date.now(),
     });
-  }, [isConnected, currentSong?.id, works.length, isLoadingWorks, state, room?.songs?.length, allowedWorks?.length]);
+  }, [isConnected, currentSong, works.length, isLoadingWorks, state, room?.songs?.length, allowedWorks?.length]);
 
   if (!isConnected) {
     console.log("[MultiGameClient] ⚠️ RENDERING: Connexion au serveur...");

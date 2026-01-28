@@ -360,7 +360,7 @@ const UniverseCustomizeModalComponent = ({
                         : "bg-white text-[var(--color-text-secondary)]"
                     }`}
                   >
-                    Musique à l'envers
+                    Musique à l&apos;envers
                   </button>
                 </div>
                 {mysteryEffects.selectedEffects.length === 0 && (

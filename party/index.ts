@@ -177,6 +177,10 @@ const MessageSchema = z.discriminatedUnion("type", [
     type: z.literal("show_scores"),
     hostId: z.string().min(1),
   }),
+  z.object({
+    type: z.literal("reset_to_waiting"),
+    hostId: z.string().min(1),
+  }),
 ]);
 
 type Message = z.infer<typeof MessageSchema>;
@@ -361,6 +365,9 @@ export default class BlindTestRoom implements Party.Server {
           break;
         case "show_scores":
           this.handleShowScores(parsed, sender);
+          break;
+        case "reset_to_waiting":
+          this.handleResetToWaiting(parsed, sender);
           break;
       }
     } catch (error) {
@@ -1495,6 +1502,115 @@ export default class BlindTestRoom implements Party.Server {
       roomId: this.state.roomId,
       finalScores: this.getFinalScores(),
     });
+  }
+
+  /**
+   * Handler: RESET_TO_WAITING - Réinitialiser la room et retourner au lobby
+   * 
+   * Réinitialise complètement l'état de la room (scores, réponses, config, etc.)
+   * et redirige tous les joueurs vers la waiting room pour reconfigurer.
+   * 
+   * Host-only action.
+   */
+  private handleResetToWaiting(msg: Extract<Message, { type: "reset_to_waiting" }>, sender: Party.Connection) {
+    const { hostId } = msg;
+    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+    const senderId = senderPlayer?.id ?? hostId;
+
+    console.log(`[${this.room.id}] handleResetToWaiting called`, {
+      hostId,
+      senderId,
+      senderPlayer: senderPlayer?.id,
+      senderConn: sender.id,
+      expectedHostId: this.state.hostId,
+      currentState: this.state.state,
+      universeId: this.state.universeId,
+      songsCount: this.state.songs.length,
+      playersCount: this.state.players.size,
+    });
+
+    // Validation: est-ce bien le host ?
+    if (senderId !== this.state.hostId) {
+      console.warn(
+        `[${this.room.id}] RESET_TO_WAITING rejected: expected hostId=${this.state.hostId}, senderId=${senderId}`
+      );
+      sender.send(
+        JSON.stringify({
+          type: "error",
+          message: "Only the host can reset the room to waiting",
+        })
+      );
+      return;
+    }
+
+    // ⭐ RESET COMPLET DE L'ÉTAT DE LA ROOM
+    // Réinitialiser tous les champs de configuration et de jeu
+    this.state.universeId = "";
+    this.state.songs = [];
+    this.state.currentSongIndex = 0;
+    this.state.responses.clear();
+    this.state.rounds = undefined;
+    this.state.currentRoundIndex = undefined;
+    this.state.mysteryEffectsConfig = undefined;
+    this.state.allowedWorks = undefined;
+    this.state.options = undefined;
+    this.state.state = "idle";
+
+    // ⭐ RESET DES SCORES DE TOUS LES JOUEURS
+    // Réinitialiser score, correct, incorrect pour chaque joueur
+    for (const player of this.state.players.values()) {
+      player.score = 0;
+      player.correct = 0;
+      player.incorrect = 0;
+    }
+
+    console.log(`[${this.room.id}] Room reset to waiting state`, {
+      state: this.state.state,
+      universeId: this.state.universeId,
+      songsCount: this.state.songs.length,
+      playersCount: this.state.players.size,
+      playersReset: Array.from(this.state.players.values()).map((p) => ({
+        id: p.id,
+        score: p.score,
+        correct: p.correct,
+        incorrect: p.incorrect,
+      })),
+    });
+
+    // ⭐ NOTIFIER LE LOBBY que la room est revenue en état idle
+    void this.notifyLobby("room_state_changed", {
+      state: "idle",
+      playersCount: this.state.players.size,
+      universeId: "",
+      hasPassword: Boolean(this.state.passwordHash),
+    });
+
+    // ⭐ BROADCAST players_update pour mettre à jour les scores à zéro côté client
+    this.broadcast({
+      type: "players_update",
+      players: this.getPlayersArray(),
+    });
+
+    // ⭐ BROADCAST state_sync pour forcer tous les clients à synchroniser l'état reset
+    // (obligatoire pour éviter les ghost states)
+    this.broadcast({
+      type: "state_sync",
+      state: this.serializeState(),
+    });
+
+    // ⭐ BROADCAST redirect_to_waiting_room pour rediriger tous les joueurs
+    // Chaque client construira son URL avec son playerId et displayName depuis le serveur
+    this.broadcast({
+      type: "redirect_to_waiting_room",
+      roomId: this.state.roomId,
+      // Inclure les infos des joueurs pour que chaque client puisse construire son URL
+      players: this.getPlayersArray().map((p) => ({
+        id: p.id,
+        displayName: p.displayName,
+      })),
+    });
+
+    console.log(`[${this.room.id}] Reset to waiting completed, all players will be redirected`);
   }
 
   // ==========================================================================

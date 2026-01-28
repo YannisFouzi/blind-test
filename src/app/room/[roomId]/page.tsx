@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { usePartyKitRoom } from "@/hooks/usePartyKitRoom";
 import { CUSTOM_UNIVERSE, MAX_WORKS_CUSTOM_MODE } from "@/hooks/useUniverseCustomization";
 import { useGameConfiguration, useRoomAuthStore } from "@/stores";
@@ -14,10 +14,11 @@ import { UniverseGrid } from "@/components/home/UniverseGrid";
 import { getAllWorks, getSongsByWork, getWorksByUniverse } from "@/services/firebase";
 import { shuffleArray } from "@/utils/formatters";
 import type { Song, Universe } from "@/types";
+import { useGameNavigation } from "@/hooks/useGameNavigation";
 
 export default function WaitingRoomPage() {
   console.log("[WaitingRoomPage] RENDER", { timestamp: Date.now() });
-  const router = useRouter();
+  const { navigate } = useGameNavigation();
   const params = useParams<{ roomId: string }>();
   const searchParams = useSearchParams();
 
@@ -306,7 +307,7 @@ export default function WaitingRoomPage() {
         setIsConfiguringRoom(false);
       }
     },
-    [isHost, configureRoom, startGame, roomId]
+    [isHost, configureRoom, startGame, roomId, mysteryEffects.enabled, mysteryEffects.frequency, mysteryEffects.selectedEffects]
   );
 
   const passwordGate = authRequired ? (
@@ -352,17 +353,29 @@ export default function WaitingRoomPage() {
       isConnected,
     });
 
-    if (!identityReady || !room?.universeId || !roomId || !playerId) {
+    // ⭐ Protection : ne pas rediriger si universeId est vide (après reset) ou si state est "idle"
+    // Cela évite les redirects intempestifs après un reset_to_waiting
+    if (
+      !identityReady ||
+      !room?.universeId ||
+      room.universeId === "" ||
+      room.state === "idle" ||
+      !roomId ||
+      !playerId
+    ) {
       console.log("[WaitingRoomPage] auto-redirect SKIP", {
         reason: !identityReady
           ? "identity_not_ready"
-          : !room?.universeId
+          : !room?.universeId || room.universeId === ""
           ? "no_universe"
+          : room.state === "idle"
+          ? "state_idle"
           : !roomId
           ? "no_room"
           : "no_player",
         identityReady,
         universeId: room?.universeId,
+        state: room?.state,
         roomId,
         playerId,
       });
@@ -383,8 +396,8 @@ export default function WaitingRoomPage() {
 
     const targetUrl = `/game/${room.universeId}?${params.toString()}`;
     console.log("[WaitingRoomPage] REDIRECTING to game", { targetUrl });
-    router.replace(targetUrl);
-  }, [room?.universeId, allowedWorks, options?.noSeek, roomId, playerId, displayName, router, identityReady, state, isConnected]);
+    navigate(targetUrl);
+  }, [room?.universeId, room?.state, allowedWorks, options?.noSeek, roomId, playerId, displayName, identityReady, state, isConnected, navigate]);
 
   if (!roomId || !identityReady || !playerId) {
     return (

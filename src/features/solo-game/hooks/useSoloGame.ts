@@ -82,7 +82,7 @@ export const useSoloGame = ({
   const [lastGain, setLastGain] = useState<{ points: number; key: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [rounds, setRounds] = useState<GameRound[]>([]);
+  const [, setRounds] = useState<GameRound[]>([]);
   // Sélections en mode double : songId -> selectedWorkId
   const [doubleSelections, setDoubleSelections] = useState<Record<string, string | null>>({});
 

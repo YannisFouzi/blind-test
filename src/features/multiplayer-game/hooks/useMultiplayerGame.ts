@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GameAnswer, Song } from "@/types";
 import { usePartyKitRoom } from "@/hooks/usePartyKitRoom";
 import { useWorksQuery } from "@/hooks/queries";
-import { getCurrentRound, type GameRound } from "@/utils/mysteryEffects";
+import type { GameRound } from "@/utils/mysteryEffects";
 
 /**
  * Options pour useMultiplayerGame
@@ -24,6 +24,9 @@ export interface UseMultiplayerGameOptions {
 
   /** Callback pour précharger la prochaine chanson */
   preloadNextTrack?: (song: Song) => void;
+
+  /** Callback appelé avant redirection vers waiting room (pour cleanup audio, etc.) */
+  onRedirect?: () => void;
 }
 
 /**
@@ -60,6 +63,7 @@ export const useMultiplayerGame = ({
   playerId,
   displayName,
   preloadNextTrack,
+  onRedirect,
 }: UseMultiplayerGameOptions) => {
   // ============================================================
   // WebSocket Connection (PartyKit)
@@ -75,6 +79,7 @@ export const useMultiplayerGame = ({
     canGoNext,
     goNextSong,
     showScores,
+    resetToWaiting,
     submitAnswer,
     startGame,
     options,
@@ -86,7 +91,7 @@ export const useMultiplayerGame = ({
     authError,
     submitPassword,
     allPlayersAnswered,
-  } = usePartyKitRoom({ roomId, playerId, displayName });
+  } = usePartyKitRoom({ roomId, playerId, displayName, onRedirect });
 
   // ============================================================
   // Works Data (TanStack Query avec cache)
@@ -581,6 +586,7 @@ export const useMultiplayerGame = ({
     validateAnswer,
     nextSong,
     showScores: handleShowScores,
+    resetToWaiting,
     startGame: handleStartGame,
     configureRoom: handleConfigureRoom,
     authRequired,

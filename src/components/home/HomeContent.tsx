@@ -17,6 +17,7 @@ import { usePartyKitLobby } from "@/hooks/usePartyKitLobby";
 import { Room, Universe } from "@/types";
 import { useIdentity } from "@/hooks/useIdentity";
 import { Lock } from "lucide-react";
+import { useGameNavigation } from "@/hooks/useGameNavigation";
 
 type Mode = "solo" | "multi";
 type LobbyRoom = Room & { hasPassword?: boolean };
@@ -31,6 +32,7 @@ const displayNameSchema = z.object({
 
 export const HomeContent = () => {
   const router = useRouter();
+  const { navigate } = useGameNavigation();
   const { user } = useAuth();
   const { universes, loading: universesLoading, error: universesError } = useUniverses();
 
@@ -192,18 +194,17 @@ export const HomeContent = () => {
         displayName: name,
       });
 
-      // Rediriger le HOST vers la page d'attente pour qu'il se connecte EN PREMIER
-      router.push(
-        `/room/${roomId}?name=${encodeURIComponent(name)}&player=${playerIdRef.current}&host=1`
-      );
-      setHomeInfo(`Room crÃ©Ã©e: ${roomId}. SÃ©lectionne un univers pour lancer la partie.`);
+      // ⭐ Rediriger le HOST vers la page d'attente pour qu'il se connecte EN PREMIER
+      const targetUrl = `/room/${roomId}?name=${encodeURIComponent(name)}&player=${playerIdRef.current}&host=1`;
+      navigate(targetUrl);
+      // Note: setHomeInfo ne sera jamais affiché car la page est immédiatement rechargée
     } catch (error) {
       console.error("[multi][host][PartyKit] create room error", error);
       setHomeError(error instanceof Error ? error.message : "Erreur inconnue");
     } finally {
       setIsCreatingRoom(false);
     }
-  }, [hostRoomId, ensureDisplayName, createPartyKitRoom, ensurePlayerId, identityReady, router, createPassword, setPendingPassword]);
+  }, [hostRoomId, ensureDisplayName, createPartyKitRoom, ensurePlayerId, identityReady, createPassword, setPendingPassword, navigate]);
 
   const handleJoinRoom = useCallback(
     async (roomId: string, password?: string) => {
@@ -222,11 +223,10 @@ export const HomeContent = () => {
       }
       // Connexion directe Ã  la room via la page d'attente
       setHostRoomId("");
-      router.push(
-        `/room/${roomId}?name=${encodeURIComponent(name)}&player=${playerIdRef.current}`
-      );
+      const targetUrl = `/room/${roomId}?name=${encodeURIComponent(name)}&player=${playerIdRef.current}`;
+      navigate(targetUrl);
     },
-    [ensureDisplayName, ensurePlayerId, identityReady, router, setPendingPassword]
+    [ensureDisplayName, ensurePlayerId, identityReady, setPendingPassword, navigate]
   );
 
   const handleUniverseClick = useCallback(
