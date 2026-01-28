@@ -47,6 +47,7 @@ export interface SongData {
   artist: string;
   youtubeId: string;
   audioUrl: string;
+  audioUrlReversed?: string;
   duration: number;
   workId: string;
 }

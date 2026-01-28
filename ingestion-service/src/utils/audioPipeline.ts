@@ -69,6 +69,7 @@ export interface ProcessPlaylistResult {
     duration: number;
     artist: string;
     audioUrl: string;
+    audioUrlReversed?: string;
   }>;
 }
 
@@ -157,7 +158,7 @@ export const processPlaylist = async (
             "Artiste YouTube";
           const trackTitle = meta.track || meta.title || video.title;
 
-          // 1. Télécharger et uploader sur R2
+          // 1. Télécharger et uploader sur R2 (normal + reverse)
           const uploadResult = await downloadUploadAudio(
             workId,
             video.id,
@@ -172,6 +173,7 @@ export const processPlaylist = async (
             artist,
             youtubeId: video.id,
             audioUrl: uploadResult.url,
+            audioUrlReversed: uploadResult.reversedUrl,
             duration: video.duration,
             workId,
           });
@@ -188,6 +190,7 @@ export const processPlaylist = async (
             duration: video.duration,
             artist,
             audioUrl: uploadResult.url,
+            audioUrlReversed: uploadResult.reversedUrl,
           });
           imported += 1;
         } catch (error) {
@@ -232,19 +235,32 @@ const downloadUploadAudio = async (
 ) => {
   const tmpInputBase = tmp.tmpNameSync();
   const tmpOutput = tmp.tmpNameSync({ postfix: ".mp3" });
+  const tmpOutputReversed = tmp.tmpNameSync({ postfix: ".mp3" });
   let tmpInput: string | null = null;
 
   try {
     const downloadedPath = await downloadAudioStream(videoId, tmpInputBase);
     tmpInput = downloadedPath;
     await convertToMp3(downloadedPath, tmpOutput);
+
+    // Générer la version reversed à partir du MP3 normal
+    await convertToReversedMp3(tmpOutput, tmpOutputReversed);
+
     const key = buildObjectKey(workId, videoId, title);
+    const reversedKey = key.replace(/\.mp3$/i, "_reversed.mp3");
+
     const upload = await uploadToR2(tmpOutput, key);
-    return upload;
+    const reversedUpload = await uploadToR2(tmpOutputReversed, reversedKey);
+
+    return {
+      ...upload,
+      reversedUrl: reversedUpload.url,
+    };
   } finally {
     await Promise.allSettled([
       tmpInput ? fs.remove(tmpInput) : Promise.resolve(),
       fs.remove(tmpOutput),
+      fs.remove(tmpOutputReversed),
     ]);
   }
 };
@@ -309,6 +325,19 @@ const convertToMp3 = (input: string, output: string) => {
       .audioBitrate(128)
       .format("mp3")
       .outputOptions(["-metadata", "comment=BlindTest"])
+      .on("end", () => resolve())
+      .on("error", reject)
+      .save(output);
+  });
+};
+
+const convertToReversedMp3 = (input: string, output: string) => {
+  return new Promise<void>((resolve, reject) => {
+    ffmpeg(input)
+      .audioBitrate(128)
+      .format("mp3")
+      .audioFilters("areverse")
+      .outputOptions(["-metadata", "comment=BlindTest-Reverse"])
       .on("end", () => resolve())
       .on("error", reject)
       .save(output);

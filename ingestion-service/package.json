@@ -8,7 +8,8 @@
     "build": "node scripts/install-yt-dlp.js && tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "postinstall": "node scripts/install-yt-dlp.js",
-    "prepare": "node scripts/install-yt-dlp.js"
+    "prepare": "node scripts/install-yt-dlp.js",
+    "migrate:reverse-audio": "node dist/scripts/generateReversedAudio.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.675.0",
