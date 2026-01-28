@@ -98,6 +98,7 @@ export default function WaitingRoomPage() {
     noSeek: customNoSeek,
     maxSongs: customMaxSongs,
     isCustomMode,
+    mysteryEffects,
     openCustomize: openCustomizeStore,
     closeCustomize,
   } = useGameConfiguration();
@@ -126,8 +127,15 @@ export default function WaitingRoomPage() {
   const applyCustomizeAndPlay = useCallback(async () => {
     if (!customizingUniverse || !isHost || !configureRoom) return;
 
+    // ⭐ FIX: sauvegarder avant closeCustomize() (qui reset le store)
+    const savedMysteryEffects = { ...mysteryEffects };
+    const savedAllowedWorks = [...customAllowedWorks];
+    const savedNoSeek = customNoSeek;
+    const savedMaxSongs = customMaxSongs;
+    const savedIsCustomMode = isCustomMode;
+
     // Déterminer si c'est le mode custom
-    const isCustomModeActive = isCustomMode || customizingUniverse.id === CUSTOM_UNIVERSE.id;
+    const isCustomModeActive = savedIsCustomMode || customizingUniverse.id === CUSTOM_UNIVERSE.id;
     const universeId = isCustomModeActive ? CUSTOM_UNIVERSE.id : customizingUniverse.id;
     
     closeCustomize();
@@ -150,9 +158,9 @@ export default function WaitingRoomPage() {
       const availableWorks = worksResult.data;
 
       const worksToUse = isCustomModeActive
-        ? availableWorks.filter((work) => customAllowedWorks.includes(work.id))
-        : (customAllowedWorks.length > 0 && customAllowedWorks.length !== availableWorks.length
-            ? availableWorks.filter((work) => customAllowedWorks.includes(work.id))
+        ? availableWorks.filter((work) => savedAllowedWorks.includes(work.id))
+        : (savedAllowedWorks.length > 0 && savedAllowedWorks.length !== availableWorks.length
+            ? availableWorks.filter((work) => savedAllowedWorks.includes(work.id))
             : availableWorks);
 
       if (worksToUse.length === 0) {
@@ -180,19 +188,29 @@ export default function WaitingRoomPage() {
 
       // Mélanger et limiter selon maxSongs (ou toutes si null)
       const shuffled = shuffleArray([...allSongs]);
-      const maxCount = customMaxSongs !== null && customMaxSongs < shuffled.length
-        ? customMaxSongs
+      const maxCount = savedMaxSongs !== null && savedMaxSongs < shuffled.length
+        ? savedMaxSongs
         : shuffled.length;
       const selectedSongs = shuffled.slice(0, maxCount);
 
       // En mode custom, on passe TOUJOURS les allowedWorkIds
       const allowedWorkIds = isCustomModeActive
-        ? customAllowedWorks
-        : (customAllowedWorks.length > 0 && customAllowedWorks.length !== availableWorks.length
-            ? customAllowedWorks
+        ? savedAllowedWorks
+        : (savedAllowedWorks.length > 0 && savedAllowedWorks.length !== availableWorks.length
+            ? savedAllowedWorks
             : undefined);
 
-      await configureRoom(universeId, selectedSongs, allowedWorkIds, { noSeek: customNoSeek });
+      // Effets mystères pour mode multi
+      const mysteryEffectsConfig =
+        savedMysteryEffects.enabled && savedMysteryEffects.selectedEffects.length > 0
+          ? {
+              enabled: true,
+              frequency: savedMysteryEffects.frequency,
+              effects: savedMysteryEffects.selectedEffects,
+            }
+          : undefined;
+
+      await configureRoom(universeId, selectedSongs, allowedWorkIds, { noSeek: savedNoSeek }, mysteryEffectsConfig);
 
       if (startGame) {
         await startGame();
@@ -210,6 +228,7 @@ export default function WaitingRoomPage() {
     customAllowedWorks,
     customNoSeek,
     customMaxSongs,
+    mysteryEffects,
     closeCustomize,
     isCustomMode,
   ]);
@@ -261,7 +280,16 @@ export default function WaitingRoomPage() {
           songsCount: selectedSongs.length,
         });
 
-        await configureRoom(universeId, selectedSongs, undefined, { noSeek: false });
+        const mysteryEffectsConfig =
+          mysteryEffects.enabled && mysteryEffects.selectedEffects.length > 0
+            ? {
+                enabled: true,
+                frequency: mysteryEffects.frequency,
+                effects: mysteryEffects.selectedEffects,
+              }
+            : undefined;
+
+        await configureRoom(universeId, selectedSongs, undefined, { noSeek: false }, mysteryEffectsConfig);
 
         console.info("[WaitingRoomPage] Room configured, now starting game");
 

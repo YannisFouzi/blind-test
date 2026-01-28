@@ -1,5 +1,5 @@
 import { assign, setup } from "xstate";
-import type { Room, RoomPlayer, RoomResponse, Song } from "@/types";
+import type { Room, RoomPlayer, RoomResponse, Song, GameRound } from "@/types";
 
 export type ServerStateSnapshot = {
   roomId?: string;
@@ -7,6 +7,10 @@ export type ServerStateSnapshot = {
   universeId?: string;
   songs?: Song[];
   currentSongIndex?: number;
+  currentRoundIndex?: number;
+  currentRound?: GameRound;
+  displayedSongIndex?: number;
+  displayedTotalSongs?: number;
   state?: string;
   allowedWorks?: string[];
   options?: { noSeek?: boolean };
@@ -37,9 +41,9 @@ export type RoomMachineEvent =
     }
   | { type: "players_update"; players: RoomPlayer[] }
   | { type: "room_configured"; universeId?: string; songs?: Song[]; allowedWorks?: string[]; options?: { noSeek?: boolean } }
-  | { type: "game_started"; currentSongIndex?: number; state?: "playing"; songs?: Song[] }
+  | { type: "game_started"; currentSongIndex?: number; currentRoundIndex?: number; currentRound?: GameRound; displayedSongIndex?: number; displayedTotalSongs?: number; state?: "playing"; songs?: Song[] }
   | { type: "configure_success" }
-  | { type: "song_changed"; currentSongIndex?: number }
+  | { type: "song_changed"; currentSongIndex?: number; currentRoundIndex?: number; currentRound?: GameRound; displayedSongIndex?: number; displayedTotalSongs?: number }
   | { type: "game_ended"; players?: RoomPlayer[]; state?: "results" }
   | { type: "answer_recorded"; response: RoomResponse }
   | { type: "player_answered"; playerId: string; songId: string }
@@ -122,6 +126,10 @@ export const roomMachine = setup({
           universeId: snapshot.universeId ?? context.room.universeId,
           songs: snapshot.songs || [],
           currentSongIndex: snapshot.currentSongIndex ?? 0,
+          currentRoundIndex: snapshot.currentRoundIndex,
+          currentRound: snapshot.currentRound,
+          displayedSongIndex: snapshot.displayedSongIndex,
+          displayedTotalSongs: snapshot.displayedTotalSongs,
           state: nextState,
           allowedWorks: snapshot.allowedWorks,
           options: snapshot.options ? normalizeOptions(snapshot.options) : context.room.options,
@@ -172,6 +180,10 @@ export const roomMachine = setup({
           ...context.room,
           state: "playing" as Room["state"],
           currentSongIndex: event.currentSongIndex ?? 0,
+          currentRoundIndex: event.currentRoundIndex,
+          currentRound: event.currentRound,
+          displayedSongIndex: event.displayedSongIndex,
+          displayedTotalSongs: event.displayedTotalSongs,
           songs: event.songs || context.room.songs || [],
         },
         allPlayersAnswered: false,
@@ -184,6 +196,10 @@ export const roomMachine = setup({
         room: {
           ...context.room,
           currentSongIndex: event.currentSongIndex ?? context.room.currentSongIndex ?? 0,
+          currentRoundIndex: event.currentRoundIndex ?? context.room.currentRoundIndex,
+          currentRound: event.currentRound ?? context.room.currentRound,
+          displayedSongIndex: event.displayedSongIndex ?? context.room.displayedSongIndex,
+          displayedTotalSongs: event.displayedTotalSongs ?? context.room.displayedTotalSongs,
         },
         allPlayersAnswered: false,
       };

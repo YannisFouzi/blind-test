@@ -28,3 +28,4 @@ export { VolumeControl, type VolumeControlProps } from "./components/VolumeContr
 
 // Hooks
 export { useAudioPlayer } from "./hooks/useAudioPlayer";
+export { useDoubleAudioPlayer } from "./hooks/useDoubleAudioPlayer";

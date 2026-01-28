@@ -51,6 +51,8 @@ export const SongSchema = z.object({
   workId: z.string().min(1),
   youtubeId: z.string().min(1),
   audioUrl: audioUrlSchema,
+  // URL du fichier reverse pré-généré (optionnel pour compat avec anciens docs)
+  audioUrlReversed: audioUrlSchema,
   duration: z.number().int().min(0),
   createdAt: timestampSchema,
 });
@@ -85,11 +87,32 @@ export const UniverseSchema = z.object({
   createdAt: timestampSchema,
 });
 
+/**
+ * Configuration des effets mystères (solo + multi)
+ */
+export const MysteryEffectConfigSchema = z.object({
+  enabled: z.boolean(),
+  frequency: z.number().int().min(1).max(100),
+  effects: z.array(z.enum(["double", "reverse"])).min(1),
+});
+
+/**
+ * Modèle "Round" partagé (solo + multi)
+ */
+export const GameRoundSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("normal"), songIds: z.tuple([z.string()]) }),
+  z.object({ type: z.literal("reverse"), songIds: z.tuple([z.string()]) }),
+  z.object({ type: z.literal("double"), songIds: z.tuple([z.string(), z.string()]) }),
+]);
+
 export const GameSessionSchema = z.object({
   id: z.string().min(1),
   universeId: z.string().min(1),
   songs: z.array(SongSchema),
   currentSongIndex: z.number().int().min(0),
+  // Nouveaux champs pour le modèle "rounds" (mode solo)
+  currentRoundIndex: z.number().int().min(0).optional(),
+  rounds: z.array(GameRoundSchema).optional(),
   score: ScoreSchema,
   answers: z.array(GameAnswerSchema),
   createdAt: timestampSchema,
@@ -139,6 +162,13 @@ export const RoomSchema = z.object({
   startedAt: timestampSchema.nullable().optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema.optional(),
+  // Effets mystères / rounds côté client (lecture seule)
+  currentRound: GameRoundSchema.optional(),
+  currentRoundIndex: z.number().int().min(0).optional(),
+  mysteryEffectsConfig: MysteryEffectConfigSchema.optional(),
+  // Compteur affiché basé sur les rounds (calculé côté serveur)
+  displayedSongIndex: z.number().int().min(1).optional(),
+  displayedTotalSongs: z.number().int().min(1).optional(),
 });
 
 export const UserSchema = z.object({
@@ -159,3 +189,5 @@ export type Room = z.infer<typeof RoomSchema>;
 export type RoomPlayer = z.infer<typeof RoomPlayerSchema>;
 export type RoomResponse = z.infer<typeof RoomResponseSchema>;
 export type RoomState = z.infer<typeof RoomStateSchema>;
+export type GameRound = z.infer<typeof GameRoundSchema>;
+export type MysteryEffectsConfig = z.infer<typeof MysteryEffectConfigSchema>;

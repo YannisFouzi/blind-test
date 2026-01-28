@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GameAnswer, Song } from "@/types";
 import { usePartyKitRoom } from "@/hooks/usePartyKitRoom";
 import { useWorksQuery } from "@/hooks/queries";
+import { getCurrentRound, type GameRound } from "@/utils/mysteryEffects";
 
 /**
  * Options pour useMultiplayerGame
@@ -102,6 +103,8 @@ export const useMultiplayerGame = ({
   const [gameAnswer, setGameAnswer] = useState<GameAnswer | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [lastGain, setLastGain] = useState<{ points: number; key: number } | null>(null);
+  // Sélections en mode double : songId -> selectedWorkId
+  const [doubleSelections, setDoubleSelections] = useState<Record<string, string | null>>({});
 
   // ============================================================
   // Computed Values
@@ -142,6 +145,46 @@ export const useMultiplayerGame = ({
    */
   const canGoPrev = false; // Multiplayer = pas de prev
 
+  /**
+   * Round actuel (modèle "rounds" pour effets mystères)
+   */
+  const currentRound = useMemo<GameRound | undefined>(() => {
+    return room?.currentRound;
+  }, [room?.currentRound]);
+
+  /**
+   * Mode reverse activé ?
+   */
+  const isReverseMode = useMemo(() => {
+    return currentRound?.type === "reverse";
+  }, [currentRound]);
+
+  /**
+   * Mode double activé ?
+   */
+  const isDoubleMode = useMemo(() => {
+    return currentRound?.type === "double";
+  }, [currentRound]);
+
+  /**
+   * Chansons du round actuel (pour mode double : 2 chansons, sinon 1)
+   */
+  const currentRoundSongs = useMemo<Song[]>(() => {
+    if (!room?.songs || !currentRound) {
+      return currentSong ? [currentSong] : [];
+    }
+
+    const songsForRound = currentRound.songIds
+      .map((id) => room.songs.find((s) => s.id === id))
+      .filter((s): s is Song => Boolean(s));
+
+    if (!songsForRound.length && currentSong) {
+      return [currentSong];
+    }
+
+    return songsForRound;
+  }, [room?.songs, currentRound, currentSong]);
+
   // ============================================================
   // Effects
   // ============================================================
@@ -154,6 +197,7 @@ export const useMultiplayerGame = ({
     setGameAnswer(null);
     setShowAnswer(false);
     setLastGain(null);
+    setDoubleSelections({});
   }, [currentSong?.id]);
 
   /**
@@ -214,6 +258,12 @@ export const useMultiplayerGame = ({
    */
   const handleAnswer = (workId: string) => {
     if (showAnswer || isCurrentSongAnswered) return;
+
+    // En mode double, la sélection passe par un handler dédié
+    if (isDoubleMode) {
+      return;
+    }
+
     setSelectedWork(workId);
   };
 
@@ -221,6 +271,11 @@ export const useMultiplayerGame = ({
    * Valider la réponse
    */
   const validateAnswer = async () => {
+    // Mode double : utiliser validateAnswerDouble
+    if (isDoubleMode) {
+      return validateAnswerDouble();
+    }
+
     if (!currentSong || !selectedWork) return;
 
     if (state !== "playing") {
@@ -292,10 +347,180 @@ export const useMultiplayerGame = ({
   /**
    * Configurer la room avec songs (host only)
    */
-  const handleConfigureRoom = async (songs: Song[], universeIdParam: string, allowedWorksParam?: string[], optionsParam?: { noSeek: boolean }) => {
+  const handleConfigureRoom = async (
+    songs: Song[],
+    universeIdParam: string,
+    allowedWorksParam?: string[],
+    optionsParam?: { noSeek: boolean },
+    mysteryEffectsConfig?: {
+      enabled: boolean;
+      frequency: number;
+      effects: ("double" | "reverse")[];
+    }
+  ) => {
     if (!isHost) return;
-    await configureRoom(universeIdParam, songs, allowedWorksParam, optionsParam);
+    await configureRoom(universeIdParam, songs, allowedWorksParam, optionsParam, mysteryEffectsConfig);
   };
+
+  /**
+   * Sélectionner une œuvre pour un slot en mode double
+   */
+  const handleDoubleSelection = useCallback(
+    (slotIndex: 0 | 1, workId: string) => {
+      if (showAnswer || isCurrentSongAnswered || !currentRound || currentRound.type !== "double") {
+        return;
+      }
+
+      const songId = currentRound.songIds[slotIndex];
+      if (!songId) return;
+
+      // Vérifier si une réponse est déjà enregistrée pour cette chanson (via responses)
+      const hasAnswered = responses.some(
+        (r) => r.songId === songId && r.playerId === playerId
+      );
+      if (hasAnswered) {
+        return;
+      }
+
+      setDoubleSelections((prev) => ({
+        ...prev,
+        [songId]: workId,
+      }));
+    },
+    [showAnswer, isCurrentSongAnswered, currentRound, responses, playerId]
+  );
+
+  /**
+   * Retirer une sélection pour une œuvre en mode double (un slot à la fois)
+   */
+  const clearDoubleSelectionForWork = useCallback(
+    (workId: string) => {
+      if (!currentRound || currentRound.type !== "double" || showAnswer) return;
+
+      setDoubleSelections((prev) => {
+        const songIds = currentRound.songIds;
+        const newSelections = { ...prev };
+
+        // Trouver un songId du round actuel qui pointe sur cette œuvre
+        const targetSongId = songIds.find((id) => newSelections[id] === workId);
+        if (!targetSongId) {
+          return prev;
+        }
+
+        newSelections[targetSongId] = null;
+        return newSelections;
+      });
+    },
+    [currentRound, showAnswer]
+  );
+
+  /**
+   * Valider les réponses en mode double
+   * ⭐ Utilise un multi-set (ordre-indépendant) comme en solo pour corriger le mapping
+   */
+  const validateAnswerDouble = useCallback(async () => {
+    if (!currentRound || currentRound.type !== "double" || !currentRoundSongs || currentRoundSongs.length < 2) {
+      return;
+    }
+
+    if (state !== "playing") {
+      setSubmitError("La partie n'a pas démarré");
+      return;
+    }
+
+    // Préparer les infos chansons + sélections
+    const songInfos = currentRoundSongs
+      .map((song) => {
+        return {
+          songId: song.id,
+          song,
+          selectedId: doubleSelections[song.id] ?? null,
+        };
+      })
+      .filter((info) => Boolean(info.song));
+
+    if (songInfos.length < 2) {
+      setSubmitError("Veuillez sélectionner deux œuvres");
+      return;
+    }
+
+    // Vérifier que les 2 slots sont remplis
+    const allSelected = songInfos.every((info) => info.selectedId !== null);
+    if (!allSelected) {
+      setSubmitError("Veuillez sélectionner deux œuvres");
+      return;
+    }
+
+    try {
+      // Ensemble des œuvres correctes (ordre-indépendant, avec multiplicité)
+      const remainingCorrectWorks: string[] = songInfos.map((info) => info.song.workId);
+
+      // Construire le mapping explicite songId → workId avec multi-set
+      const answers: Array<{ songId: string; workId: string | null }> = [];
+
+      songInfos.forEach((info) => {
+        const selectedId = info.selectedId;
+        let matchedWorkId: string | null = null;
+
+        if (selectedId) {
+          const matchIndex = remainingCorrectWorks.indexOf(selectedId);
+          if (matchIndex !== -1) {
+            // On consomme une occurrence de cette œuvre correcte (multi-set)
+            remainingCorrectWorks.splice(matchIndex, 1);
+            matchedWorkId = selectedId;
+          } else {
+            // Sélection incorrecte, mais on l'envoie quand même
+            matchedWorkId = selectedId;
+          }
+        }
+
+        answers.push({
+          songId: info.songId,
+          workId: matchedWorkId,
+        });
+      });
+
+      console.log("[useMultiplayerGame] submit double answer", {
+        roomId,
+        answers,
+        playerId,
+      });
+
+      const result = await submitAnswer(null, false, answers);
+
+      if (result.success) {
+        const pointsEarned = result.data?.points ?? 0;
+        const timestamp = typeof performance !== "undefined" ? performance.now() : Date.now();
+
+        setLastGain({ points: pointsEarned, key: timestamp });
+        setSubmitError(null);
+        setShowAnswer(true);
+      } else {
+        console.error("[useMultiplayerGame] submit double answer error", result.error);
+        setSubmitError(result.error || "Impossible d'enregistrer les réponses");
+      }
+    } catch (error) {
+      console.error("[useMultiplayerGame] submit double answer exception", error);
+      setSubmitError(error instanceof Error ? error.message : "Erreur inconnue lors de la validation");
+    }
+  }, [currentRound, currentRoundSongs, doubleSelections, state, submitAnswer, roomId, playerId]);
+
+  // Sélections actuelles pour les deux chansons du round double (slot 1 / slot 2)
+  const doubleSelectedWorkSlot1: string | null = useMemo(() => {
+    if (!currentRound || currentRound.type !== "double" || !currentRoundSongs || currentRoundSongs.length < 1) {
+      return null;
+    }
+    const [songId1] = currentRound.songIds;
+    return doubleSelections[songId1] ?? null;
+  }, [currentRound, currentRoundSongs, doubleSelections]);
+
+  const doubleSelectedWorkSlot2: string | null = useMemo(() => {
+    if (!currentRound || currentRound.type !== "double" || !currentRoundSongs || currentRoundSongs.length < 2) {
+      return null;
+    }
+    const [, songId2] = currentRound.songIds;
+    return songId2 ? doubleSelections[songId2] ?? null : null;
+  }, [currentRound, currentRoundSongs, doubleSelections]);
 
   // ============================================================
   // Return
@@ -324,6 +549,8 @@ export const useMultiplayerGame = ({
     currentSong,
     currentSongIndex,
     totalSongs: room?.songs?.length ?? 0,
+    displayedSongIndex: room?.displayedSongIndex ?? currentSongIndex + 1,
+    displayedTotalSongs: room?.displayedTotalSongs ?? room?.songs?.length ?? 0,
 
     // Answer state
     selectedWork,
@@ -338,6 +565,16 @@ export const useMultiplayerGame = ({
 
     // Options
     options,
+
+    // Effets mystères (multi)
+    currentRound,
+    isReverseMode,
+    isDoubleMode,
+    currentRoundSongs,
+    doubleSelectedWorkSlot1,
+    doubleSelectedWorkSlot2,
+    handleDoubleSelection,
+    clearDoubleSelectionForWork,
 
     // Actions
     handleAnswer,

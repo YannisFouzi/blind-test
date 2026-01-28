@@ -6,6 +6,13 @@ import { useGameConfiguration, useCanSelectMoreWorks } from "@/stores";
 import { getAllWorks, getSongsByWork, getWorksByUniverse, getUniverses } from "@/services/firebase";
 import { pressable } from "@/styles/ui";
 
+const MYSTERY_INTENSITY_PRESETS = [
+  { label: "Léger", value: 10 },
+  { label: "Moyen", value: 25 },
+  { label: "Beaucoup", value: 50 },
+  { label: "Atroce", value: 100 },
+] as const;
+
 /**
  * Props pour UniverseCustomizeModal
  *
@@ -37,11 +44,15 @@ const UniverseCustomizeModalComponent = ({
     maxSongs,
     isCustomMode,
     maxWorksAllowed,
+    mysteryEffects,
     toggleWork,
     setAllowedWorks,
     setNoSeek,
     setMaxSongs,
     closeCustomize,
+    setMysteryEffectsEnabled,
+    setMysteryEffectsFrequency,
+    toggleMysteryEffect,
   } = useGameConfiguration();
 
   const canSelectMoreWorks = useCanSelectMoreWorks();
@@ -283,6 +294,82 @@ const UniverseCustomizeModalComponent = ({
             <p className="text-xs text-[var(--color-text-secondary)]">
               Impossible de se déplacer pendant la lecture du morceau.
             </p>
+          </div>
+
+          {/* Effets mystères */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-[var(--color-text-primary)] text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  checked={mysteryEffects.enabled}
+                  onChange={(e) => setMysteryEffectsEnabled(e.target.checked)}
+                  className="w-4 h-4 rounded border-2 border-black accent-yellow-400"
+                />
+                Activer les effets mystères
+              </label>
+              {mysteryEffects.enabled && (
+                <span className="text-[var(--color-text-secondary)] text-xs">
+                  Fréquence : {mysteryEffects.frequency}%
+                </span>
+              )}
+            </div>
+
+            {mysteryEffects.enabled && (
+              <div className="space-y-3 pl-1">
+                {/* Niveaux fixes de fréquence */}
+                <div className="flex flex-wrap gap-2">
+                  {MYSTERY_INTENSITY_PRESETS.map((preset) => {
+                    const isActive = mysteryEffects.frequency === preset.value;
+                    return (
+                      <button
+                        key={preset.value}
+                        type="button"
+                        onClick={() => setMysteryEffectsFrequency(preset.value)}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-full border-2 border-black shadow-[2px_2px_0_#1B1B1B] transition-colors ${
+                          isActive
+                            ? "bg-[#FDE68A] text-[var(--color-text-primary)]"
+                            : "bg-white text-[var(--color-text-secondary)]"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Choix des effets */}
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleMysteryEffect("double")}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-full border-2 border-black shadow-[2px_2px_0_#1B1B1B] transition-colors ${
+                      mysteryEffects.selectedEffects.includes("double")
+                        ? "bg-[#FDE68A] text-[var(--color-text-primary)]"
+                        : "bg-white text-[var(--color-text-secondary)]"
+                    }`}
+                  >
+                    Deux musiques en même temps
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleMysteryEffect("reverse")}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-full border-2 border-black shadow-[2px_2px_0_#1B1B1B] transition-colors ${
+                      mysteryEffects.selectedEffects.includes("reverse")
+                        ? "bg-[#FDE68A] text-[var(--color-text-primary)]"
+                        : "bg-white text-[var(--color-text-secondary)]"
+                    }`}
+                  >
+                    Musique à l'envers
+                  </button>
+                </div>
+                {mysteryEffects.selectedEffects.length === 0 && (
+                  <p className="text-[var(--color-text-secondary)] text-xs">
+                    Sélectionne au moins un effet à activer.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Œuvres incluses */}

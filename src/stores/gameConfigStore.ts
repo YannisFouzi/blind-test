@@ -47,6 +47,15 @@ interface GameConfigStore {
    */
   maxWorksAllowed: number | null;
 
+  /**
+   * Configuration des effets mystères (solo + multi)
+   */
+  mysteryEffects: {
+    enabled: boolean;
+    frequency: number; // 1-100
+    selectedEffects: ("double" | "reverse")[];
+  };
+
   // ========== ACTIONS ==========
 
   /**
@@ -91,6 +100,21 @@ interface GameConfigStore {
    * Reset uniquement les options (garde l'univers et les œuvres)
    */
   resetOptions: () => void;
+
+  /**
+   * Activer / désactiver les effets mystères
+   */
+  setMysteryEffectsEnabled: (enabled: boolean) => void;
+
+  /**
+   * Modifier la fréquence des effets mystères (1-100%)
+   */
+  setMysteryEffectsFrequency: (frequency: number) => void;
+
+  /**
+   * Activer / désactiver un effet donné (double / reverse)
+   */
+  toggleMysteryEffect: (effect: "double" | "reverse") => void;
 }
 
 /**
@@ -103,6 +127,11 @@ const INITIAL_STATE = {
   maxSongs: null,
   isCustomMode: false,
   maxWorksAllowed: null,
+   mysteryEffects: {
+    enabled: false,
+    frequency: 10,
+    selectedEffects: [],
+  },
 };
 
 /**
@@ -199,6 +228,44 @@ export const useGameConfig = create<GameConfigStore>((set) => ({
     noSeek: false,
     maxSongs: null,
   }),
+
+  setMysteryEffectsEnabled: (enabled) =>
+    set((state) => ({
+      mysteryEffects: {
+        ...state.mysteryEffects,
+        enabled,
+      },
+    })),
+
+  setMysteryEffectsFrequency: (frequency) =>
+    set((state) => ({
+      mysteryEffects: {
+        ...state.mysteryEffects,
+        frequency: Math.max(1, Math.min(100, frequency)),
+      },
+    })),
+
+  toggleMysteryEffect: (effect) =>
+    set((state) => {
+      const selectedEffects = state.mysteryEffects.selectedEffects;
+      const isSelected = selectedEffects.includes(effect);
+
+      if (isSelected) {
+        return {
+          mysteryEffects: {
+            ...state.mysteryEffects,
+            selectedEffects: selectedEffects.filter((e) => e !== effect),
+          },
+        };
+      }
+
+      return {
+        mysteryEffects: {
+          ...state.mysteryEffects,
+          selectedEffects: [...selectedEffects, effect],
+        },
+      };
+    }),
 }));
 
 /**
@@ -212,6 +279,7 @@ export const gameConfigSelectors = {
   maxSongs: (state: GameConfigStore) => state.maxSongs,
   isCustomMode: (state: GameConfigStore) => state.isCustomMode,
   maxWorksAllowed: (state: GameConfigStore) => state.maxWorksAllowed,
+  mysteryEffects: (state: GameConfigStore) => state.mysteryEffects,
 
   // Actions
   openCustomize: (state: GameConfigStore) => state.openCustomize,
@@ -222,6 +290,9 @@ export const gameConfigSelectors = {
   setMaxSongs: (state: GameConfigStore) => state.setMaxSongs,
   reset: (state: GameConfigStore) => state.reset,
   resetOptions: (state: GameConfigStore) => state.resetOptions,
+  setMysteryEffectsEnabled: (state: GameConfigStore) => state.setMysteryEffectsEnabled,
+  setMysteryEffectsFrequency: (state: GameConfigStore) => state.setMysteryEffectsFrequency,
+  toggleMysteryEffect: (state: GameConfigStore) => state.toggleMysteryEffect,
 };
 
 /**
@@ -252,6 +323,7 @@ export const useGameConfiguration = () => ({
   maxSongs: useGameConfig(gameConfigSelectors.maxSongs),
   isCustomMode: useGameConfig(gameConfigSelectors.isCustomMode),
   maxWorksAllowed: useGameConfig(gameConfigSelectors.maxWorksAllowed),
+  mysteryEffects: useGameConfig(gameConfigSelectors.mysteryEffects),
 
   // Actions
   openCustomize: useGameConfig(gameConfigSelectors.openCustomize),
@@ -262,6 +334,9 @@ export const useGameConfiguration = () => ({
   setMaxSongs: useGameConfig(gameConfigSelectors.setMaxSongs),
   reset: useGameConfig(gameConfigSelectors.reset),
   resetOptions: useGameConfig(gameConfigSelectors.resetOptions),
+  setMysteryEffectsEnabled: useGameConfig(gameConfigSelectors.setMysteryEffectsEnabled),
+  setMysteryEffectsFrequency: useGameConfig(gameConfigSelectors.setMysteryEffectsFrequency),
+  toggleMysteryEffect: useGameConfig(gameConfigSelectors.toggleMysteryEffect),
 });
 
 /**

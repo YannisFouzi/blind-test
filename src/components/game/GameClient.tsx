@@ -80,6 +80,9 @@ export function GameClient({ universeId }: GameClientProps) {
   const queryNoSeek = searchParams?.get("noseek") === "1";
   const queryWorks = searchParams?.get("works") || "";
   const queryMaxSongs = searchParams?.get("maxsongs");
+  const queryMysteryEnabled = searchParams?.get("me") === "1";
+  const queryMysteryFrequency = searchParams?.get("mef");
+  const queryMysteryEffects = searchParams?.get("mee") || "";
 
   // ============================================================
   // Identity Management (pour multiplayer)
@@ -121,6 +124,23 @@ export function GameClient({ universeId }: GameClientProps) {
     [queryMaxSongs]
   );
 
+  const mysteryEffectsConfig = useMemo(() => {
+    if (!queryMysteryEnabled) return undefined;
+    const effects = queryMysteryEffects
+      .split(",")
+      .map((e) => e.trim())
+      .filter((e): e is "double" | "reverse" => e === "double" || e === "reverse");
+    const frequency = queryMysteryFrequency ? parseInt(queryMysteryFrequency, 10) : 0;
+    if (!effects.length || !frequency || Number.isNaN(frequency)) {
+      return undefined;
+    }
+    return {
+      enabled: true,
+      frequency,
+      effects,
+    };
+  }, [queryMysteryEnabled, queryMysteryFrequency, queryMysteryEffects]);
+
   // ============================================================
   // Render
   // ============================================================
@@ -157,6 +177,7 @@ export function GameClient({ universeId }: GameClientProps) {
       allowedWorks={allowedWorks}
       maxSongs={maxSongs}
       noSeek={queryNoSeek}
+      mysteryEffectsConfig={mysteryEffectsConfig}
     />
   );
 }

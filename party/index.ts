@@ -1,5 +1,11 @@
 import type * as Party from "partykit/server";
 import { z } from "zod";
+import {
+  calculateGameRounds,
+  getCurrentRound,
+  type GameRound,
+  type MysteryEffectsConfig,
+} from "../src/utils/mysteryEffects";
 
 // ============================================================================
 // SECURITY CONSTANTS & HELPERS
@@ -128,12 +134,20 @@ const MessageSchema = z.discriminatedUnion("type", [
         workId: z.string(),
         youtubeId: z.string(),
         audioUrl: z.string().optional(),
+        audioUrlReversed: z.string().optional(),
         duration: z.number(),
       })
     ),
     allowedWorks: z.array(z.string()).optional(),
     options: z.object({ noSeek: z.boolean() }).optional(),
     hostId: z.string().optional(),
+    mysteryEffectsConfig: z
+      .object({
+        enabled: z.boolean(),
+        frequency: z.number().int().min(1).max(100),
+        effects: z.array(z.enum(["double", "reverse"])).min(1),
+      })
+      .optional(),
   }),
   z.object({
     type: z.literal("start"),
@@ -142,8 +156,18 @@ const MessageSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("answer"),
     playerId: z.string().min(1),
-    songId: z.string().min(1),
+    // Mode normal/reverse : format simple
+    songId: z.string().min(1).optional(),
     workId: z.string().optional().nullable(),
+    // Mode double : mapping explicite songId → workId
+    answers: z
+      .array(
+        z.object({
+          songId: z.string().min(1),
+          workId: z.string().nullable(),
+        })
+      )
+      .optional(),
   }),
   z.object({
     type: z.literal("next"),
@@ -194,6 +218,7 @@ interface Song {
   workId: string;
   youtubeId: string;
   audioUrl?: string;
+  audioUrlReversed?: string;
   duration: number;
 }
 
@@ -232,6 +257,10 @@ interface RoomState {
   passwordHash?: string;
   authTokens: Map<string, AuthTokenRecord>;
   failedAttempts: Map<string, FailedAttempt>;
+  // Effets mystères (modèle "rounds")
+  rounds?: GameRound[];
+  currentRoundIndex?: number;
+  mysteryEffectsConfig?: MysteryEffectsConfig;
 }
 
 // ============================================================================
@@ -702,7 +731,14 @@ export default class BlindTestRoom implements Party.Server {
    */
   private handleConfigure(msg: Extract<Message, { type: "configure" }>, sender: Party.Connection) {
     console.log(`[${this.room.id}] ========== CONFIGURE MESSAGE RECEIVED ==========`);
-    const { universeId, songs, allowedWorks, options, hostId: hostIdFromClient } = msg;
+    const {
+      universeId,
+      songs,
+      allowedWorks,
+      options,
+      hostId: hostIdFromClient,
+      mysteryEffectsConfig,
+    } = msg;
     const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
     const senderId = senderPlayer?.id ?? hostIdFromClient;
 
@@ -741,8 +777,28 @@ export default class BlindTestRoom implements Party.Server {
     this.state.songs = songs;
     this.state.allowedWorks = allowedWorks;
     this.state.options = options;
-    this.state.currentSongIndex = 0;
-    this.state.state = "configured"; // âœ… ChangÃ© de "idle" Ã  "configured"
+
+    // Effets mystères : calculer les rounds si configurés
+    const hasEffects =
+      mysteryEffectsConfig?.enabled && mysteryEffectsConfig.effects && mysteryEffectsConfig.effects.length > 0;
+
+    if (hasEffects) {
+      this.state.mysteryEffectsConfig = mysteryEffectsConfig;
+      this.state.rounds = calculateGameRounds(this.state.songs, mysteryEffectsConfig);
+      this.state.currentRoundIndex = 0;
+
+      const firstRound = this.state.rounds[0];
+      const firstSongId = firstRound?.songIds[0];
+      const firstSongIndex = this.state.songs.findIndex((s) => s.id === firstSongId);
+      this.state.currentSongIndex = firstSongIndex >= 0 ? firstSongIndex : 0;
+    } else {
+      this.state.mysteryEffectsConfig = undefined;
+      this.state.rounds = undefined;
+      this.state.currentRoundIndex = undefined;
+      this.state.currentSongIndex = 0;
+    }
+
+    this.state.state = "configured"; // ✅ Changé de "idle" à "configured"
 
     console.log(`[${this.room.id}] Configured: ${songs.length} songs, universe ${universeId}`);
 
@@ -840,21 +896,39 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // DÃ©marrer la partie
+    // Déterminer l'index du premier morceau si les rounds sont configurés
+    if (this.state.rounds && this.state.rounds.length > 0) {
+      // S'assurer que currentRoundIndex est initialisé à 0 si les rounds existent
+      if (this.state.currentRoundIndex === undefined) {
+        this.state.currentRoundIndex = 0;
+      }
+      const currentRound = getCurrentRound(this.state.rounds, this.state.currentRoundIndex) ?? this.state.rounds[0];
+      const firstSongId = currentRound?.songIds[0];
+      const firstSongIndex = this.state.songs.findIndex((s) => s.id === firstSongId);
+      this.state.currentSongIndex = firstSongIndex >= 0 ? firstSongIndex : 0;
+    } else {
+      this.state.currentSongIndex = 0;
+    }
+
+    // Démarrer la partie
     this.state.state = "playing";
-    this.state.currentSongIndex = 0;
 
     console.log(`[${this.room.id}] Game started by hostId=${hostId} (conn=${sender.id}, senderPlayer=${senderPlayer?.id})`);
 
     // âœ… Phase 7: Notifier le Lobby que la room a commencÃ© Ã  jouer
     void this.notifyLobby("room_state_changed", { state: "playing", playersCount: this.state.players.size, universeId: this.state.universeId, hasPassword: Boolean(this.state.passwordHash), });
 
-    // Broadcaster le dÃ©marrage (avec la liste complÃ¨te des songs)
+    // Broadcaster le démarrage (avec la liste complète des songs)
+    const currentRound = this.getCurrentRound();
     this.broadcast({
       type: "game_started",
-      currentSongIndex: 0,
+      currentSongIndex: this.state.currentSongIndex,
+      currentRoundIndex: this.state.currentRoundIndex,
+      currentRound: currentRound,
+      displayedSongIndex: this.getDisplayedSongIndex(),
+      displayedTotalSongs: this.getDisplayedTotalSongs(),
       state: "playing",
-      currentSong: this.state.songs[0],
+      currentSong: this.state.songs[this.state.currentSongIndex],
       songs: this.state.songs, // Ajouter pour que les clients aient la liste
       totalSongs: this.state.songs.length,
     });
@@ -870,12 +944,13 @@ export default class BlindTestRoom implements Party.Server {
    * Handler: ANSWER - Soumission d'une rÃ©ponse
    */
   private handleAnswer(msg: Extract<Message, { type: "answer" }>, sender: Party.Connection) {
-    const { playerId, songId } = msg;
-    const workId = msg.workId ?? null; // Normaliser undefined â†’ null
+    const { playerId } = msg;
     console.log(`[${this.room.id}] handleAnswer called`, {
       playerId,
-      songId,
-      workId,
+      hasAnswers: !!msg.answers,
+      answersCount: msg.answers?.length ?? 0,
+      songId: msg.songId,
+      workId: msg.workId,
       state: this.state.state,
       responses: this.state.responses.size,
       players: this.state.players.size,
@@ -914,6 +989,27 @@ export default class BlindTestRoom implements Party.Server {
       );
       return;
     }
+
+    // ⭐ NOUVEAU : Détecter le mode double
+    const currentRound = this.getCurrentRound();
+    if (currentRound?.type === "double") {
+      // Mode double : traiter les 2 réponses avec mapping explicite
+      return this.handleAnswerDouble(msg, sender, player, currentRound);
+    }
+
+    // Mode normal/reverse : logique existante
+    if (!msg.songId) {
+      sender.send(
+        JSON.stringify({
+          type: "error",
+          message: "songId is required for normal/reverse mode",
+        })
+      );
+      return;
+    }
+
+    const songId = msg.songId;
+    const workId = msg.workId ?? null; // Normaliser undefined â†’ null
 
     // DÃ©duplication: a-t-il dÃ©jÃ  rÃ©pondu ?
     const responseKey = `${songId}-${playerId}`;
@@ -1008,12 +1104,173 @@ export default class BlindTestRoom implements Party.Server {
     });
 
     // VÃ©rifier si tous les joueurs ont rÃ©pondu
+    // ⭐ FIX: Utiliser le songId du round actuel au lieu de celui du message
+    // pour être cohérent avec le mode double et éviter les problèmes de synchronisation
+    const roundSongId = currentRound?.songIds[0] ?? songId;
     const currentSongResponses = Array.from(this.state.responses.values()).filter(
-      (r) => r.songId === songId
+      (r) => r.songId === roundSongId
     );
 
     if (currentSongResponses.length === connectedPlayers.length) {
-      console.log(`[${this.room.id}] All players answered for song ${songId}`);
+      console.log(`[${this.room.id}] All players answered for song ${roundSongId}`);
+      this.broadcast({ type: "all_players_answered" });
+    }
+  }
+
+  /**
+   * Handler pour mode double : traiter 2 réponses avec mapping explicite
+   */
+  private handleAnswerDouble(
+    msg: Extract<Message, { type: "answer" }>,
+    sender: Party.Connection,
+    player: Player,
+    currentRound: GameRound
+  ) {
+    const { playerId } = msg;
+
+    // Vérifier que le message contient 2 réponses
+    if (!msg.answers || msg.answers.length !== 2) {
+      sender.send(
+        JSON.stringify({
+          type: "error",
+          message: "Double mode requires 2 answers",
+        })
+      );
+      return;
+    }
+
+    // Vérifier que les songIds correspondent au round
+    const expectedSongIds = currentRound.songIds;
+    const receivedSongIds = msg.answers.map((a) => a.songId);
+
+    if (
+      !expectedSongIds.every((id) => receivedSongIds.includes(id)) ||
+      expectedSongIds.length !== receivedSongIds.length
+    ) {
+      sender.send(
+        JSON.stringify({
+          type: "error",
+          message: "SongIds don't match current round",
+        })
+      );
+      return;
+    }
+
+    // Traiter en multiset : l'ordre des sélections ne compte pas
+    const connectedPlayers = Array.from(this.state.players.values()).filter((p) => p.connected);
+    const activePlayers = connectedPlayers.length;
+    let totalPoints = 0;
+    let totalCorrect = 0;
+    let totalIncorrect = 0;
+
+    // Multiset des œuvres correctes pour ce round (avec multiplicité)
+    const correctWorkIds = currentRound.songIds
+      .map((sid) => this.state.songs.find((s) => s.id === sid)?.workId)
+      .filter((w): w is string => Boolean(w));
+    let remainingCorrect = [...correctWorkIds];
+
+    for (const answer of msg.answers) {
+      const song = this.state.songs.find((s) => s.id === answer.songId);
+      if (!song) {
+        console.warn(`[${this.room.id}] Song ${answer.songId} not found in handleAnswerDouble`);
+        continue;
+      }
+
+      // Vérifier déduplication pour cette combinaison songId + playerId
+      const responseKey = `${answer.songId}-${playerId}`;
+      if (this.state.responses.has(responseKey)) {
+        console.log(`[${this.room.id}] Player ${playerId} already answered for song ${answer.songId}, skipping`);
+        continue;
+      }
+
+      // Multiset : la sélection est correcte si cette œuvre fait partie des correctes restantes
+      const idx = remainingCorrect.indexOf(answer.workId ?? "");
+      const isCorrect = idx !== -1;
+      if (isCorrect) remainingCorrect.splice(idx, 1);
+
+      // Rang pour cette bonne réponse : combien ont déjà répondu correctement pour ce songId spécifique
+      // ⭐ FIX: Calculer le rank par songId (comme en mode normal) pour que chaque musique ait son propre rank
+      // même si elles partagent le même workId
+      let rank = 1;
+      if (isCorrect) {
+        for (const response of this.state.responses.values()) {
+          // Compter les réponses précédentes pour ce songId spécifique (pas par workId)
+          if (response.songId === answer.songId && response.isCorrect) {
+            rank++;
+          }
+        }
+      }
+
+      const points = isCorrect ? Math.max(1, activePlayers - rank + 1) : 0;
+      totalPoints += points;
+
+      if (isCorrect) {
+        totalCorrect += 1;
+      } else {
+        totalIncorrect += 1;
+      }
+
+      // Enregistrer la réponse
+      const response: Response = {
+        songId: answer.songId,
+        playerId,
+        workId: answer.workId,
+        isCorrect,
+        rank: isCorrect ? rank : 0,
+        points,
+        timestamp: Date.now(),
+      };
+
+      this.state.responses.set(responseKey, response);
+
+      console.log(
+        `[${this.room.id}] Double Answer: ${playerId} → song ${answer.songId} → ${isCorrect ? "✓" : "✗"} (rank ${rank}, ${points} pts)`
+      );
+
+      this.broadcast({
+        type: "player_answered",
+        playerId,
+        songId: answer.songId,
+      });
+    }
+
+    // Mettre à jour le score du joueur (somme des points)
+    player.score += totalPoints;
+    player.correct += totalCorrect;
+    player.incorrect += totalIncorrect;
+
+    console.log(
+      `[${this.room.id}] Double Answer Total: ${playerId} → ${totalCorrect} correct, ${totalIncorrect} incorrect, ${totalPoints} pts`
+    );
+
+    // Notifier le joueur (points totaux)
+    sender.send(
+      JSON.stringify({
+        type: "answer_recorded",
+        rank: totalCorrect > 0 ? 1 : 0, // Rank global (simplifié, car on a 2 réponses)
+        points: totalPoints,
+        isCorrect: totalCorrect > 0,
+        duplicate: false,
+      })
+    );
+
+    // Broadcaster la mise à jour des scores et statuts
+    this.broadcast({
+      type: "players_update",
+      players: this.getPlayersArray(),
+    });
+
+    // Vérifier si tous les joueurs ont répondu aux 2 songs du round
+    const roundSongIds = currentRound.songIds;
+    const allPlayersAnsweredRound = roundSongIds.every((songId) => {
+      const songResponses = Array.from(this.state.responses.values()).filter(
+        (r) => r.songId === songId
+      );
+      return songResponses.length === activePlayers;
+    });
+
+    if (allPlayersAnsweredRound) {
+      console.log(`[${this.room.id}] All players answered for double round`);
       this.broadcast({ type: "all_players_answered" });
     }
   }
@@ -1054,34 +1311,92 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // VÃ©rifier s'il reste des morceaux
-    if (this.state.currentSongIndex >= this.state.songs.length - 1) {
-      // Fin de partie
-      this.state.state = "results";
+    // Si des rounds sont définis, on navigue par round, sinon fallback historique par songIndex
+    if (this.state.rounds && this.state.rounds.length > 0) {
+      // S'assurer que currentRoundIndex est défini (utiliser 0 par défaut si undefined)
+      const currentRoundIndex = this.state.currentRoundIndex ?? 0;
+      const nextRoundIndex = currentRoundIndex + 1;
 
-      console.log(`[${this.room.id}] Game ended`);
+      if (nextRoundIndex >= this.state.rounds.length) {
+        // Fin de partie
+        this.state.state = "results";
 
+        console.log(`[${this.room.id}] Game ended (rounds)`);
+
+        this.broadcast({
+          type: "game_ended",
+          state: "results",
+          players: this.getPlayersArray(),
+          finalScores: this.getFinalScores(),
+        });
+
+        return;
+      }
+
+      const nextRound = this.state.rounds[nextRoundIndex];
+      if (!nextRound) {
+        console.error(`[${this.room.id}] Next round at index ${nextRoundIndex} is undefined`);
+        return;
+      }
+      const nextSongId = nextRound.songIds[0];
+      const nextSongIndex = this.state.songs.findIndex((s) => s.id === nextSongId);
+      const nextSong = nextSongIndex >= 0 ? this.state.songs[nextSongIndex] : this.state.songs[0];
+
+      this.state.currentRoundIndex = nextRoundIndex;
+      this.state.currentSongIndex = nextSongIndex >= 0 ? nextSongIndex : 0;
+
+      console.log(
+        `[${this.room.id}] Next round: ${this.state.currentRoundIndex + 1}/${this.state.rounds.length} (songIndex=${
+          this.state.currentSongIndex + 1
+        }/${this.state.songs.length})`
+      );
+
+      const currentRound = this.getCurrentRound();
       this.broadcast({
-        type: "game_ended",
-        state: "results",
-        players: this.getPlayersArray(),
-        finalScores: this.getFinalScores(),
+        type: "song_changed",
+        currentSongIndex: this.state.currentSongIndex,
+        currentRoundIndex: this.state.currentRoundIndex,
+        currentRound: currentRound,
+        displayedSongIndex: this.getDisplayedSongIndex(),
+        displayedTotalSongs: this.getDisplayedTotalSongs(),
+        currentSong: nextSong,
       });
+    } else {
+      // Comportement historique : navigation séquentielle par songIndex
+      if (this.state.currentSongIndex >= this.state.songs.length - 1) {
+        // Fin de partie
+        this.state.state = "results";
 
-      return;
+        console.log(`[${this.room.id}] Game ended`);
+
+        this.broadcast({
+          type: "game_ended",
+          state: "results",
+          players: this.getPlayersArray(),
+          finalScores: this.getFinalScores(),
+        });
+
+        return;
+      }
+
+      this.state.currentSongIndex++;
+      const nextSong = this.state.songs[this.state.currentSongIndex];
+
+      console.log(
+        `[${this.room.id}] Next song: ${this.state.currentSongIndex + 1}/${this.state.songs.length}`
+      );
+
+      const currentRound = this.getCurrentRound();
+      this.broadcast({
+        type: "song_changed",
+        currentSongIndex: this.state.currentSongIndex,
+        currentRoundIndex: this.state.currentRoundIndex,
+        currentRound: currentRound,
+        displayedSongIndex: this.getDisplayedSongIndex(),
+        displayedTotalSongs: this.getDisplayedTotalSongs(),
+        currentSong: nextSong,
+      });
     }
-
-    // Passer au morceau suivant
-    this.state.currentSongIndex++;
-    const nextSong = this.state.songs[this.state.currentSongIndex];
-
-    console.log(`[${this.room.id}] Next song: ${this.state.currentSongIndex + 1}/${this.state.songs.length}`);
-
-    this.broadcast({
-      type: "song_changed",
-      currentSongIndex: this.state.currentSongIndex,
-      currentSong: nextSong,
-    });
 
     // âœ… FIX: Envoyer players_update pour rÃ©initialiser hasAnsweredCurrentSong
     this.broadcast({
@@ -1203,15 +1518,64 @@ export default class BlindTestRoom implements Party.Server {
   }
 
   /**
+   * Obtenir le round actuel (helper pour éviter la répétition)
+   */
+  private getCurrentRound(): GameRound | undefined {
+    if (!this.state.rounds || this.state.rounds.length === 0) {
+      return undefined;
+    }
+    // Si currentRoundIndex n'est pas défini mais que rounds existe, utiliser 0 par défaut
+    const roundIndex = this.state.currentRoundIndex ?? 0;
+    return getCurrentRound(this.state.rounds, roundIndex);
+  }
+
+  /**
+   * Calculer le total de "songs consommés" basé sur les rounds (comme en solo)
+   */
+  private getDisplayedTotalSongs(): number {
+    if (this.state.rounds && this.state.rounds.length > 0) {
+      return this.state.rounds.reduce((acc, round) => {
+        return acc + (round.type === "double" ? 2 : 1);
+      }, 0);
+    }
+    return this.state.songs.length;
+  }
+
+  /**
+   * Calculer l'index affiché du morceau actuel basé sur les rounds (comme en solo)
+   */
+  private getDisplayedSongIndex(): number {
+    if (this.state.rounds && this.state.rounds.length > 0) {
+      // Si currentRoundIndex n'est pas défini mais que rounds existe, utiliser 0 par défaut
+      const roundIndex = this.state.currentRoundIndex ?? 0;
+      // Somme des morceaux "consommés" par tous les rounds précédents
+      let consumed = 0;
+      for (let i = 0; i < roundIndex; i++) {
+        const round = this.state.rounds[i];
+        consumed += round.type === "double" ? 2 : 1;
+      }
+      // L'index affiché commence à 1
+      return consumed + 1;
+    }
+    // Fallback historique : index basé sur currentSongIndex
+    return (this.state.currentSongIndex ?? 0) + 1;
+  }
+
+  /**
    * SÃ©rialiser l'Ã©tat pour l'envoyer au client
    */
   private serializeState() {
+    const currentRound = this.getCurrentRound();
     return {
       roomId: this.state.roomId,
       hostId: this.state.hostId,
       universeId: this.state.universeId,
       songs: this.state.songs,
       currentSongIndex: this.state.currentSongIndex,
+      currentRoundIndex: this.state.currentRoundIndex,
+      currentRound: currentRound,
+      displayedSongIndex: this.getDisplayedSongIndex(),
+      displayedTotalSongs: this.getDisplayedTotalSongs(),
       state: this.state.state,
       players: this.getPlayersArray(),
       allowedWorks: this.state.allowedWorks,

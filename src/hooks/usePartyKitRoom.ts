@@ -39,13 +39,17 @@ type IncomingMessage =
   | {
       type: "game_started";
       currentSongIndex?: number;
+      currentRoundIndex?: number;
+      currentRound?: import("@/types").GameRound;
+      displayedSongIndex?: number;
+      displayedTotalSongs?: number;
       state?: "playing";
       currentSong?: Song;
       songs?: Song[];
       totalSongs?: number;
     }
   | { type: "configure_success" }
-  | { type: "song_changed"; currentSongIndex?: number; currentSong?: Song }
+  | { type: "song_changed"; currentSongIndex?: number; currentRoundIndex?: number; currentRound?: import("@/types").GameRound; displayedSongIndex?: number; displayedTotalSongs?: number; currentSong?: Song }
   | { type: "game_ended"; state?: "results"; players?: RoomPlayer[]; finalScores?: unknown }
   | { type: "show_scores"; roomId?: string; finalScores?: Array<RoomPlayer & { rank: number }> }
   | { type: "answer_recorded"; rank: number; points: number; isCorrect: boolean; duplicate: boolean }
@@ -483,7 +487,12 @@ export const usePartyKitRoom = ({
       universeId: string,
       songs: Song[],
       allowedWorks?: string[],
-      options?: { noSeek: boolean }
+      options?: { noSeek: boolean },
+      mysteryEffectsConfig?: {
+        enabled: boolean;
+        frequency: number;
+        effects: ("double" | "reverse")[];
+      }
     ) => {
       if (!socketRef.current) {
         return { success: false, error: "Not connected" };
@@ -499,6 +508,7 @@ export const usePartyKitRoom = ({
         songs,
         allowedWorks: allowedWorks || [],
         options: options || { noSeek: false },
+        mysteryEffectsConfig,
       };
       socketRef.current.send(JSON.stringify(configureMessage));
 
@@ -517,12 +527,46 @@ export const usePartyKitRoom = ({
   );
 
   const submitAnswer = useCallback(
-    async (selectedWorkId: string | null, _isCorrect: boolean) => {
-      if (!socketRef.current || !playerId || !currentSong) {
+    async (
+      selectedWorkId: string | null,
+      _isCorrect: boolean,
+      answers?: Array<{ songId: string; workId: string | null }>
+    ) => {
+      if (!socketRef.current || !playerId) {
         return { success: false, error: "Not ready" };
       }
 
       void _isCorrect;
+
+      // Mode double : utiliser answers[]
+      if (answers && answers.length > 0) {
+        const message = {
+          type: "answer",
+          playerId,
+          answers: answers.map((a) => ({
+            songId: a.songId,
+            workId: a.workId,
+          })),
+        };
+
+        return new Promise<AnswerResult>((resolve, reject) => {
+          pendingAnswerCallbackRef.current = { resolve, reject };
+          socketRef.current!.send(JSON.stringify(message));
+
+          setTimeout(() => {
+            const pending = pendingAnswerCallbackRef.current;
+            if (pending) {
+              pending.reject(new Error("Timeout"));
+              pendingAnswerCallbackRef.current = null;
+            }
+          }, 5000);
+        });
+      }
+
+      // Mode normal/reverse : format simple
+      if (!currentSong) {
+        return { success: false, error: "Not ready" };
+      }
 
       const message = {
         type: "answer",

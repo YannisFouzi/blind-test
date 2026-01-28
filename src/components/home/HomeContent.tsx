@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRouter } from "next/navigation";
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -62,6 +62,7 @@ export const HomeContent = () => {
     allowedWorks: customAllowedWorks,
     noSeek: customNoSeek,
     maxSongs: customMaxSongs,
+    mysteryEffects,
     openCustomize: openCustomizeStore,
     closeCustomize,
     reset: resetCustomization,
@@ -214,7 +215,8 @@ export const HomeContent = () => {
       if (!name) return;
       setHomeError(null);
       setHomeInfo(null);
-      const trimmedPassword = password?.trim();
+
+      const trimmedPassword = password?.trim();
       if (trimmedPassword) {
         setPendingPassword(roomId, trimmedPassword);
       }
@@ -298,6 +300,12 @@ export const HomeContent = () => {
   const applyCustomizeAndPlay = useCallback(async () => {
     if (!customizingUniverse) return;
     
+    // ⭐ FIX: Sauvegarder les valeurs AVANT d'appeler closeCustomize() qui réinitialise tout
+    const savedMysteryEffects = { ...mysteryEffects };
+    const savedAllowedWorks = [...customAllowedWorks];
+    const savedNoSeek = customNoSeek;
+    const savedMaxSongs = customMaxSongs;
+    
     // DÃ©terminer si c'est le mode custom (toutes les Å“uvres)
     const isCustomModeActive = customizingUniverse.id === CUSTOM_UNIVERSE.id;
     // En mode custom, on utilise "__custom__" comme universeId
@@ -311,17 +319,25 @@ export const HomeContent = () => {
 
     if (mode === "solo") {
       const params = new URLSearchParams();
-      if (customNoSeek) params.set("noseek", "1");
+      if (savedNoSeek) params.set("noseek", "1");
 
-      // Passer les works sÃ©lectionnÃ©s si nÃ©cessaire
-      if (customAllowedWorks.length > 0) {
-        params.set("works", customAllowedWorks.join(","));
+      // Works sélectionnées
+      if (savedAllowedWorks.length > 0) {
+        params.set("works", savedAllowedWorks.join(","));
       }
 
-      // Passer le nombre max de songs si spÃ©cifiÃ©
-      if (customMaxSongs !== null) {
-        params.set("maxsongs", String(customMaxSongs));
+      // Nombre max de songs
+      if (savedMaxSongs !== null) {
+        params.set("maxsongs", String(savedMaxSongs));
       }
+
+      // Effets mystères (solo) - utiliser les valeurs sauvegardées
+      if (savedMysteryEffects.enabled && savedMysteryEffects.selectedEffects.length > 0) {
+        params.set("me", "1");
+        params.set("mef", String(savedMysteryEffects.frequency));
+        params.set("mee", savedMysteryEffects.selectedEffects.join(","));
+      }
+
       router.push(`/game/${universeId}?${params.toString()}`);
       return;
     }
@@ -340,16 +356,16 @@ export const HomeContent = () => {
         player: playerIdRef.current,
         room: hostRoomId,
       });
-      if (customNoSeek) params.set("noseek", "1");
+      if (savedNoSeek) params.set("noseek", "1");
 
       // Passer les works sÃ©lectionnÃ©s si nÃ©cessaire
-      if (customAllowedWorks.length > 0) {
-        params.set("works", customAllowedWorks.join(","));
+      if (savedAllowedWorks.length > 0) {
+        params.set("works", savedAllowedWorks.join(","));
       }
 
       // Passer le nombre max de songs si spÃ©cifiÃ©
-      if (customMaxSongs !== null) {
-        params.set("maxsongs", String(customMaxSongs));
+      if (savedMaxSongs !== null) {
+        params.set("maxsongs", String(savedMaxSongs));
       }
       hasUsedRoomRef.current = true;
 
@@ -367,6 +383,7 @@ export const HomeContent = () => {
     customAllowedWorks,
     customNoSeek,
     customMaxSongs,
+    mysteryEffects,
     router,
     displayName,
     ensurePlayerId,
