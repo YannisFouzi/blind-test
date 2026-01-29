@@ -30,11 +30,11 @@ export const WORKS_PER_ROUND_DEFAULT = 5;
 export const UNIVERSE_BACKGROUND_IMAGES: Record<string, string> = {
   [CUSTOM_UNIVERSE_ID]: "/image/custom.avif",
   [RANDOM_UNIVERSE_ID]: "/image/custom.avif",
-  disney: "/image/disney.jpg",
+  disney: "/image/disney.webp",
   "star-wars": "/image/star-wars.webp",
-  "harry-potter": "/image/harry_potter.jpg",
-  "lord-of-the-rings": "/image/lord-of-the-rings.jpg",
-  "seigneur-des-anneaux": "/image/lord-of-the-rings.jpg",
+  "harry-potter": "/image/harry_potter.webp",
+  "lord-of-the-rings": "/image/lord-of-the-rings.webp",
+  "seigneur-des-anneaux": "/image/lord-of-the-rings.webp",
 };
 
 /** Normalise le nom d'univers pour la recherche d'image (lowercase, espaces → tirets) */
