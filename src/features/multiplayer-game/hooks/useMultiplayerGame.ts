@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GameAnswer, Song } from "@/types";
 import { usePartyKitRoom } from "@/hooks/usePartyKitRoom";
-import { useWorksQuery } from "@/hooks/queries";
+import { useWorksQuery, useWorksByIdsQuery } from "@/hooks/queries";
+import { CUSTOM_UNIVERSE_ID, RANDOM_UNIVERSE_ID } from "@/constants/gameModes";
+import { shuffleWithSeed } from "@/utils/formatters";
 import type { GameRound } from "@/utils/mysteryEffects";
 
 /**
@@ -90,6 +92,7 @@ export const useMultiplayerGame = ({
     startAt,
     options,
     allowedWorks,
+    worksPerRound,
     configureRoom,
     leaveRoom,
     isConnected,
@@ -104,7 +107,28 @@ export const useMultiplayerGame = ({
   // Works Data (TanStack Query avec cache)
   // ============================================================
 
-  const { data: works = [], isLoading: isLoadingWorks } = useWorksQuery(universeId);
+  // Mode custom/random : on charge par IDs (allowedWorks)
+  // Mode normal : on charge par universeId
+  const isCustomOrRandomMode =
+    universeId === CUSTOM_UNIVERSE_ID || universeId === RANDOM_UNIVERSE_ID;
+
+  // Pour useWorksQuery : désactivé si custom/random (passer "" → enabled: false)
+  const universeQueryId = isCustomOrRandomMode ? "" : universeId;
+  const {
+    data: worksByUniverse = [],
+    isLoading: isLoadingByUniverse,
+  } = useWorksQuery(universeQueryId);
+
+  // Pour useWorksByIdsQuery : activé seulement si custom/random et allowedWorks non vide
+  const workIdsForQuery = isCustomOrRandomMode && allowedWorks?.length ? allowedWorks : [];
+  const {
+    data: worksByIds = [],
+    isLoading: isLoadingByIds,
+  } = useWorksByIdsQuery(workIdsForQuery);
+
+  // Sélectionner les données du bon hook
+  const works = isCustomOrRandomMode ? worksByIds : worksByUniverse;
+  const isLoadingWorks = isCustomOrRandomMode ? isLoadingByIds : isLoadingByUniverse;
 
   // ============================================================
   // Local UI State
@@ -196,6 +220,52 @@ export const useMultiplayerGame = ({
 
     return songsForRound;
   }, [room?.songs, currentRound, currentSong]);
+
+  /**
+   * Œuvres affichées comme choix (mode aléatoire multi).
+   * Si worksPerRound est défini : échantillonne X œuvres par manche (dont la/les bonne(s)).
+   * Sinon : toutes les œuvres filtrées (filteredWorks).
+   */
+  const displayWorks = useMemo(() => {
+    const wpr = worksPerRound ?? undefined;
+    const isRandom = universeId === RANDOM_UNIVERSE_ID;
+    if (!isRandom || !wpr || filteredWorks.length === 0) {
+      return filteredWorks;
+    }
+
+    const songs =
+      isDoubleMode && currentRoundSongs && currentRoundSongs.length >= 2
+        ? currentRoundSongs
+        : currentSong
+          ? [currentSong]
+          : [];
+    if (songs.length === 0) {
+      return filteredWorks;
+    }
+
+    const correctIds = [...new Set(songs.map((s) => s.workId))];
+    const wrongWorks = filteredWorks.filter((w) => !correctIds.includes(w.id));
+    const correctWorks = correctIds
+      .map((id) => filteredWorks.find((w) => w.id === id))
+      .filter((w): w is NonNullable<typeof w> => Boolean(w));
+    const count = Math.max(
+      0,
+      Math.min(wpr - correctWorks.length, wrongWorks.length)
+    );
+    const seed = `${currentSongIndex}-${songs.map((s) => s.id).join("-")}`;
+    const shuffledWrong = shuffleWithSeed([...wrongWorks], seed);
+    const selectedWrong = shuffledWrong.slice(0, count);
+    const pool = [...correctWorks, ...selectedWrong];
+    return shuffleWithSeed(pool, `${seed}-final`);
+  }, [
+    universeId,
+    worksPerRound,
+    filteredWorks,
+    isDoubleMode,
+    currentRoundSongs,
+    currentSong,
+    currentSongIndex,
+  ]);
 
   // ============================================================
   // Effects
@@ -518,7 +588,7 @@ export const useMultiplayerGame = ({
     canGoPrev,
 
     // Works
-    works: filteredWorks,
+    works: displayWorks,
     isLoadingWorks,
     allowedWorks,
 

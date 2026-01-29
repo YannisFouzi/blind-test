@@ -917,6 +917,7 @@ export const usePartyKitRoom = ({
 
     options: room.options,
     allowedWorks: room.allowedWorks,
+    worksPerRound: room.worksPerRound,
 
     startGame,
     sendPlayerReady,
