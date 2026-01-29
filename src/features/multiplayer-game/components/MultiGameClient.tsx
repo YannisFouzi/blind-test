@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import {
   Check,
   Home as HomeIcon,
+  LogOut,
   Pause,
   Play as PlayIcon,
   SkipForward,
@@ -12,16 +13,131 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
+import type { RoomPlayer } from "@/types";
 
 import { useMultiplayerGame } from "../hooks/useMultiplayerGame";
 import { PlayersScoreboard } from "./PlayersScoreboard";
 import { useAudioPlayer, useDoubleAudioPlayer } from "@/features/audio-player";
 import { WorkSelector, DoubleWorkSelector } from "@/components/game";
 import { PointsCelebration } from "@/components/game/PointsCelebration";
+import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
+import { QuitRoomButton } from "@/components/ui/QuitRoomButton";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { cn } from "@/lib/utils";
 import { pressable } from "@/styles/ui";
+
+/** Joueur avec champ ready (phase starting) */
+type PlayerWithReady = RoomPlayer & { ready?: boolean };
+
+interface StartingPhaseUIProps {
+  players: PlayerWithReady[];
+  readyCount: number;
+  totalCount: number;
+  startAt?: number;
+  playerId: string;
+  onLeave: () => void;
+  isHost: boolean;
+  resetToWaiting?: () => void;
+}
+
+function StartingPhaseUI({
+  players,
+  readyCount,
+  totalCount,
+  startAt,
+  playerId,
+  onLeave,
+  isHost,
+  resetToWaiting,
+}: StartingPhaseUIProps) {
+  const [countdown, setCountdown] = useState<number | null>(null);
+  useEffect(() => {
+    if (startAt == null) {
+      setCountdown(null);
+      return;
+    }
+    const tick = () => {
+      const remaining = startAt - Date.now();
+      if (remaining <= 0) {
+        setCountdown(null);
+        return;
+      }
+      if (remaining > 2000) setCountdown(3);
+      else if (remaining > 1000) setCountdown(2);
+      else if (remaining > 0) setCountdown(1);
+      else setCountdown(null);
+    };
+    tick();
+    const id = setInterval(tick, 100);
+    return () => clearInterval(id);
+  }, [startAt]);
+
+  return (
+    <div className="min-h-screen bg-[var(--color-surface-base)] flex flex-col items-center justify-center p-6">
+      <div className="fixed top-3 left-2 sm:top-6 sm:left-6 z-50 flex flex-col items-start gap-2">
+        {isHost && resetToWaiting && (
+          <ConfirmActionButton
+            buttonLabel="Accueil"
+            title="Retour à la salle d'attente ?"
+            message="Vous allez revenir à la salle d'attente. La partie restera configurée."
+            confirmText="Oui, retour"
+            cancelText="Annuler"
+            onConfirm={() => void resetToWaiting()}
+            variant="warning"
+            className="magic-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
+          >
+            <HomeIcon className="text-base sm:text-lg" />
+            <span className="hidden sm:inline">Accueil</span>
+          </ConfirmActionButton>
+        )}
+        <QuitRoomButton onConfirm={onLeave} title="Quitter la partie ?" />
+      </div>
+
+      <h1 className="text-2xl sm:text-3xl font-display font-bold text-[var(--color-text-primary)] mb-6 text-center">
+        Démarrage de la partie...
+      </h1>
+
+      <p className="text-lg text-[var(--color-text-secondary)] mb-8">
+        {readyCount} / {totalCount} joueurs prêts
+      </p>
+
+      <ul className="space-y-2 w-full max-w-xs mb-10">
+        {players.map((p) => (
+          <li
+            key={p.id}
+            className={cn(
+              "flex items-center justify-between gap-3 px-4 py-2 rounded-lg",
+              "bg-[var(--color-surface-elevated)] border-2",
+              p.id === playerId ? "border-[var(--color-accent)]" : "border-transparent"
+            )}
+          >
+            <span className="font-medium text-[var(--color-text-primary)] truncate">
+              {p.displayName}
+              {p.id === playerId && (
+                <span className="ml-2 text-xs text-[var(--color-text-secondary)]">(toi)</span>
+              )}
+            </span>
+            {(p as PlayerWithReady).ready ? (
+              <Check className="shrink-0 w-5 h-5 text-green-600" aria-hidden />
+            ) : (
+              <span className="text-sm text-[var(--color-text-secondary)]">En attente...</span>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {countdown != null && (
+        <div className="text-6xl sm:text-8xl font-display font-bold text-[var(--color-accent)] animate-pulse">
+          {countdown}
+        </div>
+      )}
+      {startAt != null && countdown === null && Date.now() >= startAt - 200 && (
+        <p className="text-xl font-display font-bold text-[var(--color-accent)]">C&apos;est parti !</p>
+      )}
+    </div>
+  );
+}
 
 export interface MultiGameClientProps {
   universeId: string;
@@ -67,49 +183,9 @@ export const MultiGameClient = ({
   );
   const [passwordInput, setPasswordInput] = useState("");
 
-  const {
-    isPlaying: audioIsPlaying,
-    volume: audioVolume,
-    currentTime: audioCurrentTime,
-    duration: audioDuration,
-    isMuted: audioIsMuted,
-    error: audioError,
-    togglePlay: audioTogglePlay,
-    setVolume: audioSetVolume,
-    toggleMute: audioToggleMute,
-    seek: audioSeek,
-    loadTrack: audioLoadTrack,
-    preloadTrack: audioPreloadTrack,
-    reset: audioReset,
-  } = useAudioPlayer({
-    noSeek,
-    autoPlay: true,
-  });
-
-  const {
-    isPlaying: doubleIsPlaying,
-    volume: doubleVolume,
-    currentTime: doubleCurrentTime,
-    duration: doubleDuration,
-    isMuted: doubleIsMuted,
-    error: doubleError,
-    togglePlay: doubleTogglePlay,
-    setVolume: doubleSetVolume,
-    toggleMute: doubleToggleMute,
-    seek: doubleSeek,
-    loadTracks: doubleLoadTracks,
-    reset: doubleReset,
-  } = useDoubleAudioPlayer({
-    noSeek,
-    autoPlay: true,
-  });
-
-  // Callback stable pour cleanup audio avant redirection
-  const handleRedirect = useCallback(() => {
-    // Cleanup audio avant redirection vers waiting room
-    audioReset();
-    doubleReset();
-  }, [audioReset, doubleReset]);
+  // Refs pour déléguer à des callbacks définis après les hooks audio (évite dépendance circulaire)
+  const preloadTrackRef = useRef<(url: string) => void>(() => {});
+  const redirectRef = useRef<() => void>(() => {});
 
   const game = useMultiplayerGame({
     universeId,
@@ -117,11 +193,9 @@ export const MultiGameClient = ({
     playerId,
     displayName,
     preloadNextTrack: (song) => {
-      if (song.audioUrl) {
-        audioPreloadTrack(song.audioUrl);
-      }
+      if (song?.audioUrl) preloadTrackRef.current(song.audioUrl);
     },
-    onRedirect: handleRedirect,
+    onRedirect: () => redirectRef.current?.(),
     navigate: (url) => router.push(url),
   });
 
@@ -146,24 +220,103 @@ export const MultiGameClient = ({
     submitPassword,
     allPlayersAnswered,
     isHost,
-    allowedWorks,
     isLoadingWorks,
     isReverseMode,
     isDoubleMode,
     currentRoundSongs,
     displayedSongIndex,
     displayedTotalSongs,
+    roundCount,
+    currentRoundIndex,
     doubleSelectedWorkSlot1,
     doubleSelectedWorkSlot2,
     handleDoubleSelection,
     clearDoubleSelectionForWork,
+    sendPlayerReady,
+    startAt,
   } = game;
+
+  // autoPlay : false pour le premier slot affiché (toujours lancé par le timer à startAt).
+  // Avec les rounds, currentSongIndex peut être > 0 pour le premier slot (ex. 28), donc on utilise displayedSongIndex.
+  const currentSongIndex = room?.currentSongIndex ?? 0;
+  const displayedIdx = room?.displayedSongIndex ?? currentSongIndex + 1;
+  const shouldAutoPlay = displayedIdx > 1;
+
+  const {
+    isPlaying: audioIsPlaying,
+    volume: audioVolume,
+    currentTime: audioCurrentTime,
+    duration: audioDuration,
+    isMuted: audioIsMuted,
+    error: audioError,
+    play: audioPlay,
+    togglePlay: audioTogglePlay,
+    setVolume: audioSetVolume,
+    toggleMute: audioToggleMute,
+    seek: audioSeek,
+    loadTrack: audioLoadTrack,
+    preloadTrack: audioPreloadTrack,
+    reset: audioReset,
+  } = useAudioPlayer({
+    noSeek,
+    autoPlay: shouldAutoPlay,
+  });
+
+  const {
+    isPlaying: doubleIsPlaying,
+    volume: doubleVolume,
+    currentTime: doubleCurrentTime,
+    duration: doubleDuration,
+    isMuted: doubleIsMuted,
+    error: doubleError,
+    play: doublePlay,
+    togglePlay: doubleTogglePlay,
+    setVolume: doubleSetVolume,
+    toggleMute: doubleToggleMute,
+    seek: doubleSeek,
+    loadTracks: doubleLoadTracks,
+    reset: doubleReset,
+  } = useDoubleAudioPlayer({
+    noSeek,
+    autoPlay: shouldAutoPlay,
+  });
+
+  redirectRef.current = () => {
+    audioReset();
+    doubleReset();
+  };
+  preloadTrackRef.current = audioPreloadTrack;
+
+  // ⭐ Refs stables pour les fonctions play (évite re-run des useEffect de sync)
+  const audioPlayRef = useRef(audioPlay);
+  const doublePlayRef = useRef(doublePlay);
+
+  /** Refs pour les timers startAt : survivent au re-render quand game_started efface startAt (cleanup ne doit pas annuler le timer). */
+  const audioStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const doubleAudioStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    audioPlayRef.current = audioPlay;
+  }, [audioPlay]);
+
+  useEffect(() => {
+    doublePlayRef.current = doublePlay;
+  }, [doublePlay]);
 
   useEffect(() => {
     if (authRequired) {
       setPasswordInput("");
     }
   }, [authRequired]);
+
+  // Ready Check : envoyer player_ready une seule fois quand on est en phase "starting" et connecté
+  const playerReadySentRef = useRef(false);
+  useEffect(() => {
+    if (state !== "starting" || !isConnected) return;
+    if (playerReadySentRef.current) return;
+    playerReadySentRef.current = true;
+    sendPlayerReady?.();
+  }, [state, isConnected, sendPlayerReady]);
 
   // Déterminer l'URL audio à utiliser (normal ou reverse) pour le mode simple
   const audioUrlToUse = useMemo(() => {
@@ -186,9 +339,16 @@ export const MultiGameClient = ({
     return { primary, secondary };
   }, [isDoubleMode, currentRoundSongs]);
 
+  // Chargement audio en phase "starting" ou "playing" (préchargement pendant countdown)
   useEffect(() => {
     // En mode double, on reset l'audio simple et on laisse le hook dédié gérer le chargement
     if (isDoubleMode) {
+      audioReset();
+      return;
+    }
+
+    // Ne charger que si on est en phase "starting" (préchargement) ou "playing" (partie lancée)
+    if (state !== "starting" && state !== "playing") {
       audioReset();
       return;
     }
@@ -198,11 +358,17 @@ export const MultiGameClient = ({
     } else {
       audioReset();
     }
-  }, [audioUrlToUse, audioLoadTrack, audioReset, isDoubleMode]);
+  }, [audioUrlToUse, audioLoadTrack, audioReset, isDoubleMode, state]);
 
-  // Chargement des deux pistes en mode double
+  // Chargement des deux pistes en mode double (préchargement pendant countdown)
   useEffect(() => {
     if (!isDoubleMode) {
+      doubleReset();
+      return;
+    }
+
+    // Ne charger que si on est en phase "starting" (préchargement) ou "playing" (partie lancée)
+    if (state !== "starting" && state !== "playing") {
       doubleReset();
       return;
     }
@@ -214,8 +380,92 @@ export const MultiGameClient = ({
       return;
     }
 
+    console.log("[AUDIO-DEBUG] Double load effect: calling loadTracks", {
+      state,
+      isDoubleMode,
+      currentSongIndex,
+      shouldAutoPlay,
+    });
     void doubleLoadTracks(primary, secondary);
-  }, [isDoubleMode, doubleUrls, doubleLoadTracks, doubleReset]);
+  }, [isDoubleMode, doubleUrls, doubleLoadTracks, doubleReset, state, currentSongIndex, shouldAutoPlay]);
+
+  // ⭐ SYNCHRONISATION AUDIO : Lancer exactement à startAt (mode normal/reverse)
+  // Timer stocké dans une ref pour survivre au re-render quand game_started efface startAt (sinon le cleanup annulerait le timer avant qu'il ne se déclenche).
+  useEffect(() => {
+    if (isDoubleMode) return;
+    if (!startAt) return;
+
+    const delay = startAt - Date.now();
+
+    if (delay <= 0) {
+      audioPlayRef.current();
+      return;
+    }
+
+    if (audioStartTimerRef.current) {
+      clearTimeout(audioStartTimerRef.current);
+      audioStartTimerRef.current = null;
+    }
+
+    const timerId = setTimeout(() => {
+      audioStartTimerRef.current = null;
+      audioPlayRef.current();
+    }, delay);
+    audioStartTimerRef.current = timerId;
+
+    // Ne pas annuler le timer dans le cleanup : quand game_started arrive, startAt devient undefined, l'effet re-run et le cleanup tuerait le timer. On nettoie uniquement au démontage (voir useEffect ci-dessous).
+    return () => {};
+  }, [startAt, isDoubleMode]);
+
+  // ⭐ SYNCHRONISATION AUDIO : Lancer exactement à startAt (mode double)
+  // Même principe : timer dans une ref pour survivre au re-render quand game_started efface startAt.
+  useEffect(() => {
+    if (!isDoubleMode) return;
+    if (!startAt) return;
+
+    const delay = startAt - Date.now();
+
+    console.log("[AUDIO-DEBUG] Double timer effect", {
+      startAt,
+      isDoubleMode,
+      delayMs: Math.round(delay),
+      delayNegative: delay <= 0,
+    });
+
+    if (delay <= 0) {
+      console.log("[AUDIO-DEBUG] Double timer: startAt déjà passé → play immédiat");
+      doublePlayRef.current();
+      return;
+    }
+
+    if (doubleAudioStartTimerRef.current) {
+      clearTimeout(doubleAudioStartTimerRef.current);
+      doubleAudioStartTimerRef.current = null;
+    }
+
+    const timerId = setTimeout(() => {
+      doubleAudioStartTimerRef.current = null;
+      console.log("[AUDIO-DEBUG] Double timer FIRED → play()");
+      doublePlayRef.current();
+    }, delay);
+    doubleAudioStartTimerRef.current = timerId;
+
+    return () => {};
+  }, [startAt, isDoubleMode]);
+
+  // Nettoyage des timers startAt uniquement au démontage du composant (évite les fuites).
+  useEffect(() => {
+    return () => {
+      if (audioStartTimerRef.current) {
+        clearTimeout(audioStartTimerRef.current);
+        audioStartTimerRef.current = null;
+      }
+      if (doubleAudioStartTimerRef.current) {
+        clearTimeout(doubleAudioStartTimerRef.current);
+        doubleAudioStartTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const isDoubleRound = isDoubleMode;
 
@@ -284,14 +534,9 @@ export const MultiGameClient = ({
     showScores();
   }, [showScores]);
 
-  const handleGoHome = useCallback(() => {
-    // Si c'est l'hôte : reset la room et retourner au lobby (sans quitter la room)
-    // Si c'est un invité : quitter la room et retourner à l'accueil
-    if (game.isHost && game.resetToWaiting) {
-      void game.resetToWaiting();
-    } else {
-      router.push("/");
-    }
+  const handleLeaveRoom = useCallback(() => {
+    game.leaveRoom?.();
+    router.push("/");
   }, [router, game]);
 
   const formatTime = useCallback((seconds: number): string => {
@@ -324,16 +569,24 @@ export const MultiGameClient = ({
     [currentPlayer]
   );
 
-  // Vérifier si on est au dernier morceau (basé sur displayedSongIndex)
-  const isLastSong = useMemo(
-    () => displayedSongIndex >= displayedTotalSongs,
-    [displayedSongIndex, displayedTotalSongs]
-  );
+  // Vérifier si on est au dernier morceau : priorité roundCount (rounds), sinon displayedSongIndex
+  const isLastSong = useMemo(() => {
+    if (roundCount != null && roundCount > 0) {
+      return (currentRoundIndex ?? 0) >= roundCount - 1;
+    }
+    return displayedSongIndex >= displayedTotalSongs;
+  }, [roundCount, currentRoundIndex, displayedSongIndex, displayedTotalSongs]);
 
   // Déterminer si on doit afficher "Voir les scores" ou "Morceau suivant"
+  // Garde: ne pas afficher si pas de morceaux (évite envoi show_scores avec état vide)
   const shouldShowScoresButton = useMemo(
-    () => isHost && isLastSong && allPlayersAnswered && showAnswer,
-    [isHost, isLastSong, allPlayersAnswered, showAnswer]
+    () =>
+      isHost &&
+      displayedTotalSongs >= 1 &&
+      isLastSong &&
+      allPlayersAnswered &&
+      showAnswer,
+    [isHost, displayedTotalSongs, isLastSong, allPlayersAnswered, showAnswer]
   );
 
   const answerFooter = useMemo(() => {
@@ -386,61 +639,43 @@ export const MultiGameClient = ({
       );
     }
 
-    // Mode normal/reverse
-    if (game.currentSongAnswer && currentSong?.artist && currentSong?.title) {
-      return (
-        <div className="flex flex-col items-center justify-center gap-3">
+    // Mode normal/reverse : toujours afficher le footer quand showAnswer (boutons + titre si dispo)
+    return (
+      <div className="flex flex-col items-center justify-center gap-3">
+        {(currentSong?.artist ?? currentSong?.title) && (
           <div className="px-5 py-3 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B]">
             <p className="text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide">
-              {currentSong.artist} &mdash;{" "}
-              <span className="text-[#B45309]">{currentSong.title}</span>
+              {currentSong?.artist} {currentSong?.artist && currentSong?.title ? "&mdash; " : ""}
+              <span className="text-[#B45309]">{currentSong?.title ?? ""}</span>
             </p>
           </div>
-          {shouldShowScoresButton ? (
+        )}
+        {shouldShowScoresButton ? (
+          <button
+            onClick={handleShowScores}
+            className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
+          >
+            <span className="relative z-10 flex items-center gap-2">
+              Voir les scores
+            </span>
+          </button>
+        ) : (
+          canGoNext && isHost && (
             <button
-              onClick={handleShowScores}
+              onClick={handleNextSong}
               className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
             >
               <span className="relative z-10 flex items-center gap-2">
-                Voir les scores
+                Morceau suivant
               </span>
             </button>
-          ) : (
-            canGoNext && isHost && (
-              <button
-                onClick={handleNextSong}
-                className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
-              >
-                <span className="relative z-10 flex items-center gap-2">
-                  Morceau suivant
-                </span>
-              </button>
-            )
-          )}
-        </div>
-      );
-    }
-
-    return null;
-  }, [showAnswer, isDoubleMode, currentRoundSongs, works, shouldShowScoresButton, canGoNext, isHost, handleShowScores, handleNextSong, game.currentSongAnswer, currentSong]);
-
-  // Log render state pour debug
-  useEffect(() => {
-    console.log("[MultiGameClient] 🎨 RENDER STATE", {
-      isConnected,
-      hasCurrentSong: !!currentSong,
-      currentSongId: currentSong?.id,
-      worksCount: works.length,
-      isLoadingWorks,
-      state,
-      roomSongsCount: room?.songs?.length ?? 0,
-      allowedWorksCount: allowedWorks?.length ?? 0,
-      timestamp: Date.now(),
-    });
-  }, [isConnected, currentSong, works.length, isLoadingWorks, state, room?.songs?.length, allowedWorks?.length]);
+          )
+        )}
+      </div>
+    );
+  }, [showAnswer, isDoubleMode, currentRoundSongs, works, shouldShowScoresButton, canGoNext, isHost, handleShowScores, handleNextSong, currentSong]);
 
   if (!isConnected) {
-    console.log("[MultiGameClient] ⚠️ RENDERING: Connexion au serveur...");
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center">
         <div className="text-center">
@@ -453,12 +688,25 @@ export const MultiGameClient = ({
     );
   }
 
+  // Phase Ready Check (starting) : X/Y prêts + countdown 3-2-1
+  if (state === "starting") {
+    const readyCount = players.filter((p) => (p as RoomPlayer & { ready?: boolean }).ready).length;
+    const totalCount = players.length;
+    return (
+      <StartingPhaseUI
+        players={players}
+        readyCount={readyCount}
+        totalCount={totalCount}
+        startAt={startAt}
+        playerId={playerId}
+        onLeave={handleLeaveRoom}
+        isHost={isHost}
+        resetToWaiting={game.resetToWaiting}
+      />
+    );
+  }
+
   if (!currentSong) {
-    console.log("[MultiGameClient] ⚠️ RENDERING: En attente de la playlist...", {
-      roomSongsCount: room?.songs?.length ?? 0,
-      state,
-      isHost: playerId === room?.hostId,
-    });
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center">
         <div className="text-center">
@@ -478,18 +726,13 @@ export const MultiGameClient = ({
 
   // Attendre que les works soient chargés avant de vérifier s'ils sont vides
   if (!isLoadingWorks && works.length === 0) {
-    console.log("[MultiGameClient] ⚠️ RENDERING: Aucune oeuvre trouvée", {
-      isLoadingWorks,
-      filteredWorksCount: works.length,
-      allowedWorks: allowedWorks?.length ?? 0,
-    });
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center p-6">
         <div className="text-center">
           <ErrorMessage message="Aucune oeuvre trouvee pour cet univers" />
-          <button onClick={handleGoHome} className="magic-button mt-6 px-6 py-3">
-            <HomeIcon className="inline mr-2" />
-            Retour a l&apos;accueil
+          <button onClick={handleLeaveRoom} className="magic-button mt-6 px-6 py-3">
+            <LogOut className="inline mr-2" />
+            Quitter
           </button>
         </div>
       </div>
@@ -498,10 +741,6 @@ export const MultiGameClient = ({
 
   // Si les works sont en cours de chargement, afficher un loader
   if (isLoadingWorks) {
-    console.log("[MultiGameClient] ⚠️ RENDERING: Chargement des oeuvres...", {
-      isLoadingWorks,
-      hasCurrentSong: !!currentSong,
-    });
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center">
         <div className="text-center">
@@ -513,12 +752,6 @@ export const MultiGameClient = ({
       </div>
     );
   }
-
-  console.log("[MultiGameClient] ✅ RENDERING: Game UI", {
-    currentSongId: currentSong?.id,
-    worksCount: works.length,
-    state,
-  });
 
   return (
     <div className="min-h-screen bg-[var(--color-surface-base)] relative overflow-hidden">
@@ -539,14 +772,26 @@ export const MultiGameClient = ({
 
       <div className="absolute inset-0 bg-gradient-to-r from-yellow-200/40 via-transparent to-blue-200/40 pointer-events-none" />
 
-      <div className="fixed top-3 left-2 sm:top-6 sm:left-6 z-50">
-        <button
-          onClick={handleGoHome}
-          className="magic-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
-        >
-          <HomeIcon className="text-base sm:text-lg" />
-          <span className="hidden sm:inline">Accueil</span>
-        </button>
+      <div className="fixed top-3 left-2 sm:top-6 sm:left-6 z-50 flex flex-col items-start gap-2">
+        {isHost && (
+          <ConfirmActionButton
+            buttonLabel="Accueil"
+            title="Retour à la salle d'attente ?"
+            message="Vous allez revenir à la salle d'attente. La partie restera configurée."
+            confirmText="Oui, retour"
+            cancelText="Annuler"
+            onConfirm={() => void game.resetToWaiting?.()}
+            variant="warning"
+            className="magic-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
+          >
+            <HomeIcon className="text-base sm:text-lg" />
+            <span className="hidden sm:inline">Accueil</span>
+          </ConfirmActionButton>
+        )}
+        <QuitRoomButton
+          onConfirm={handleLeaveRoom}
+          title="Quitter la partie ?"
+        />
       </div>
 
       <div className="fixed top-6 right-6 z-40 hidden lg:block">
@@ -671,7 +916,9 @@ export const MultiGameClient = ({
 
                 <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center text-sm gap-3 pt-1">
                   <span className="text-[#B45309] font-semibold">
-                    Morceau {displayedSongIndex} / {displayedTotalSongs}
+                    {isDoubleMode && currentRoundSongs.length === 2
+                      ? `Morceau ${displayedSongIndex}+${displayedSongIndex + 1} / ${displayedTotalSongs}`
+                      : `Morceau ${displayedSongIndex} / ${displayedTotalSongs}`}
                   </span>
 
                   <div className="flex items-center justify-center gap-3 text-xs">

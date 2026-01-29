@@ -57,8 +57,8 @@ yarn-error.log*
 next-env.d.ts
 
 
-*.txt
-*.md
+
+
 *.jpg
 CLAUDE.md
 

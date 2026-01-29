@@ -95,13 +95,6 @@ export const useMultiplayerGame = ({
     }
     const isCorrect = selectedWork === currentSong.workId;
     try {
-      console.log("[multi] submit answer", {
-        roomId,
-        songId: currentSong.id,
-        playerId,
-        selectedWork,
-        isCorrect,
-      });
       const result = await submitAnswer(selectedWork, isCorrect);
       if (result.success) {
         const pointsEarned = result.data?.points ?? 0;
@@ -135,18 +128,6 @@ export const useMultiplayerGame = ({
     // Utiliser la valeur directe de usePartyKitRoom (plus fiable)
     return isHostFromRoom;
   }, [isHostFromRoom]);
-
-  useEffect(() => {
-    console.info("[useMultiplayerGame] state snapshot", {
-      roomId: room?.id,
-      state,
-      songs: room?.songs?.length ?? 0,
-      currentSongId: currentSong?.id,
-      players: players.length,
-      isHost,
-      isConnected,
-    });
-  }, [room?.id, state, room?.songs?.length, currentSong?.id, players.length, isHost, isConnected]);
 
   return {
     mode: "multiplayer" as const,

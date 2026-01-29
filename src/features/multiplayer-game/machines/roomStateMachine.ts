@@ -9,6 +9,7 @@ export type ServerStateSnapshot = {
   currentSongIndex?: number;
   currentRoundIndex?: number;
   currentRound?: GameRound;
+  roundCount?: number;
   displayedSongIndex?: number;
   displayedTotalSongs?: number;
   state?: string;
@@ -24,6 +25,8 @@ export type RoomMachineContext = {
   allPlayersAnswered: boolean;
   isConnected: boolean;
   error: string | null;
+  /** Timestamp absolu (Date.now()) auquel la partie démarre (après countdown Ready Check) */
+  startAt?: number;
 };
 
 export type RoomMachineEvent =
@@ -41,9 +44,11 @@ export type RoomMachineEvent =
     }
   | { type: "players_update"; players: RoomPlayer[] }
   | { type: "room_configured"; universeId?: string; songs?: Song[]; allowedWorks?: string[]; options?: { noSeek?: boolean } }
-  | { type: "game_started"; currentSongIndex?: number; currentRoundIndex?: number; currentRound?: GameRound; displayedSongIndex?: number; displayedTotalSongs?: number; state?: "playing"; songs?: Song[] }
+  | { type: "game_starting"; state: "starting"; songs?: Song[]; totalSongs?: number; currentSongIndex?: number; currentRoundIndex?: number; currentRound?: GameRound; roundCount?: number; displayedSongIndex?: number; displayedTotalSongs?: number }
+  | { type: "all_players_ready"; startIn: number }
+  | { type: "game_started"; currentSongIndex?: number; currentRoundIndex?: number; currentRound?: GameRound; roundCount?: number; displayedSongIndex?: number; displayedTotalSongs?: number; state?: "playing"; songs?: Song[] }
   | { type: "configure_success" }
-  | { type: "song_changed"; currentSongIndex?: number; currentRoundIndex?: number; currentRound?: GameRound; displayedSongIndex?: number; displayedTotalSongs?: number }
+  | { type: "song_changed"; currentSongIndex?: number; currentRoundIndex?: number; currentRound?: GameRound; roundCount?: number; displayedSongIndex?: number; displayedTotalSongs?: number }
   | { type: "game_ended"; players?: RoomPlayer[]; state?: "results" }
   | { type: "answer_recorded"; response: RoomResponse }
   | { type: "player_answered"; playerId: string; songId: string }
@@ -128,6 +133,7 @@ export const roomMachine = setup({
           currentSongIndex: snapshot.currentSongIndex ?? 0,
           currentRoundIndex: snapshot.currentRoundIndex,
           currentRound: snapshot.currentRound,
+          roundCount: snapshot.roundCount,
           displayedSongIndex: snapshot.displayedSongIndex,
           displayedTotalSongs: snapshot.displayedTotalSongs,
           state: nextState,
@@ -173,6 +179,30 @@ export const roomMachine = setup({
         error: null,
       };
     }),
+    applyGameStarting: assign(({ context, event }) => {
+      if (event.type !== "game_starting") return {};
+      return {
+        room: {
+          ...context.room,
+          state: "starting" as Room["state"],
+          songs: event.songs || context.room.songs || [],
+          currentSongIndex: event.currentSongIndex ?? 0,
+          currentRoundIndex: event.currentRoundIndex,
+          currentRound: event.currentRound,
+          roundCount: event.roundCount,
+          displayedSongIndex: event.displayedSongIndex,
+          displayedTotalSongs: event.displayedTotalSongs,
+        },
+        startAt: undefined,
+        error: null,
+      };
+    }),
+    applyAllPlayersReady: assign(({ event }) => {
+      if (event.type !== "all_players_ready") return {};
+      return {
+        startAt: Date.now() + event.startIn,
+      };
+    }),
     applyGameStarted: assign(({ context, event }) => {
       if (event.type !== "game_started") return {};
       return {
@@ -182,10 +212,12 @@ export const roomMachine = setup({
           currentSongIndex: event.currentSongIndex ?? 0,
           currentRoundIndex: event.currentRoundIndex,
           currentRound: event.currentRound,
+          roundCount: event.roundCount,
           displayedSongIndex: event.displayedSongIndex,
           displayedTotalSongs: event.displayedTotalSongs,
           songs: event.songs || context.room.songs || [],
         },
+        startAt: undefined,
         allPlayersAnswered: false,
         error: null,
       };
@@ -198,6 +230,7 @@ export const roomMachine = setup({
           currentSongIndex: event.currentSongIndex ?? context.room.currentSongIndex ?? 0,
           currentRoundIndex: event.currentRoundIndex ?? context.room.currentRoundIndex,
           currentRound: event.currentRound ?? context.room.currentRound,
+          roundCount: event.roundCount ?? context.room.roundCount,
           displayedSongIndex: event.displayedSongIndex ?? context.room.displayedSongIndex,
           displayedTotalSongs: event.displayedTotalSongs ?? context.room.displayedTotalSongs,
         },
@@ -247,6 +280,7 @@ export const roomMachine = setup({
     allPlayersAnswered: false,
     isConnected: false,
     error: null,
+    startAt: undefined,
   },
   states: {
     connecting: {},
@@ -308,6 +342,13 @@ export const roomMachine = setup({
     room_configured: {
       target: ".lobby",
       actions: "applyRoomConfigured",
+    },
+    game_starting: {
+      target: ".playing",
+      actions: "applyGameStarting",
+    },
+    all_players_ready: {
+      actions: "applyAllPlayersReady",
     },
     game_started: {
       target: ".playing",

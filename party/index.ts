@@ -181,6 +181,37 @@ const MessageSchema = z.discriminatedUnion("type", [
     type: z.literal("reset_to_waiting"),
     hostId: z.string().min(1),
   }),
+  z.object({
+    type: z.literal("host_preview_start"),
+    universeId: z.string().min(1),
+    universeName: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal("host_preview_options"),
+    noSeek: z.boolean().optional(),
+    mysteryEffects: z
+      .object({
+        enabled: z.boolean(),
+        frequency: z.number().int().min(1).max(100),
+        effects: z.array(z.enum(["double", "reverse"])),
+      })
+      .optional(),
+    allowedWorks: z.array(z.string()).optional(),
+    allowedWorkNames: z.array(z.string()).optional(),
+    allWorksSelected: z.boolean().optional(),
+    maxSongs: z.number().int().min(1).nullable().optional(),
+    totalSongs: z
+      .union([z.number().int().min(0), z.unknown()])
+      .optional()
+      .transform((v) => (typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : undefined)),
+  }),
+  z.object({
+    type: z.literal("host_preview_clear"),
+  }),
+  z.object({
+    type: z.literal("player_ready"),
+    playerId: z.string().min(1).optional(),
+  }),
 ]);
 
 type Message = z.infer<typeof MessageSchema>;
@@ -197,6 +228,8 @@ interface Player {
   isHost: boolean;
   connected: boolean;
   connectionId: string; // ID de connexion WebSocket
+  /** Phase "starting" (Ready Check) : true quand le joueur a envoyé player_ready */
+  ready?: boolean;
 }
 
 /**
@@ -252,7 +285,7 @@ interface RoomState {
   universeId: string;
   songs: Song[];
   currentSongIndex: number;
-  state: "idle" | "configured" | "playing" | "results";
+  state: "idle" | "configured" | "starting" | "playing" | "results";
   players: Map<string, Player>; // key: playerId
   responses: Map<string, Response>; // key: `${songId}-${playerId}`
   allowedWorks?: string[];
@@ -277,6 +310,8 @@ export default class BlindTestRoom implements Party.Server {
   private authenticatedConnections = new Set<string>();
   private connectionIps = new Map<string, string | null>();
   private globalCooldownUntil = 0;
+  /** Timer pour le countdown Ready Check (phase "starting") → game_started après startIn ms */
+  private startingCountdownTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(public room: Party.Room) {
     // Initialiser l'Ã©tat de la room
@@ -334,8 +369,6 @@ export default class BlindTestRoom implements Party.Server {
       const parsed = MessageSchema.parse(data);
       await this.ensureSecurityState();
 
-      console.log(`[${this.room.id}] Message from ${sender.id}:`, parsed.type, parsed);
-
       if (parsed.type !== "join" && !this.authenticatedConnections.has(sender.id)) {
         sender.send(
           JSON.stringify({
@@ -369,6 +402,18 @@ export default class BlindTestRoom implements Party.Server {
         case "reset_to_waiting":
           this.handleResetToWaiting(parsed, sender);
           break;
+        case "host_preview_start":
+          this.handleHostPreviewStart(parsed, sender);
+          break;
+        case "host_preview_options":
+          this.handleHostPreviewOptions(parsed, sender);
+          break;
+        case "host_preview_clear":
+          this.handleHostPreviewClear(sender);
+          break;
+        case "player_ready":
+          this.handlePlayerReady(parsed, sender);
+          break;
       }
     } catch (error) {
       console.error(`[${this.room.id}] Invalid message:`, error);
@@ -386,50 +431,70 @@ export default class BlindTestRoom implements Party.Server {
    */
   async onClose(conn: Party.Connection) {
     console.log(`[${this.room.id}] Disconnection: ${conn.id}`);
+    console.log(
+      `[HOST-DEBUG] onClose conn=${conn.id} | hostId=${this.state.hostId} | players=${this.state.players.size}`
+    );
     this.authenticatedConnections.delete(conn.id);
     this.connectionIps.delete(conn.id);
 
     // Trouver le joueur associÃ© Ã  cette connexion
-    let disconnectedPlayer: Player | undefined;
-    for (const player of this.state.players.values()) {
-      if (player.connectionId === conn.id) {
-        player.connected = false;
-        disconnectedPlayer = player;
-        break;
+    const disconnectedPlayer = Array.from(this.state.players.values()).find(
+      (p) => p.connectionId === conn.id
+    );
+
+    if (!disconnectedPlayer) {
+      await this.maybeScheduleCleanup();
+      return;
+    }
+
+    const disconnectedPlayerId = disconnectedPlayer.id;
+    const wasHost = disconnectedPlayer.id === this.state.hostId;
+    console.log(
+      `[HOST-DEBUG] onClose joueur trouvé: disconnectedPlayerId=${disconnectedPlayerId} wasHost=${wasHost}`
+    );
+
+    this.state.players.delete(disconnectedPlayerId);
+
+    for (const key of this.state.responses.keys()) {
+      if (key.endsWith(`-${disconnectedPlayerId}`)) {
+        this.state.responses.delete(key);
       }
     }
 
-    if (disconnectedPlayer) {
-      console.log(`[${this.room.id}] Player ${disconnectedPlayer.id} marked as disconnected`);
-
-      // Broadcaster la mise Ã  jour
-      this.broadcast({
-        type: "players_update",
-        players: this.getPlayersArray(),
-      });
-
-      // Ne pas transférer le statut d'hôte : conserver hostId même si l'hôte est offline.
+    if (wasHost && this.state.players.size > 0) {
+      const newHost = this.state.players.values().next().value as Player;
+      newHost.isHost = true;
+      this.state.hostId = newHost.id;
+      console.log(
+        `[HOST-DEBUG] Transfert d'hôte: ${disconnectedPlayerId} -> ${newHost.id} (${newHost.displayName})`
+      );
+      console.log(`[${this.room.id}] Host left; new host: ${newHost.id} (${newHost.displayName})`);
+    } else if (wasHost) {
+      this.state.hostId = "";
     }
 
-    // Si plus personne n'est connectÃ©, programmer une alarme de cleanup (survit Ã  l'hibernation)
-    const hasConnectedPlayers = Array.from(this.state.players.values()).some((p) => p.connected);
-    if (!hasConnectedPlayers) {
-      const existingAlarm = await this.room.storage.getAlarm();
-      if (existingAlarm) {
-        console.log(`[${this.room.id}] Cleanup alarm already pending`);
-        return;
-      }
-      const connections = Array.from(this.room.getConnections());
-      console.log(`[${this.room.id}] No players connected, scheduling cleanup alarm`, {
-        remainingPlayers: this.state.players.size,
-        connectionsCount: connections.length,
-        connectionIds: connections.map((c) => c.id),
-      });
-      // Sauvegarder le roomId dans le storage (car this.room.id n'est pas accessible dans onAlarm)
-      await this.room.storage.put("roomIdForCleanup", this.room.id);
-      // Alarme dans 30 secondes - survit mÃªme si le serveur hiberne
-      await this.room.storage.setAlarm(Date.now() + 30000);
-    }
+    console.log(`[${this.room.id}] Player ${disconnectedPlayerId} removed; players left: ${this.state.players.size}`);
+
+    this.broadcast({
+      type: "players_update",
+      players: this.getPlayersArray(),
+    });
+
+    await this.maybeScheduleCleanup();
+  }
+
+  /** Programme une alarme de cleanup si la room est vide (survit à l'hibernation). */
+  private async maybeScheduleCleanup() {
+    if (this.state.players.size > 0) return;
+    const existingAlarm = await this.room.storage.getAlarm();
+    if (existingAlarm) return;
+    const connections = Array.from(this.room.getConnections());
+    console.log(`[${this.room.id}] No players in room, scheduling cleanup alarm`, {
+      connectionsCount: connections.length,
+      connectionIds: connections.map((c) => c.id),
+    });
+    await this.room.storage.put("roomIdForCleanup", this.room.id);
+    await this.room.storage.setAlarm(Date.now() + 30000);
   }
 
   /**
@@ -601,6 +666,9 @@ export default class BlindTestRoom implements Party.Server {
     await this.ensureSecurityState();
     const { playerId, displayName, password, token } = msg;
     const isFirstPlayer = this.state.players.size === 0;
+    console.log(
+      `[HOST-DEBUG] handleJoin playerId=${playerId} displayName=${displayName} isFirstPlayer=${isFirstPlayer} hostId=${this.state.hostId}`
+    );
 
     let sessionToken: string | undefined;
 
@@ -666,6 +734,9 @@ export default class BlindTestRoom implements Party.Server {
       existingPlayer.connectionId = sender.id;
       existingPlayer.displayName = displayName;
       existingPlayer.isHost = existingPlayer.id === this.state.hostId;
+      console.log(
+        `[HOST-DEBUG] Reconnexion: playerId=${playerId} -> isHost=${existingPlayer.isHost} (hostId serveur=${this.state.hostId})`
+      );
       console.log(`[${this.room.id}] Player ${playerId} reconnected`);
     } else {
       // Nouveau joueur
@@ -724,20 +795,12 @@ export default class BlindTestRoom implements Party.Server {
       type: "players_update",
       players: this.getPlayersArray(),
     });
-
-    console.log(`[${this.room.id}] handleJoin snapshot`, {
-      hostId: this.state.hostId,
-      state: this.state.state,
-      songs: this.state.songs.length,
-      players: this.state.players.size,
-    });
   }
 
   /**
    * Handler: CONFIGURE - Configuration de la playlist
    */
   private handleConfigure(msg: Extract<Message, { type: "configure" }>, sender: Party.Connection) {
-    console.log(`[${this.room.id}] ========== CONFIGURE MESSAGE RECEIVED ==========`);
     const {
       universeId,
       songs,
@@ -748,20 +811,6 @@ export default class BlindTestRoom implements Party.Server {
     } = msg;
     const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
     const senderId = senderPlayer?.id ?? hostIdFromClient;
-
-    console.log(`[${this.room.id}] handleConfigure called`, {
-      senderId,
-      senderPlayer: senderPlayer?.id,
-      senderConn: sender.id,
-      expectedHostId: this.state.hostId,
-      hostIdFromClient,
-      universeId,
-      songs: songs.length,
-      allowedWorks: allowedWorks?.length ?? 0,
-      options,
-      state: this.state.state,
-      allPlayers: Array.from(this.state.players.values()).map(p => ({ id: p.id, connId: p.connectionId })),
-    });
 
     // Validation: seul l'host peut configurer
     if (!senderId || senderId !== this.state.hostId) {
@@ -805,9 +854,7 @@ export default class BlindTestRoom implements Party.Server {
       this.state.currentSongIndex = 0;
     }
 
-    this.state.state = "configured"; // ✅ Changé de "idle" à "configured"
-
-    console.log(`[${this.room.id}] Configured: ${songs.length} songs, universe ${universeId}`);
+    this.state.state = "configured";
 
     // Envoyer confirmation
     sender.send(
@@ -833,42 +880,15 @@ export default class BlindTestRoom implements Party.Server {
       allowedWorks,
       options,
     };
-    const configConnections = Array.from(this.room.getConnections());
-    console.log(`[${this.room.id}] Broadcasting room_configured`, {
-      universeId,
-      songsCount: songs.length,
-      connectionsCount: configConnections.length,
-      connectionIds: configConnections.map(c => c.id),
-    });
     this.broadcast(broadcastMessage);
-    console.log(`[${this.room.id}] room_configured broadcast DONE`);
-
-    console.log(`[${this.room.id}] handleConfigure applied`, {
-      universeId: this.state.universeId,
-      songs: this.state.songs.length,
-      state: this.state.state,
-      players: this.state.players.size,
-    });
   }
 
   /**
    * Handler: START - DÃ©marrage de la partie
    */
   private handleStart(msg: Extract<Message, { type: "start" }>, sender: Party.Connection) {
-    console.log(`[${this.room.id}] ========== START MESSAGE RECEIVED ==========`);
     const { hostId } = msg;
     const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
-
-    console.log(`[${this.room.id}] handleStart called`, {
-      hostId,
-      senderPlayer: senderPlayer?.id,
-      senderConn: sender.id,
-      expectedHostId: this.state.hostId,
-      state: this.state.state,
-      songs: this.state.songs.length,
-      players: this.state.players.size,
-      allPlayers: Array.from(this.state.players.values()).map(p => ({ id: p.id, connId: p.connectionId })),
-    });
 
     // Validation: est-ce bien le host ?
     if (hostId !== this.state.hostId) {
@@ -917,33 +937,99 @@ export default class BlindTestRoom implements Party.Server {
       this.state.currentSongIndex = 0;
     }
 
-    // Démarrer la partie
-    this.state.state = "playing";
+    // Ready Check (Option A) : passer en phase "starting", pas directement "playing"
+    this.state.state = "starting";
+    for (const p of this.state.players.values()) {
+      p.ready = false;
+    }
+    if (this.startingCountdownTimer) {
+      clearTimeout(this.startingCountdownTimer);
+      this.startingCountdownTimer = null;
+    }
 
-    console.log(`[${this.room.id}] Game started by hostId=${hostId} (conn=${sender.id}, senderPlayer=${senderPlayer?.id})`);
+    // Phase 7: Notifier le Lobby que la room a commencÃ© Ã  jouer
+    void this.notifyLobby("room_state_changed", { state: "starting", playersCount: this.state.players.size, universeId: this.state.universeId, hasPassword: Boolean(this.state.passwordHash), });
 
-    // âœ… Phase 7: Notifier le Lobby que la room a commencÃ© Ã  jouer
-    void this.notifyLobby("room_state_changed", { state: "playing", playersCount: this.state.players.size, universeId: this.state.universeId, hasPassword: Boolean(this.state.passwordHash), });
+    this.broadcast({
+      type: "game_starting",
+      state: "starting",
+      currentSongIndex: this.state.currentSongIndex,
+      currentRoundIndex: this.state.currentRoundIndex,
+      currentRound: this.getCurrentRound(),
+      roundCount: this.state.rounds?.length,
+      displayedSongIndex: this.getDisplayedSongIndex(),
+      displayedTotalSongs: this.getDisplayedTotalSongs(),
+      songs: this.state.songs,
+      totalSongs: this.state.songs.length,
+    });
 
-    // Broadcaster le démarrage (avec la liste complète des songs)
+    this.broadcast({
+      type: "players_update",
+      players: this.getPlayersArray(),
+    });
+  }
+
+  private handlePlayerReady(msg: Extract<Message, { type: "player_ready" }>, sender: Party.Connection) {
+    if (this.state.state !== "starting") {
+      sender.send(JSON.stringify({ type: "error", message: "Not in starting phase" }));
+      return;
+    }
+    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+    if (!senderPlayer) {
+      sender.send(JSON.stringify({ type: "error", message: "Player not found" }));
+      return;
+    }
+    const playerId = msg.playerId ?? senderPlayer.id;
+    if (playerId !== senderPlayer.id) {
+      sender.send(JSON.stringify({ type: "error", message: "Player ID mismatch" }));
+      return;
+    }
+    senderPlayer.ready = true;
+
+    this.broadcast({
+      type: "players_update",
+      players: this.getPlayersArray(),
+    });
+
+    const allReady = Array.from(this.state.players.values()).every((p) => p.ready === true);
+    if (!allReady) return;
+
+    const startInMs = 3000;
+    this.broadcast({
+      type: "all_players_ready",
+      startIn: startInMs,
+    });
+
+    if (this.startingCountdownTimer) {
+      clearTimeout(this.startingCountdownTimer);
+    }
+    this.startingCountdownTimer = setTimeout(() => {
+      this.startingCountdownTimer = null;
+      this.state.state = "playing";
+      console.log(`[${this.room.id}] Ready Check complete, game started`);
+      void this.notifyLobby("room_state_changed", { state: "playing", playersCount: this.state.players.size, universeId: this.state.universeId, hasPassword: Boolean(this.state.passwordHash), });
+      this.broadcastGameStarted();
+      this.broadcast({
+        type: "players_update",
+        players: this.getPlayersArray(),
+      });
+    }, startInMs);
+  }
+
+  private broadcastGameStarted() {
     const currentRound = this.getCurrentRound();
     this.broadcast({
       type: "game_started",
       currentSongIndex: this.state.currentSongIndex,
       currentRoundIndex: this.state.currentRoundIndex,
       currentRound: currentRound,
+      roundCount: this.state.rounds?.length,
       displayedSongIndex: this.getDisplayedSongIndex(),
       displayedTotalSongs: this.getDisplayedTotalSongs(),
       state: "playing",
       currentSong: this.state.songs[this.state.currentSongIndex],
-      songs: this.state.songs, // Ajouter pour que les clients aient la liste
+      songs: this.state.songs,
       totalSongs: this.state.songs.length,
-    });
-
-    // âœ… FIX: Envoyer players_update pour initialiser hasAnsweredCurrentSong
-    this.broadcast({
-      type: "players_update",
-      players: this.getPlayersArray(),
     });
   }
 
@@ -952,18 +1038,8 @@ export default class BlindTestRoom implements Party.Server {
    */
   private handleAnswer(msg: Extract<Message, { type: "answer" }>, sender: Party.Connection) {
     const { playerId } = msg;
-    console.log(`[${this.room.id}] handleAnswer called`, {
-      playerId,
-      hasAnswers: !!msg.answers,
-      answersCount: msg.answers?.length ?? 0,
-      songId: msg.songId,
-      workId: msg.workId,
-      state: this.state.state,
-      responses: this.state.responses.size,
-      players: this.state.players.size,
-    });
 
-    // âœ… Validation: le jeu doit Ãªtre en mode "playing"
+    // Validation: le jeu doit être en mode "playing"
     if (this.state.state !== "playing") {
       sender.send(
         JSON.stringify({
@@ -1286,13 +1362,6 @@ export default class BlindTestRoom implements Party.Server {
    * Handler: NEXT - Passer au morceau suivant
    */
   private handleNext(msg: Extract<Message, { type: "next" }>, sender: Party.Connection) {
-    console.log(`[${this.room.id}] handleNext called`, {
-      hostId: msg.hostId,
-      expectedHostId: this.state.hostId,
-      state: this.state.state,
-      currentSongIndex: this.state.currentSongIndex,
-      songs: this.state.songs.length,
-    });
     const { hostId } = msg;
     const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
 
@@ -1364,6 +1433,7 @@ export default class BlindTestRoom implements Party.Server {
         currentSongIndex: this.state.currentSongIndex,
         currentRoundIndex: this.state.currentRoundIndex,
         currentRound: currentRound,
+        roundCount: this.state.rounds?.length,
         displayedSongIndex: this.getDisplayedSongIndex(),
         displayedTotalSongs: this.getDisplayedTotalSongs(),
         currentSong: nextSong,
@@ -1399,13 +1469,14 @@ export default class BlindTestRoom implements Party.Server {
         currentSongIndex: this.state.currentSongIndex,
         currentRoundIndex: this.state.currentRoundIndex,
         currentRound: currentRound,
+        roundCount: this.state.rounds?.length,
         displayedSongIndex: this.getDisplayedSongIndex(),
         displayedTotalSongs: this.getDisplayedTotalSongs(),
         currentSong: nextSong,
       });
     }
 
-    // âœ… FIX: Envoyer players_update pour rÃ©initialiser hasAnsweredCurrentSong
+    // FIX: Envoyer players_update pour rÃ©initialiser hasAnsweredCurrentSong
     this.broadcast({
       type: "players_update",
       players: this.getPlayersArray(),
@@ -1441,11 +1512,21 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // Si on est encore en mode "playing", vérifier si on peut terminer la partie
+    // Si on est encore en mode "playing", vérifier si on peut terminer la partie.
+    // Utiliser la même logique que le client (displayedSongIndex >= displayedTotalSongs)
+    // pour rester aligné avec l’UI (rounds / double rounds).
     if (this.state.state === "playing") {
-      const isLastSong = this.state.currentSongIndex >= this.state.songs.length - 1;
-      
-      if (!isLastSong) {
+      let atEnd: boolean;
+      if (this.state.rounds && this.state.rounds.length > 0) {
+        const roundIndex = this.state.currentRoundIndex ?? 0;
+        atEnd = roundIndex >= this.state.rounds.length - 1;
+      } else {
+        const displayedTotal = this.getDisplayedTotalSongs();
+        const displayedIndex = this.getDisplayedSongIndex();
+        atEnd = displayedTotal > 0 && displayedIndex >= displayedTotal;
+      }
+
+      if (!atEnd) {
         sender.send(
           JSON.stringify({
             type: "error",
@@ -1455,9 +1536,13 @@ export default class BlindTestRoom implements Party.Server {
         return;
       }
 
-      // Vérifier si tous les joueurs ont répondu au dernier morceau
-      const currentSong = this.state.songs[this.state.currentSongIndex];
-      if (!currentSong) {
+      // Vérifier si tous les joueurs ont répondu au(x) morceau(x) de la manche courante
+      const currentRound = this.getCurrentRound();
+      const songIdsToCheck: string[] = currentRound
+        ? currentRound.songIds
+        : [this.state.songs[this.state.currentSongIndex]?.id].filter(Boolean) as string[];
+
+      if (songIdsToCheck.length === 0) {
         sender.send(
           JSON.stringify({
             type: "error",
@@ -1468,18 +1553,19 @@ export default class BlindTestRoom implements Party.Server {
       }
 
       const connectedPlayers = Array.from(this.state.players.values()).filter((p) => p.connected);
-      const currentSongResponses = Array.from(this.state.responses.values()).filter(
-        (r) => r.songId === currentSong.id
-      );
-
-      if (currentSongResponses.length < connectedPlayers.length) {
-        sender.send(
-          JSON.stringify({
-            type: "error",
-            message: "All players must answer before showing scores",
-          })
+      for (const songId of songIdsToCheck) {
+        const responsesForSong = Array.from(this.state.responses.values()).filter(
+          (r) => r.songId === songId
         );
-        return;
+        if (responsesForSong.length < connectedPlayers.length) {
+          sender.send(
+            JSON.stringify({
+              type: "error",
+              message: "All players must answer before showing scores",
+            })
+          );
+          return;
+        }
       }
 
       // Tous les joueurs ont répondu au dernier morceau : terminer la partie automatiquement
@@ -1517,18 +1603,6 @@ export default class BlindTestRoom implements Party.Server {
     const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
     const senderId = senderPlayer?.id ?? hostId;
 
-    console.log(`[${this.room.id}] handleResetToWaiting called`, {
-      hostId,
-      senderId,
-      senderPlayer: senderPlayer?.id,
-      senderConn: sender.id,
-      expectedHostId: this.state.hostId,
-      currentState: this.state.state,
-      universeId: this.state.universeId,
-      songsCount: this.state.songs.length,
-      playersCount: this.state.players.size,
-    });
-
     // Validation: est-ce bien le host ?
     if (senderId !== this.state.hostId) {
       console.warn(
@@ -1555,6 +1629,11 @@ export default class BlindTestRoom implements Party.Server {
     this.state.allowedWorks = undefined;
     this.state.options = undefined;
     this.state.state = "idle";
+
+    if (this.startingCountdownTimer) {
+      clearTimeout(this.startingCountdownTimer);
+      this.startingCountdownTimer = null;
+    }
 
     // ⭐ RESET DES SCORES DE TOUS LES JOUEURS
     // Réinitialiser score, correct, incorrect pour chaque joueur
@@ -1620,6 +1699,43 @@ export default class BlindTestRoom implements Party.Server {
   /**
    * Broadcaster un message Ã  tous les clients connectÃ©s
    */
+  private handleHostPreviewStart(
+    msg: Extract<Message, { type: "host_preview_start" }>,
+    sender: Party.Connection
+  ) {
+    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+    if (!senderPlayer || senderPlayer.id !== this.state.hostId) return;
+    this.broadcast({
+      type: "host_preview_start",
+      universeId: msg.universeId,
+      universeName: msg.universeName,
+    });
+  }
+
+  private handleHostPreviewOptions(
+    msg: Extract<Message, { type: "host_preview_options" }>,
+    sender: Party.Connection
+  ) {
+    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+    if (!senderPlayer || senderPlayer.id !== this.state.hostId) return;
+    this.broadcast({
+      type: "host_preview_options",
+      noSeek: msg.noSeek,
+      mysteryEffects: msg.mysteryEffects,
+      allowedWorks: msg.allowedWorks,
+      allowedWorkNames: msg.allowedWorkNames,
+      allWorksSelected: msg.allWorksSelected,
+      maxSongs: msg.maxSongs,
+      totalSongs: msg.totalSongs,
+    });
+  }
+
+  private handleHostPreviewClear(sender: Party.Connection) {
+    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+    if (!senderPlayer || senderPlayer.id !== this.state.hostId) return;
+    this.broadcast({ type: "host_preview_clear" });
+  }
+
   private broadcast(message: any, excludeConnectionIds: string[] = []) {
     const payload = JSON.stringify(message);
 
@@ -1690,6 +1806,7 @@ export default class BlindTestRoom implements Party.Server {
       currentSongIndex: this.state.currentSongIndex,
       currentRoundIndex: this.state.currentRoundIndex,
       currentRound: currentRound,
+      roundCount: this.state.rounds?.length,
       displayedSongIndex: this.getDisplayedSongIndex(),
       displayedTotalSongs: this.getDisplayedTotalSongs(),
       state: this.state.state,
@@ -1720,6 +1837,7 @@ export default class BlindTestRoom implements Party.Server {
         incorrect: p.incorrect,
         isHost: p.isHost,
         connected: p.connected,
+        ready: p.ready ?? false,
         hasAnsweredCurrentSong,
       };
     });

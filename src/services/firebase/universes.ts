@@ -20,8 +20,19 @@ export const getUniverses = async (): Promise<ServiceResponse<Universe[]>> => {
       [orderBy("createdAt", "desc")],
       UniverseSchema
     );
+    if (process.env.NODE_ENV === "development") {
+      console.info("[UNIVERS-INCONNU] getUniverses() OK", {
+        count: data.length,
+        sample: data.slice(0, 3).map((u) => ({ id: u.id, name: u.name })),
+      });
+    }
     return { success: true, data };
   } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[UNIVERS-INCONNU] getUniverses() erreur", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
     return {
       success: false,
       error: formatError(error, "Erreur lors du chargement des univers"),

@@ -28,6 +28,26 @@ interface GameConfigStore {
   allowedWorks: string[];
 
   /**
+   * Noms des œuvres sélectionnées (pour préview invités)
+   */
+  allowedWorkNames: string[];
+
+  /**
+   * Nombre total de chansons disponibles (pour préview quand maxSongs = null)
+   */
+  totalSongsForPreview: number | null;
+
+  /**
+   * Nombre total d'œuvres dans l'univers (pour préview "toutes" œuvres)
+   */
+  totalWorksInUniverse: number | null;
+
+  /**
+   * Nombre de chansons effectif pour la préview invités (= ce que l'hôte voit : 0 si aucune œuvre, sinon maxSongs ?? total des œuvres sélectionnées)
+   */
+  effectiveSongsForPreview: number | null;
+
+  /**
    * Mode sans avance rapide (timeline non cliquable)
    */
   noSeek: boolean;
@@ -72,14 +92,34 @@ interface GameConfigStore {
   closeCustomize: () => void;
 
   /**
-   * Toggle une œuvre (ajouter/retirer de la sélection)
+   * Toggle une œuvre (ajouter/retirer de la sélection). workTitle optionnel pour la préview invités.
    */
-  toggleWork: (workId: string) => void;
+  toggleWork: (workId: string, workTitle?: string) => void;
 
   /**
    * Sélectionner plusieurs œuvres d'un coup
    */
   setAllowedWorks: (workIds: string[]) => void;
+
+  /**
+   * Sélectionner œuvres avec noms (pour "tout sélectionner" + préview)
+   */
+  setAllowedWorksWithNames: (workIds: string[], workNames: string[]) => void;
+
+  /**
+   * Définir le total de chansons disponibles (modal)
+   */
+  setTotalSongsForPreview: (n: number | null) => void;
+
+  /**
+   * Définir le nombre total d'œuvres dans l'univers (modal)
+   */
+  setTotalWorksInUniverse: (n: number | null) => void;
+
+  /**
+   * Définir le nombre de chansons effectif pour la préview (modal : 0 si 0 œuvres, sinon maxSongs ?? total sélection)
+   */
+  setEffectiveSongsForPreview: (n: number | null) => void;
 
   /**
    * Activer/désactiver le mode sans avance rapide
@@ -123,6 +163,10 @@ interface GameConfigStore {
 const INITIAL_STATE = {
   customizingUniverse: null,
   allowedWorks: [],
+  allowedWorkNames: [],
+  totalSongsForPreview: null,
+  totalWorksInUniverse: null,
+  effectiveSongsForPreview: null,
   noSeek: false,
   maxSongs: null,
   isCustomMode: false,
@@ -192,31 +236,44 @@ export const useGameConfig = create<GameConfigStore>((set) => ({
     ...INITIAL_STATE,
   }),
 
-  toggleWork: (workId) => set((state) => {
+  toggleWork: (workId, workTitle) => set((state) => {
     const isSelected = state.allowedWorks.includes(workId);
+    const name = workTitle ?? workId;
 
     if (isSelected) {
-      // Retirer l'œuvre
+      const idx = state.allowedWorks.indexOf(workId);
       return {
         allowedWorks: state.allowedWorks.filter(id => id !== workId),
+        allowedWorkNames: state.allowedWorkNames.filter((_, i) => i !== idx),
       };
     } else {
-      // Vérifier la limite (mode custom)
       const canAdd = !state.maxWorksAllowed || state.allowedWorks.length < state.maxWorksAllowed;
-
       if (!canAdd) {
         console.warn(`Limite d'œuvres atteinte (${state.maxWorksAllowed})`);
-        return state; // Pas de changement
+        return state;
       }
-
-      // Ajouter l'œuvre
       return {
         allowedWorks: [...state.allowedWorks, workId],
+        allowedWorkNames: [...state.allowedWorkNames, name],
       };
     }
   }),
 
-  setAllowedWorks: (workIds) => set({ allowedWorks: workIds }),
+  setAllowedWorks: (workIds) => set({
+    allowedWorks: workIds,
+    allowedWorkNames: workIds.length > 0 ? workIds.map(id => id) : [],
+  }),
+
+  setAllowedWorksWithNames: (workIds, workNames) => set({
+    allowedWorks: workIds,
+    allowedWorkNames: workNames,
+  }),
+
+  setTotalSongsForPreview: (n) => set({ totalSongsForPreview: n }),
+
+  setTotalWorksInUniverse: (n) => set({ totalWorksInUniverse: n }),
+
+  setEffectiveSongsForPreview: (n) => set({ effectiveSongsForPreview: n }),
 
   setNoSeek: (value) => set({ noSeek: value }),
 
@@ -275,6 +332,10 @@ export const gameConfigSelectors = {
   // State
   customizingUniverse: (state: GameConfigStore) => state.customizingUniverse,
   allowedWorks: (state: GameConfigStore) => state.allowedWorks,
+  allowedWorkNames: (state: GameConfigStore) => state.allowedWorkNames,
+  totalSongsForPreview: (state: GameConfigStore) => state.totalSongsForPreview,
+  totalWorksInUniverse: (state: GameConfigStore) => state.totalWorksInUniverse,
+  effectiveSongsForPreview: (state: GameConfigStore) => state.effectiveSongsForPreview,
   noSeek: (state: GameConfigStore) => state.noSeek,
   maxSongs: (state: GameConfigStore) => state.maxSongs,
   isCustomMode: (state: GameConfigStore) => state.isCustomMode,
@@ -286,6 +347,10 @@ export const gameConfigSelectors = {
   closeCustomize: (state: GameConfigStore) => state.closeCustomize,
   toggleWork: (state: GameConfigStore) => state.toggleWork,
   setAllowedWorks: (state: GameConfigStore) => state.setAllowedWorks,
+  setAllowedWorksWithNames: (state: GameConfigStore) => state.setAllowedWorksWithNames,
+  setTotalSongsForPreview: (state: GameConfigStore) => state.setTotalSongsForPreview,
+  setTotalWorksInUniverse: (state: GameConfigStore) => state.setTotalWorksInUniverse,
+  setEffectiveSongsForPreview: (state: GameConfigStore) => state.setEffectiveSongsForPreview,
   setNoSeek: (state: GameConfigStore) => state.setNoSeek,
   setMaxSongs: (state: GameConfigStore) => state.setMaxSongs,
   reset: (state: GameConfigStore) => state.reset,
@@ -319,6 +384,10 @@ export const useGameConfiguration = () => ({
   // State
   customizingUniverse: useGameConfig(gameConfigSelectors.customizingUniverse),
   allowedWorks: useGameConfig(gameConfigSelectors.allowedWorks),
+  allowedWorkNames: useGameConfig(gameConfigSelectors.allowedWorkNames),
+  totalSongsForPreview: useGameConfig(gameConfigSelectors.totalSongsForPreview),
+  totalWorksInUniverse: useGameConfig(gameConfigSelectors.totalWorksInUniverse),
+  effectiveSongsForPreview: useGameConfig(gameConfigSelectors.effectiveSongsForPreview),
   noSeek: useGameConfig(gameConfigSelectors.noSeek),
   maxSongs: useGameConfig(gameConfigSelectors.maxSongs),
   isCustomMode: useGameConfig(gameConfigSelectors.isCustomMode),
@@ -330,6 +399,10 @@ export const useGameConfiguration = () => ({
   closeCustomize: useGameConfig(gameConfigSelectors.closeCustomize),
   toggleWork: useGameConfig(gameConfigSelectors.toggleWork),
   setAllowedWorks: useGameConfig(gameConfigSelectors.setAllowedWorks),
+  setAllowedWorksWithNames: useGameConfig(gameConfigSelectors.setAllowedWorksWithNames),
+  setTotalSongsForPreview: useGameConfig(gameConfigSelectors.setTotalSongsForPreview),
+  setTotalWorksInUniverse: useGameConfig(gameConfigSelectors.setTotalWorksInUniverse),
+  setEffectiveSongsForPreview: useGameConfig(gameConfigSelectors.setEffectiveSongsForPreview),
   setNoSeek: useGameConfig(gameConfigSelectors.setNoSeek),
   setMaxSongs: useGameConfig(gameConfigSelectors.setMaxSongs),
   reset: useGameConfig(gameConfigSelectors.reset),

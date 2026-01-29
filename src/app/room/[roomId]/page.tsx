@@ -7,6 +7,7 @@ import { CUSTOM_UNIVERSE, MAX_WORKS_CUSTOM_MODE } from "@/hooks/useUniverseCusto
 import { useGameConfiguration, useRoomAuthStore } from "@/stores";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { QuitRoomButton } from "@/components/ui/QuitRoomButton";
 import { UniverseCustomizeModal } from "@/components/home/UniverseCustomizeModal";
 import { useIdentity } from "@/hooks/useIdentity";
 import { useUniverses } from "@/hooks/useUniverses";
@@ -17,13 +18,11 @@ import type { Song, Universe } from "@/types";
 import { useGameNavigation } from "@/hooks/useGameNavigation";
 
 export default function WaitingRoomPage() {
-  console.log("[WaitingRoomPage] RENDER", { timestamp: Date.now() });
   const { navigate } = useGameNavigation();
   const params = useParams<{ roomId: string }>();
   const searchParams = useSearchParams();
 
   const roomId = params?.roomId;
-  console.log("[WaitingRoomPage] roomId", { roomId });
 
   const { playerId, displayName: storedName, ready: identityReady, setIdentity } = useIdentity();
   const queryPlayerId = searchParams?.get("player");
@@ -53,17 +52,20 @@ export default function WaitingRoomPage() {
   const {
     room,
     players,
-    state,
-    isConnected,
     isHost,
     allowedWorks,
     options,
     configureRoom,
     startGame,
+    leaveRoom,
     authRequired,
     authError,
     submitPassword,
     isAuthenticated,
+    hostPreview,
+    sendHostPreviewStart,
+    sendHostPreviewOptions,
+    sendHostPreviewClear,
   } = usePartyKitRoom(
     identityReady && playerId && roomId
       ? {
@@ -71,6 +73,7 @@ export default function WaitingRoomPage() {
           playerId,
           displayName,
           password: pendingPassword,
+          navigate,
         }
       : {}
   );
@@ -105,8 +108,11 @@ export default function WaitingRoomPage() {
   const {
     customizingUniverse,
     allowedWorks: customAllowedWorks,
+    allowedWorkNames: customAllowedWorkNames,
     noSeek: customNoSeek,
     maxSongs: customMaxSongs,
+    effectiveSongsForPreview,
+    totalWorksInUniverse,
     isCustomMode,
     mysteryEffects,
     openCustomize: openCustomizeStore,
@@ -119,6 +125,65 @@ export default function WaitingRoomPage() {
     },
     [openCustomizeStore]
   );
+
+  // Envoyer la prévisualisation aux invités quand l'hôte ouvre/ferme le modal Personnaliser
+  useEffect(() => {
+    if (!isHostEffective || !sendHostPreviewStart || !sendHostPreviewClear) return;
+    if (customizingUniverse) {
+      sendHostPreviewStart(customizingUniverse.id, customizingUniverse.name);
+      return () => sendHostPreviewClear();
+    }
+    sendHostPreviewClear();
+  }, [isHostEffective, customizingUniverse, sendHostPreviewStart, sendHostPreviewClear]);
+
+  // Envoyer les options en temps réel quand l'hôte modifie la personnalisation
+  useEffect(() => {
+    if (!isHostEffective || !customizingUniverse || !sendHostPreviewOptions) return;
+    const allWorksSelected =
+      totalWorksInUniverse != null &&
+      totalWorksInUniverse > 0 &&
+      customAllowedWorks.length === totalWorksInUniverse;
+    // Envoyer exactement ce que l'hôte voit : effectiveSongsForPreview (0 si 0 œuvres, sinon maxSongs ?? total sélection)
+    const totalSongsValue =
+      effectiveSongsForPreview !== null && effectiveSongsForPreview !== undefined && Number.isInteger(effectiveSongsForPreview) && effectiveSongsForPreview >= 0
+        ? effectiveSongsForPreview
+        : undefined;
+    const maxSongsValue =
+      customMaxSongs !== undefined && customMaxSongs !== null
+        ? typeof customMaxSongs === "number" && Number.isInteger(customMaxSongs)
+          ? customMaxSongs
+          : undefined
+        : undefined;
+    sendHostPreviewOptions({
+      noSeek: customNoSeek,
+      mysteryEffects:
+        mysteryEffects.enabled && mysteryEffects.selectedEffects.length > 0
+          ? {
+              enabled: true,
+              frequency: mysteryEffects.frequency,
+              effects: mysteryEffects.selectedEffects,
+            }
+          : undefined,
+      allowedWorks: customAllowedWorks.length > 0 ? customAllowedWorks : undefined,
+      allowedWorkNames: customAllowedWorkNames.length > 0 ? customAllowedWorkNames : undefined,
+      allWorksSelected: allWorksSelected || undefined,
+      maxSongs: maxSongsValue,
+      totalSongs: totalSongsValue,
+    });
+  }, [
+    isHostEffective,
+    customizingUniverse,
+    sendHostPreviewOptions,
+    customNoSeek,
+    mysteryEffects.enabled,
+    mysteryEffects.frequency,
+    mysteryEffects.selectedEffects,
+    customAllowedWorks,
+    customAllowedWorkNames,
+    totalWorksInUniverse,
+    effectiveSongsForPreview,
+    customMaxSongs,
+  ]);
 
   const openCustomMode = useCallback(() => {
     openCustomizeStore(CUSTOM_UNIVERSE, {
@@ -220,6 +285,20 @@ export default function WaitingRoomPage() {
             }
           : undefined;
 
+      // Validation : 100 % double + nombre impair de musiques = impossible
+      if (
+        mysteryEffectsConfig &&
+        mysteryEffectsConfig.frequency === 100 &&
+        mysteryEffectsConfig.effects.includes("double") &&
+        selectedSongs.length % 2 !== 0
+      ) {
+        setConfigError(
+          "Avec le mode « Deux musiques en même temps » à 100 %, le nombre de musiques doit être pair. Changez la fréquence ou le nombre de musiques."
+        );
+        setIsConfiguringRoom(false);
+        return;
+      }
+
       await configureRoom(universeId, selectedSongs, allowedWorkIds, { noSeek: savedNoSeek }, mysteryEffectsConfig);
 
       if (startGame) {
@@ -252,6 +331,7 @@ export default function WaitingRoomPage() {
       }
 
       setIsConfiguringRoom(true);
+      setConfigError(null);
       try {
         console.info("[WaitingRoomPage] HOST selected universe, configuring room", { universeId, roomId });
 
@@ -298,6 +378,20 @@ export default function WaitingRoomPage() {
                 effects: mysteryEffects.selectedEffects,
               }
             : undefined;
+
+        // Validation : 100 % double + nombre impair de musiques = impossible (dernière manche ne peut pas être double)
+        if (
+          mysteryEffectsConfig &&
+          mysteryEffectsConfig.frequency === 100 &&
+          mysteryEffectsConfig.effects.includes("double") &&
+          selectedSongs.length % 2 !== 0
+        ) {
+          setConfigError(
+            "Avec le mode « Deux musiques en même temps » à 100 %, le nombre de musiques doit être pair. Changez la fréquence ou choisissez un nombre de musiques pair."
+          );
+          setIsConfiguringRoom(false);
+          return;
+        }
 
         await configureRoom(universeId, selectedSongs, undefined, { noSeek: false }, mysteryEffectsConfig);
 
@@ -353,17 +447,7 @@ export default function WaitingRoomPage() {
 
   // Dès que l'univers est connu, on bascule sur la page de jeu
   useEffect(() => {
-    console.log("[WaitingRoomPage] auto-redirect effect triggered", {
-      identityReady,
-      universeId: room?.universeId,
-      roomId,
-      playerId,
-      state,
-      isConnected,
-    });
-
     // ⭐ Protection : ne pas rediriger si universeId est vide (après reset) ou si state est "idle"
-    // Cela évite les redirects intempestifs après un reset_to_waiting
     if (
       !identityReady ||
       !room?.universeId ||
@@ -372,22 +456,6 @@ export default function WaitingRoomPage() {
       !roomId ||
       !playerId
     ) {
-      console.log("[WaitingRoomPage] auto-redirect SKIP", {
-        reason: !identityReady
-          ? "identity_not_ready"
-          : !room?.universeId || room.universeId === ""
-          ? "no_universe"
-          : room.state === "idle"
-          ? "state_idle"
-          : !roomId
-          ? "no_room"
-          : "no_player",
-        identityReady,
-        universeId: room?.universeId,
-        state: room?.state,
-        roomId,
-        playerId,
-      });
       return;
     }
 
@@ -404,9 +472,8 @@ export default function WaitingRoomPage() {
     }
 
     const targetUrl = `/game/${room.universeId}?${params.toString()}`;
-    console.log("[WaitingRoomPage] REDIRECTING to game", { targetUrl });
     navigate(targetUrl);
-  }, [room?.universeId, room?.state, allowedWorks, options?.noSeek, roomId, playerId, displayName, identityReady, state, isConnected, navigate]);
+  }, [room?.universeId, room?.state, allowedWorks, options?.noSeek, roomId, playerId, displayName, identityReady, navigate]);
 
   if (!roomId) {
     return (
@@ -419,7 +486,16 @@ export default function WaitingRoomPage() {
   // Si le HOST (serveur ou URL host=1) : afficher la sélection d'univers
   if (isHostEffective && !room?.universeId) {
     return (
-      <div className="min-h-screen bg-[var(--color-surface-base)]">
+      <div className="h-screen min-h-0 overflow-y-auto scrollbar-hide bg-[var(--color-surface-base)]">
+        {/* Quitter la room (hôte) — en haut à gauche, même composant qu'en jeu */}
+        <QuitRoomButton
+          onConfirm={() => {
+            leaveRoom?.();
+            navigate("/");
+          }}
+          title="Quitter la salle ?"
+          className="fixed top-4 left-4 z-50"
+        />
         <div className="container mx-auto px-4 py-12 space-y-10">
           <div className="text-center">
             <h1 className="text-4xl font-extrabold text-[var(--color-text-primary)] mb-4">
@@ -442,7 +518,10 @@ export default function WaitingRoomPage() {
                       className="flex items-center justify-between text-sm bg-white px-3 py-2 rounded-xl border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]"
                     >
                       <span className="font-semibold">{p.displayName}</span>
-                      {p.isHost && <span className="text-xs text-[#B45309]">Hôte</span>}
+                      <span className="flex items-center gap-2">
+                        {p.id === playerId && <span className="text-xs text-[var(--color-brand-primary)] font-semibold">Toi</span>}
+                        {p.isHost && <span className="text-xs text-[#B45309]">Hôte</span>}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -485,17 +564,38 @@ export default function WaitingRoomPage() {
   }
 
   // Si INVITÉ : afficher page d'attente
+  const mysteryEffectLabels: Record<string, string> = {
+    double: "Deux musiques en même temps",
+    reverse: "Musique à l'envers",
+  };
+
+  const songsCount = hostPreview?.maxSongs ?? hostPreview?.totalSongs ?? null;
+
   return (
-    <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center">
-      <div className="p-6 max-w-lg w-full text-[var(--color-text-primary)] space-y-4">
-        <div className="text-sm text-[var(--color-text-secondary)]">
+    <div className="h-screen min-h-0 overflow-y-auto scrollbar-hide bg-[var(--color-surface-base)]">
+      {/* Quitter la room (invité) — fixé en haut à gauche, hors du flex pour ne pas être centré */}
+      <QuitRoomButton
+        onConfirm={() => {
+          leaveRoom?.();
+          navigate("/");
+        }}
+        title="Quitter la salle ?"
+        className="fixed top-4 left-4 z-50"
+      />
+      <div className="min-h-full flex items-center justify-center p-6">
+        <div className="max-w-lg w-full text-[var(--color-text-primary)] space-y-4">
+        <div className="text-sm text-[var(--color-text-secondary)] text-center">
           <p className="font-medium">En attente de l&apos;hôte...</p>
         </div>
 
+        {/* Joueurs connectés — même DA que Personnalisation */}
         <div className="bg-white border-[3px] border-[#1B1B1B] rounded-2xl p-4 shadow-[3px_3px_0_#1B1B1B]">
-          <p className="text-xs uppercase tracking-[0.15em] text-[var(--color-text-secondary)] mb-2">
-            Joueurs connectés
-          </p>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-1 h-6 rounded-full bg-[var(--color-brand-primary)] border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]" aria-hidden />
+            <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-primary)]">
+              Joueurs connectés
+            </p>
+          </div>
           {players.length === 0 ? (
             <p className="text-[var(--color-text-secondary)] text-sm">En attente de joueurs...</p>
           ) : (
@@ -506,13 +606,130 @@ export default function WaitingRoomPage() {
                   className="flex items-center justify-between text-sm bg-white px-3 py-2 rounded-xl border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]"
                 >
                   <span className="font-semibold">{p.displayName}</span>
-                  {p.isHost && <span className="text-xs text-[#B45309]">Hôte</span>}
+                  <span className="flex items-center gap-2">
+                    {p.id === playerId && <span className="text-xs text-[var(--color-brand-primary)] font-semibold">Toi</span>}
+                    {p.isHost && <span className="text-xs text-[#B45309]">Hôte</span>}
+                  </span>
                 </li>
               ))}
             </ul>
           )}
         </div>
 
+        {/* Personnalisation en cours — design aligné DA (néo-brutaliste, badges, cartes) */}
+        {hostPreview &&
+          (hostPreview.universeId ||
+            hostPreview.noSeek ||
+            hostPreview.mysteryEffects?.enabled ||
+            (hostPreview.allowedWorks?.length ?? 0) > 0 ||
+            (hostPreview.allowedWorkNames?.length ?? 0) > 0 ||
+            hostPreview.maxSongs != null ||
+            hostPreview.totalSongs != null) && (
+          <div className="max-w-lg mx-auto bg-white border-[3px] border-[#1B1B1B] rounded-2xl p-4 shadow-[3px_3px_0_#1B1B1B]">
+            {/* Titre avec barre d’accent brand */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-1 h-6 rounded-full bg-[var(--color-brand-primary)] border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]" aria-hidden />
+              <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[var(--color-text-primary)]">
+                Personnalisation en cours
+              </p>
+            </div>
+
+            <div className="space-y-2 text-left">
+              {/* Univers */}
+              {hostPreview.universeId && (
+                <div className="flex items-center justify-between gap-2 flex-wrap bg-[var(--color-surface-overlay)] px-3 py-2 rounded-xl border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                    Univers
+                  </span>
+                  <span className="px-2 py-0.5 text-sm font-bold bg-[var(--color-brand-primary)] border-2 border-[#1B1B1B] rounded-lg shadow-[2px_2px_0_#1B1B1B] text-[var(--color-text-primary)]">
+                    {hostPreview.universeName || hostPreview.universeId}
+                  </span>
+                </div>
+              )}
+
+              {/* Mode sans avance rapide */}
+              {hostPreview.noSeek && (
+                <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl border-2 border-[#1B1B1B] bg-white shadow-[2px_2px_0_#1B1B1B]">
+                  <span className="text-sm font-semibold text-[var(--color-text-primary)]">
+                    Mode sans avance rapide
+                  </span>
+                  <span className="px-2 py-0.5 text-xs font-bold uppercase tracking-wider bg-amber-100 text-[var(--color-text-primary)] rounded border-2 border-[#1B1B1B] shadow-[1px_1px_0_#1B1B1B]">
+                    Activé
+                  </span>
+                </div>
+              )}
+
+              {/* Effets mystères */}
+              {hostPreview.mysteryEffects?.enabled && hostPreview.mysteryEffects.effects?.length > 0 && (
+                <div className="px-3 py-2 rounded-xl border-2 border-[#1B1B1B] bg-white shadow-[2px_2px_0_#1B1B1B] space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                      Effets mystères
+                    </span>
+                    <span className="px-2 py-0.5 text-xs font-bold uppercase tracking-wider bg-purple-100 text-[var(--color-text-primary)] rounded border-2 border-[#1B1B1B] shadow-[1px_1px_0_#1B1B1B]">
+                      {hostPreview.mysteryEffects.frequency} %
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {hostPreview.mysteryEffects.effects.map((e) => (
+                      <span
+                        key={e}
+                        className="px-2 py-1 text-xs font-semibold bg-white border-2 border-[#1B1B1B] rounded-lg shadow-[2px_2px_0_#1B1B1B] text-[var(--color-text-primary)]"
+                      >
+                        {mysteryEffectLabels[e] || e}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Œuvres incluses */}
+              {((hostPreview.allowedWorkNames?.length ?? 0) > 0 || (hostPreview.allowedWorks?.length ?? 0) > 0) && (
+                <div className="px-3 py-2 rounded-xl border-2 border-[#1B1B1B] bg-white shadow-[2px_2px_0_#1B1B1B] space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                      Œuvres incluses
+                    </span>
+                    {hostPreview.allWorksSelected && (
+                      <span className="px-2 py-0.5 text-xs font-bold uppercase tracking-wider bg-yellow-200 text-[var(--color-text-primary)] rounded border-2 border-[#1B1B1B] shadow-[1px_1px_0_#1B1B1B]">
+                        Toutes
+                      </span>
+                    )}
+                  </div>
+                  {hostPreview.allowedWorkNames && hostPreview.allowedWorkNames.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {hostPreview.allowedWorkNames.map((name, i) => (
+                        <span
+                          key={i}
+                          className="px-2 py-1 text-sm font-semibold bg-yellow-100 border-2 border-[#1B1B1B] rounded-lg shadow-[2px_2px_0_#1B1B1B] text-[var(--color-text-primary)]"
+                        >
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                      {hostPreview.allowedWorks?.length ?? 0} œuvre{(hostPreview.allowedWorks?.length ?? 0) > 1 ? "s" : ""}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Nombre de chansons */}
+              {songsCount != null && songsCount > 0 && (
+                <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl border-2 border-[#1B1B1B] bg-[var(--color-surface-overlay)] shadow-[2px_2px_0_#1B1B1B]">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                    Nombre de musiques
+                  </span>
+                  <span className="px-3 py-1 text-base font-extrabold bg-[var(--color-brand-primary)] border-2 border-[#1B1B1B] rounded-xl shadow-[2px_2px_0_#1B1B1B] text-[var(--color-text-primary)]">
+                    {songsCount} chanson{songsCount > 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        </div>
       </div>
       {passwordGate}
     </div>

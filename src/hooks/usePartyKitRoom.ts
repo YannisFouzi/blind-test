@@ -42,6 +42,18 @@ type IncomingMessage =
       options?: { noSeek?: boolean };
     }
   | {
+      type: "game_starting";
+      state: "starting";
+      songs?: Song[];
+      totalSongs?: number;
+      currentSongIndex?: number;
+      currentRoundIndex?: number;
+      currentRound?: import("@/types").GameRound;
+      displayedSongIndex?: number;
+      displayedTotalSongs?: number;
+    }
+  | { type: "all_players_ready"; startIn: number }
+  | {
       type: "game_started";
       currentSongIndex?: number;
       currentRoundIndex?: number;
@@ -66,8 +78,32 @@ type IncomingMessage =
   | { type: "player_answered"; playerId: string; songId: string }
   | { type: "all_players_answered" }
   | { type: "host_changed"; newHostId?: string; players?: RoomPlayer[] }
+  | { type: "host_preview_start"; universeId: string; universeName?: string }
+  | {
+      type: "host_preview_options";
+      noSeek?: boolean;
+      mysteryEffects?: { enabled: boolean; frequency: number; effects: ("double" | "reverse")[] };
+      allowedWorks?: string[];
+      allowedWorkNames?: string[];
+      allWorksSelected?: boolean;
+      maxSongs?: number | null;
+      totalSongs?: number;
+    }
+  | { type: "host_preview_clear" }
   | { type: "error"; message: string }
   | { type: "unknown"; [key: string]: unknown };
+
+export type HostPreview = {
+  universeId: string;
+  universeName?: string;
+  noSeek?: boolean;
+  mysteryEffects?: { enabled: boolean; frequency: number; effects: ("double" | "reverse")[] };
+  allowedWorks?: string[];
+  allowedWorkNames?: string[];
+  allWorksSelected?: boolean;
+  maxSongs?: number | null;
+  totalSongs?: number;
+};
 
 export const usePartyKitRoom = ({
   roomId,
@@ -78,7 +114,7 @@ export const usePartyKitRoom = ({
   navigate: navigateClient,
 }: UsePartyKitRoomOptions) => {
   const [machineState, send] = useMachine(roomMachine);
-  const { room, players, responses, allPlayersAnswered, isConnected } =
+  const { room, players, responses, allPlayersAnswered, isConnected, startAt } =
     machineState.context;
 
   const socketRef = useRef<PartySocket | null>(null);
@@ -110,6 +146,7 @@ export const usePartyKitRoom = ({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const isAuthenticatedRef = useRef(false);
   const initialPasswordRef = useRef<string | undefined>(password);
+  const [hostPreview, setHostPreview] = useState<HostPreview | null>(null);
 
   // ============================================================================
   // COMPUTED
@@ -124,11 +161,15 @@ export const usePartyKitRoom = ({
   const currentSongId = currentSong?.id;
 
   const canGoNext = useMemo(() => {
+    if (!allPlayersAnswered) return false;
+    const roundCount = room.roundCount;
+    if (roundCount != null && roundCount > 0) {
+      return (room.currentRoundIndex ?? 0) < roundCount - 1;
+    }
     const songs = room.songs || [];
     if (songs.length === 0) return false;
-    if (!allPlayersAnswered) return false;
     return (room.currentSongIndex ?? 0) < songs.length - 1;
-  }, [room.songs, room.currentSongIndex, allPlayersAnswered]);
+  }, [room.songs, room.currentSongIndex, room.currentRoundIndex, room.roundCount, allPlayersAnswered]);
 
   const playerScore = useMemo(() => {
     const me = players.find((p) => p.id === playerId && p.connected !== false);
@@ -220,15 +261,6 @@ export const usePartyKitRoom = ({
         ...(storedToken ? { token: storedToken } : {}),
       };
 
-      console.log("[usePartyKitRoom] 📤 SENDING join", {
-        playerId,
-        displayName,
-        hasToken: !!storedToken,
-        socketReadyState: socketRef.current.readyState,
-        attempt,
-        timestamp: Date.now(),
-      });
-
       setAuthError(null);
       socketRef.current.send(JSON.stringify(payload));
     },
@@ -242,43 +274,6 @@ export const usePartyKitRoom = ({
 
   const handleMessage = useCallback(
     (message: IncomingMessage) => {
-      // Helper pour extraire les données de différents types de messages
-      const getSongsCount = (msg: IncomingMessage): number => {
-        if (msg.type === "room_configured" || msg.type === "game_started") {
-          return msg.songs?.length ?? 0;
-        }
-        if (msg.type === "state_sync") {
-          return msg.state.songs?.length ?? 0;
-        }
-        return 0;
-      };
-      const getCurrentSongIndex = (msg: IncomingMessage): number | undefined => {
-        if (msg.type === "game_started" || msg.type === "song_changed") {
-          return msg.currentSongIndex;
-        }
-        if (msg.type === "state_sync") {
-          return msg.state.currentSongIndex;
-        }
-        return undefined;
-      };
-      const getStateValue = (msg: IncomingMessage): string | undefined => {
-        if (msg.type === "game_started" || msg.type === "game_ended") {
-          return msg.state;
-        }
-        if (msg.type === "state_sync") {
-          return msg.state.state;
-        }
-        return undefined;
-      };
-
-      console.log("[usePartyKitRoom] 📨 MESSAGE RECEIVED", {
-        type: message.type,
-        hasSongs: getSongsCount(message),
-        songsCount: getSongsCount(message),
-        currentSongIndex: getCurrentSongIndex(message),
-        state: getStateValue(message),
-        timestamp: Date.now(),
-      });
       switch (message.type) {
         case "password_required": {
           clearSessionToken();
@@ -351,6 +346,18 @@ export const usePartyKitRoom = ({
 
         case "show_scores": {
           if (message.roomId && typeof window !== "undefined") {
+            // Stocker les scores finaux avant navigation : la page scores monte une nouvelle
+            // machine et ne reçoit pas game_ended/show_scores, donc elle lit ce stockage.
+            if (message.finalScores && Array.isArray(message.finalScores)) {
+              try {
+                sessionStorage.setItem(
+                  `blindtest_scores_${message.roomId}`,
+                  JSON.stringify(message.finalScores)
+                );
+              } catch (e) {
+                console.warn("[usePartyKitRoom] Could not store finalScores for scores page", e);
+              }
+            }
             const url = `/scores/${message.roomId}`;
             if (navigateClient) {
               navigateClient(url);
@@ -362,6 +369,14 @@ export const usePartyKitRoom = ({
         }
 
         case "redirect_to_waiting_room": {
+          // [HOST-DEBUG] Tracer qui reçoit la redirection et avec quel isHost (avant navigation)
+          if (process.env.NODE_ENV === "development") {
+            console.info("[HOST-DEBUG] redirect_to_waiting_room reçu", {
+              roomId: message.roomId,
+              playerId,
+              isHost,
+            });
+          }
           // Marquer qu'on est en train de rediriger pour ignorer les state_sync suivants
           isRedirectingToWaitingRef.current = true;
 
@@ -387,12 +402,41 @@ export const usePartyKitRoom = ({
               onRedirect?.();
               navigateClient(url);
             } else {
+              if (process.env.NODE_ENV === "development") {
+                console.warn("[HOST-DEBUG] redirect_to_waiting_room: pas de navigate, fallback full reload (window.location) → ferme la WebSocket");
+              }
               navigateToUrl(url, onRedirect);
             }
           }
           return;
         }
 
+        case "host_preview_start": {
+          setHostPreview((prev) => ({
+            ...prev,
+            universeId: message.universeId,
+            universeName: message.universeName ?? message.universeId,
+          }));
+          return;
+        }
+        case "host_preview_options": {
+          setHostPreview((prev) => ({
+            universeId: prev?.universeId ?? "",
+            universeName: prev?.universeName,
+            noSeek: message.noSeek,
+            mysteryEffects: message.mysteryEffects,
+            allowedWorks: message.allowedWorks,
+            allowedWorkNames: message.allowedWorkNames,
+            allWorksSelected: message.allWorksSelected,
+            maxSongs: message.maxSongs,
+            totalSongs: message.totalSongs,
+          }));
+          return;
+        }
+        case "host_preview_clear": {
+          setHostPreview(null);
+          return;
+        }
         case "unknown":
           console.warn(
             "[usePartyKitRoom] Unknown message type:",
@@ -447,7 +491,6 @@ export const usePartyKitRoom = ({
     const onOpenFromProvider = (openedSocket: PartySocket) => {
       if (socketOpenSentRef.current) return;
       socketOpenSentRef.current = true;
-      console.log("[usePartyKitRoom] socket_open via PROVIDER CALLBACK", { roomId, playerId, timestamp: Date.now() });
 
       // FIX: The useEffect attached listeners on `socket`, but we need them on `openedSocket`
       // If socket !== openedSocket, messages will be sent/received on different instances
@@ -471,14 +514,6 @@ export const usePartyKitRoom = ({
         ...(storedToken ? { token: storedToken } : {}),
       };
 
-      console.log("[usePartyKitRoom] 📤 SENDING join (via Provider socket)", {
-        playerId,
-        displayName,
-        hasToken: !!storedToken,
-        socketReadyState: openedSocket.readyState,
-        timestamp: Date.now(),
-      });
-
       openedSocket.send(JSON.stringify(payload));
 
       // FIX: Manually handle join_success since listeners may be on a different socket instance
@@ -486,7 +521,6 @@ export const usePartyKitRoom = ({
       const tempMessageHandler = (event: MessageEvent) => {
         try {
           const message = JSON.parse(event.data) as IncomingMessage;
-          console.log("[usePartyKitRoom] 📨 MESSAGE via Provider socket", { type: message.type, timestamp: Date.now() });
           handleMessageRef.current?.(message);
         } catch (error) {
           console.error("[usePartyKitRoom] Invalid message:", error);
@@ -518,6 +552,9 @@ export const usePartyKitRoom = ({
           });
 
     const handleOpen = () => {
+      if (process.env.NODE_ENV === "development") {
+        console.info("[HOST-DEBUG] handleOpen", { roomId, playerId, readyState: socket.readyState });
+      }
       // WORKAROUND: si le polling readyState a déjà envoyé socket_open, ne pas double-envoyer
       if (socketOpenSentRef.current) return;
       // Éviter le double appel UNIQUEMENT si on a déjà des songs dans le state
@@ -525,27 +562,9 @@ export const usePartyKitRoom = ({
       const hasSongs = (room.songs?.length ?? 0) > 0;
       // Type assertion pour ajouter une propriété custom à la socket
       const socketWithFlag = socket as PartySocket & { __handleOpenCalled?: boolean };
-      if (socketWithFlag.__handleOpenCalled && hasSongs) {
-        console.log("[usePartyKitRoom] ⚠️ handleOpen already called AND has songs, skipping", {
-          roomId,
-          playerId,
-          songsCount: room.songs?.length ?? 0,
-          timestamp: Date.now(),
-        });
-        return;
-      }
+      if (socketWithFlag.__handleOpenCalled && hasSongs) return;
       socketWithFlag.__handleOpenCalled = true;
       socketOpenSentRef.current = true;
-      console.log("[usePartyKitRoom] 🔌 socket_open handler called", {
-        roomId,
-        playerId,
-        displayName,
-        socketReadyState: socket.readyState,
-        hasSongs,
-        songsCount: room.songs?.length ?? 0,
-        timestamp: Date.now(),
-      });
-      console.log("[usePartyKitRoom] socket_open via EVENT");
       send({ type: "socket_open" });
       setIsAuthenticated(false);
       setAuthRequired(false);
@@ -592,30 +611,10 @@ export const usePartyKitRoom = ({
     // ⚠️ IMPORTANT: Assigner socketRef AVANT d'appeler handleOpen() si la socket est déjà ouverte
     // Sinon sendJoin() ne trouvera pas socketRef.current et ne pourra pas envoyer le join
     socketRef.current = socket;
-    console.log("[usePartyKitRoom] 🔌 socketRef assigned", {
-      roomId,
-      playerId,
-      readyState: socket.readyState,
-      timestamp: Date.now(),
-    });
 
     // Si la socket est déjà ouverte (réutilisée), envoyer le join immédiatement
     if (socket.readyState === WebSocket.OPEN) {
-      console.log("[usePartyKitRoom] 🔌 Socket already OPEN, calling handleOpen immediately", {
-        roomId,
-        playerId,
-        displayName,
-        timestamp: Date.now(),
-      });
       handleOpen();
-    } else {
-      console.log("[usePartyKitRoom] 🔌 Socket not yet open, waiting for 'open' event", {
-        roomId,
-        playerId,
-        displayName,
-        readyState: socket.readyState,
-        timestamp: Date.now(),
-      });
     }
 
     return () => {
@@ -623,12 +622,30 @@ export const usePartyKitRoom = ({
       socket.removeEventListener("message", handleMessageEvent);
       socket.removeEventListener("close", handleClose);
       socket.removeEventListener("error", handleError);
-      if (managedSocket && partyKitProvider?.closeSocket) {
-        partyKitProvider.closeSocket(roomId);
-      } else if (!managedSocket && socketRef.current === socket) {
-        socket.close();
-        socketRef.current = null;
+
+      // ✅ OPTION A FIX (docs/AUDIT-CONNEXION-ROOM-GAME.md):
+      // Ne plus fermer la socket ici pour qu'elle survive à la navigation room → game.
+      // La socket sera fermée uniquement dans leaveRoom() (clic "Quitter") ou par le Provider au démontage total.
+      // Cela évite le bug de transfert d'hôte (serveur pense que l'hôte a quitté lors de la navigation).
+
+      // AVANT (bug de transfert d'hôte) :
+      // if (managedSocket && partyKitProvider?.closeSocket) {
+      //   partyKitProvider.closeSocket(roomId);
+      // } else if (!managedSocket && socketRef.current === socket) {
+      //   socket.close();
+      //   socketRef.current = null;
+      // }
+
+      // [HOST-DEBUG] Tracer le cleanup du hook (socket NE doit pas être fermée ici pour "Retour à l'accueil")
+      if (process.env.NODE_ENV === "development") {
+        console.info("[HOST-DEBUG] usePartyKitRoom cleanup", {
+          roomId,
+          playerId,
+          readyState: socket.readyState,
+          managedSocket: Boolean(managedSocket),
+        });
       }
+      // Conserver uniquement le cleanup local (refs + machine d'état)
       connectionKeyRef.current = null;
       send({ type: "socket_close" });
     };
@@ -641,45 +658,18 @@ export const usePartyKitRoom = ({
   // Refs for send/sendJoin to avoid effect re-run (and clearing interval) when those identities change.
   useEffect(() => {
     if (!roomId || !playerId || isConnected) return;
-    console.log("[usePartyKitRoom] 📡 polling effect started", { roomId, playerId, timestamp: Date.now() });
-    let tickCount = 0;
     const id = setInterval(() => {
       const socket = socketRef.current;
-      tickCount += 1;
-      if (!socket) {
-        if (tickCount <= 3 || tickCount % 20 === 0) {
-          console.log("[usePartyKitRoom] 📡 polling tick: no socket yet", { tick: tickCount, timestamp: Date.now() });
-        }
-        return;
-      }
-      if (socket.readyState !== WebSocket.OPEN) {
-        if (tickCount <= 3 || tickCount % 20 === 0) {
-          console.log("[usePartyKitRoom] 📡 polling tick: waiting for OPEN", {
-            tick: tickCount,
-            readyState: socket.readyState,
-            timestamp: Date.now(),
-          });
-        }
-        return;
-      }
+      if (!socket || socket.readyState !== WebSocket.OPEN) return;
       if (socketOpenSentRef.current) return;
       socketOpenSentRef.current = true;
-      console.log("[usePartyKitRoom] socket_open via READYSTATE POLLING", {
-        roomId,
-        playerId,
-        tick: tickCount,
-        timestamp: Date.now(),
-      });
       sendRef.current({ type: "socket_open" });
       setIsAuthenticated(false);
       setAuthRequired(false);
       setAuthError(null);
       sendJoinRef.current({ password: initialPasswordRef.current });
     }, 100);
-    return () => {
-      console.log("[usePartyKitRoom] 📡 polling effect cleanup", { roomId, playerId, tickCount, timestamp: Date.now() });
-      clearInterval(id);
-    };
+    return () => clearInterval(id);
   }, [roomId, playerId, isConnected]);
 
   // ============================================================================
@@ -697,6 +687,16 @@ export const usePartyKitRoom = ({
       })
     );
     return { success: true };
+  }, [playerId]);
+
+  const sendPlayerReady = useCallback(() => {
+    if (!socketRef.current || !playerId) return;
+    socketRef.current.send(
+      JSON.stringify({
+        type: "player_ready",
+        playerId,
+      })
+    );
   }, [playerId]);
 
   const goNextSong = useCallback(async () => {
@@ -740,6 +740,37 @@ export const usePartyKitRoom = ({
     );
     return { success: true };
   }, [playerId, isHost]);
+
+  const sendHostPreviewStart = useCallback(
+    (universeId: string, universeName?: string) => {
+      if (!socketRef.current) return;
+      socketRef.current.send(
+        JSON.stringify({ type: "host_preview_start", universeId, universeName })
+      );
+    },
+    []
+  );
+
+  const sendHostPreviewOptions = useCallback(
+    (payload: {
+      noSeek?: boolean;
+      mysteryEffects?: { enabled: boolean; frequency: number; effects: ("double" | "reverse")[] };
+      allowedWorks?: string[];
+      allowedWorkNames?: string[];
+      allWorksSelected?: boolean;
+      maxSongs?: number | null;
+      totalSongs?: number;
+    }) => {
+      if (!socketRef.current) return;
+      socketRef.current.send(JSON.stringify({ type: "host_preview_options", ...payload }));
+    },
+    []
+  );
+
+  const sendHostPreviewClear = useCallback(() => {
+    if (!socketRef.current) return;
+    socketRef.current.send(JSON.stringify({ type: "host_preview_clear" }));
+  }, []);
 
   const configureRoom = useCallback(
     async (
@@ -850,7 +881,15 @@ export const usePartyKitRoom = ({
     [currentSong, playerId]
   );
 
-  // Reset des rÃ©ponses locales quand on change de morceau
+  /** Fermer la socket et quitter la room (le caller doit naviguer vers / après) */
+  const leaveRoom = useCallback(() => {
+    if (roomId && partyKitProvider?.closeSocket) {
+      partyKitProvider.closeSocket(roomId);
+    }
+    send({ type: "socket_close" });
+  }, [roomId, partyKitProvider, send]);
+
+  // Reset des réponses locales quand on change de morceau
   useEffect(() => {
     if (currentSongId) {
       send({ type: "reset_responses" });
@@ -873,11 +912,14 @@ export const usePartyKitRoom = ({
     allowedWorks: room.allowedWorks,
 
     startGame,
+    sendPlayerReady,
     goNextSong,
     showScores,
     resetToWaiting,
     submitAnswer,
     configureRoom,
+    leaveRoom,
+    startAt,
 
     isConnected,
     isHost,
@@ -885,5 +927,10 @@ export const usePartyKitRoom = ({
     authError,
     isAuthenticated,
     submitPassword,
+
+    hostPreview,
+    sendHostPreviewStart,
+    sendHostPreviewOptions,
+    sendHostPreviewClear,
   };
 };

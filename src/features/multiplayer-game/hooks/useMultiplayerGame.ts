@@ -86,9 +86,12 @@ export const useMultiplayerGame = ({
     resetToWaiting,
     submitAnswer,
     startGame,
+    sendPlayerReady,
+    startAt,
     options,
     allowedWorks,
     configureRoom,
+    leaveRoom,
     isConnected,
     isHost: isHostFromRoom,
     authRequired,
@@ -237,27 +240,6 @@ export const useMultiplayerGame = ({
     }
   }, [currentSong, preloadNextTrack, room, currentSongIndex]);
 
-  /**
-   * Log state snapshot (debug)
-   */
-  useEffect(() => {
-    console.log("[useMultiplayerGame] 🔍 STATE SNAPSHOT", {
-      roomId: room?.id,
-      state,
-      songs: room?.songs?.length ?? 0,
-      currentSongId: currentSong?.id,
-      currentSongTitle: currentSong?.title,
-      players: players.length,
-      isHost,
-      isConnected,
-      works: works.length,
-      filteredWorks: filteredWorks.length,
-      isLoadingWorks,
-      allowedWorks: allowedWorks?.length ?? 0,
-      timestamp: Date.now(),
-    });
-  }, [room?.id, state, room?.songs?.length, currentSong?.id, currentSong?.title, players.length, isHost, isConnected, works.length, filteredWorks.length, isLoadingWorks, allowedWorks?.length]);
-
   // ============================================================
   // Actions
   // ============================================================
@@ -295,14 +277,6 @@ export const useMultiplayerGame = ({
     const isCorrect = selectedWork === currentSong.workId;
 
     try {
-      console.log("[useMultiplayerGame] submit answer", {
-        roomId,
-        songId: currentSong.id,
-        playerId,
-        selectedWork,
-        isCorrect,
-      });
-
       const result = await submitAnswer(selectedWork, isCorrect);
 
       if (result.success) {
@@ -489,12 +463,6 @@ export const useMultiplayerGame = ({
         });
       });
 
-      console.log("[useMultiplayerGame] submit double answer", {
-        roomId,
-        answers,
-        playerId,
-      });
-
       const result = await submitAnswer(null, false, answers);
 
       if (result.success) {
@@ -512,7 +480,7 @@ export const useMultiplayerGame = ({
       console.error("[useMultiplayerGame] submit double answer exception", error);
       setSubmitError(error instanceof Error ? error.message : "Erreur inconnue lors de la validation");
     }
-  }, [currentRound, currentRoundSongs, doubleSelections, state, submitAnswer, roomId, playerId]);
+  }, [currentRound, currentRoundSongs, doubleSelections, state, submitAnswer]);
 
   // Sélections actuelles pour les deux chansons du round double (slot 1 / slot 2)
   const doubleSelectedWorkSlot1: string | null = useMemo(() => {
@@ -560,6 +528,8 @@ export const useMultiplayerGame = ({
     totalSongs: room?.songs?.length ?? 0,
     displayedSongIndex: room?.displayedSongIndex ?? currentSongIndex + 1,
     displayedTotalSongs: room?.displayedTotalSongs ?? room?.songs?.length ?? 0,
+    roundCount: room?.roundCount,
+    currentRoundIndex: room?.currentRoundIndex,
 
     // Answer state
     selectedWork,
@@ -592,7 +562,10 @@ export const useMultiplayerGame = ({
     showScores: handleShowScores,
     resetToWaiting,
     startGame: handleStartGame,
+    sendPlayerReady,
+    startAt,
     configureRoom: handleConfigureRoom,
+    leaveRoom,
     authRequired,
     authError,
     submitPassword,

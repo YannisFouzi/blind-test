@@ -76,6 +76,27 @@
 }
 
 /**
+ * Quand une modale (Radix Dialog) est ouverte : masquer la scrollbar du body
+ * et annuler tout padding ajouté par Radix pour éviter le décalage.
+ */
+body:has([role="dialog"][data-state="open"]) {
+  overflow: hidden !important;
+  padding-right: 0 !important;
+}
+
+/**
+ * Cache la scrollbar tout en gardant le défilement (wheel, touch).
+ * Utilisé sur la waiting room pour pouvoir scroller sans barre visible.
+ */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE, Edge */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/**
  * ========================================
  * ANIMATIONS KEYFRAMES
  * ========================================

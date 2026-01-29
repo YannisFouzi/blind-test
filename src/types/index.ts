@@ -118,7 +118,7 @@ export const GameSessionSchema = z.object({
   createdAt: timestampSchema,
 });
 
-const RoomStateSchema = z.enum(["idle", "configured", "playing", "results"]);
+const RoomStateSchema = z.enum(["idle", "configured", "starting", "playing", "results"]);
 
 export const RoomPlayerSchema = z.object({
   id: z.string().min(1),
@@ -130,6 +130,8 @@ export const RoomPlayerSchema = z.object({
   lastSeen: timestampSchema.optional(),
   isHost: z.boolean().optional(),
   hasAnsweredCurrentSong: z.boolean().optional(),
+  /** Phase "starting" (Ready Check) : true quand le joueur a envoyé player_ready */
+  ready: z.boolean().optional(),
 });
 
 export const RoomResponseSchema = z.object({
@@ -169,6 +171,8 @@ export const RoomSchema = z.object({
   // Compteur affiché basé sur les rounds (calculé côté serveur)
   displayedSongIndex: z.number().int().min(1).optional(),
   displayedTotalSongs: z.number().int().min(1).optional(),
+  /** Nombre total de rounds (effets mystères) */
+  roundCount: z.number().int().min(0).optional(),
 });
 
 export const UserSchema = z.object({

@@ -1,8 +1,7 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const Dialog = DialogPrimitive.Root;
@@ -40,10 +39,6 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="magic-button bg-white hover:bg-[var(--color-surface-overlay)] absolute right-4 top-4 p-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-black">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Fermer</span>
-      </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </DialogPortal>
 ));

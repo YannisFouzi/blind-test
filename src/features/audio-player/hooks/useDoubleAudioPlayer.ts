@@ -177,6 +177,7 @@ export const useDoubleAudioPlayer = (
 
   const playInternal = useCallback(
     async (mode: "user" | "auto") => {
+      console.log("[AUDIO-DEBUG] useDoubleAudioPlayer playInternal called", { mode });
       const primary = primaryRef.current;
       const secondary = secondaryRef.current;
       if (!primary || !secondary) return false;
@@ -283,7 +284,13 @@ export const useDoubleAudioPlayer = (
 
       setIsLoading(false);
 
-      if (autoPlay && (primaryUrl || secondaryUrl)) {
+      const willCallPlay = Boolean(autoPlay && (primaryUrl || secondaryUrl));
+      console.log("[AUDIO-DEBUG] useDoubleAudioPlayer loadTracks resolved", {
+        autoPlay,
+        hasUrls: !!(primaryUrl || secondaryUrl),
+        willCallPlay,
+      });
+      if (willCallPlay) {
         void playInternal("auto");
       }
     },

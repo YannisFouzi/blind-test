@@ -83,8 +83,11 @@ export function calculateGameRounds<TSong extends SongLike>(
       remainingSongsToTouch > 0 && (hasDouble || hasReverse) && remainingUnconsumed > 0;
 
     if (canApplyAnyEffect) {
+      // Garantie : jamais de manche double en dernière position s'il ne reste qu'une seule chanson (nombre impair total)
       const canUseDouble =
-        hasDouble && remainingSongsToTouch >= 2 && remainingUnconsumed >= 2;
+        hasDouble &&
+        remainingSongsToTouch >= 2 &&
+        remainingUnconsumed >= 2;
       const canUseReverse = hasReverse && remainingSongsToTouch >= 1;
 
       let chosenEffect: MysteryEffectType | "none" = "none";

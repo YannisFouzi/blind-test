@@ -28,6 +28,29 @@ export const PartyKitProvider = ({ children }: { children: ReactNode }) => {
         return existing;
       }
 
+      // ✅ OPTION A FIX (docs/AUDIT-CONNEXION-ROOM-GAME.md):
+      // Avant de créer une nouvelle socket pour un roomId, fermer les sockets des AUTRES roomIds.
+      // Cela évite d'accumuler des connexions si l'utilisateur ouvre une autre room sans cliquer "Quitter".
+      // Une seule room active par client à la fois.
+      const otherRoomSockets = Array.from(socketsRef.current.entries()).filter(
+        ([k]) => !k.startsWith(`${roomId}|`)
+      );
+      if (otherRoomSockets.length > 0) {
+        console.info("[PartyKitProvider] Closing sockets for other rooms before creating new socket", {
+          newRoomId: roomId,
+          closingCount: otherRoomSockets.length,
+          closingKeys: otherRoomSockets.map(([k]) => k),
+        });
+        otherRoomSockets.forEach(([k, socket]) => {
+          try {
+            socket.close();
+          } catch {
+            // ignore
+          }
+          socketsRef.current.delete(k);
+        });
+      }
+
       const host = process.env.NEXT_PUBLIC_PARTYKIT_HOST || "127.0.0.1:1999";
       const socket = new PartySocket({
         host,
@@ -78,6 +101,9 @@ export const PartyKitProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       // Cleanup de tous les sockets si le provider est démonté
+      if (process.env.NODE_ENV === "development" && sockets.size > 0) {
+        console.warn("[HOST-DEBUG] PartyKitProvider unmount → fermeture de toutes les sockets (count=" + sockets.size + ")");
+      }
       sockets.forEach((socket) => {
         try {
           socket.close();

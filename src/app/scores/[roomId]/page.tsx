@@ -1,13 +1,16 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { Home as HomeIcon } from "lucide-react";
 import { usePartyKitRoom } from "@/hooks/usePartyKitRoom";
 import { useIdentity } from "@/hooks/useIdentity";
 import { Leaderboard } from "@/components/scores/Leaderboard";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { QuitRoomButton } from "@/components/ui/QuitRoomButton";
+import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
+import type { RoomPlayer } from "@/types";
 
 export default function MultiScoresPage() {
   const router = useRouter();
@@ -23,6 +26,9 @@ export default function MultiScoresPage() {
     players,
     state,
     isConnected,
+    isHost,
+    leaveRoom,
+    resetToWaiting,
     authRequired,
     authError,
   } = usePartyKitRoom(
@@ -41,9 +47,28 @@ export default function MultiScoresPage() {
     [queryPlayerId, playerId]
   );
 
-  const handleGoHome = () => {
+  // Scores stockés à la réception de show_scores (avant navigation) : la page monte
+  // une nouvelle machine et ne reçoit pas game_ended, donc on lit le stockage.
+  const storedScores = useMemo(() => {
+    if (typeof window === "undefined" || !roomId || state !== "results") return null;
+    try {
+      const raw = sessionStorage.getItem(`blindtest_scores_${roomId}`);
+      if (!raw) return null;
+      return JSON.parse(raw) as Array<RoomPlayer & { rank?: number }>;
+    } catch {
+      return null;
+    }
+  }, [roomId, state]);
+
+  const playersToShow = useMemo(
+    () => (storedScores && storedScores.length > 0 ? storedScores : players),
+    [storedScores, players]
+  );
+
+  const handleLeaveRoom = useCallback(() => {
+    leaveRoom?.();
     router.push("/");
-  };
+  }, [leaveRoom, router]);
 
   if (!roomId || !identityReady || !playerId) {
     return (
@@ -81,12 +106,11 @@ export default function MultiScoresPage() {
           {authError && (
             <div className="text-xs text-red-600 text-center">{authError}</div>
           )}
-          <button
-            onClick={handleGoHome}
-            className="magic-button w-full px-4 py-2 text-sm font-bold"
-          >
-            Retour à l&apos;accueil
-          </button>
+          <QuitRoomButton
+            onConfirm={handleLeaveRoom}
+            title="Quitter la salle ?"
+            className="w-full"
+          />
         </div>
       </div>
     );
@@ -98,10 +122,11 @@ export default function MultiScoresPage() {
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center p-4">
         <div className="text-center">
           <ErrorMessage message="La partie n'est pas encore terminée" />
-          <button onClick={handleGoHome} className="magic-button mt-6 px-6 py-3">
-            <HomeIcon className="inline mr-2" />
-            Retour à l&apos;accueil
-          </button>
+          <QuitRoomButton
+            onConfirm={handleLeaveRoom}
+            title="Quitter la partie ?"
+            className="mt-6"
+          />
         </div>
       </div>
     );
@@ -115,15 +140,27 @@ export default function MultiScoresPage() {
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#BFDBFE]/40 rounded-full blur-3xl" />
       </div>
 
-      {/* Header */}
-      <div className="fixed top-3 left-2 sm:top-6 sm:left-6 z-50">
-        <button
-          onClick={handleGoHome}
-          className="magic-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
-        >
-          <HomeIcon className="text-base sm:text-lg" />
-          <span className="hidden sm:inline">Accueil</span>
-        </button>
+      {/* Même boutons qu'en jeu : Accueil (hôte) + Quitter, au même endroit (fixed top-3 left-2 …) */}
+      <div className="fixed top-3 left-2 sm:top-6 sm:left-6 z-50 flex flex-col items-start gap-2">
+        {isHost && (
+          <ConfirmActionButton
+            buttonLabel="Accueil"
+            title="Retour à la salle d'attente ?"
+            message="Vous allez revenir à la salle d'attente. La partie restera configurée."
+            confirmText="Oui, retour"
+            cancelText="Annuler"
+            onConfirm={() => void resetToWaiting?.()}
+            variant="warning"
+            className="magic-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
+          >
+            <HomeIcon className="text-base sm:text-lg" />
+            <span className="hidden sm:inline">Accueil</span>
+          </ConfirmActionButton>
+        )}
+        <QuitRoomButton
+          onConfirm={handleLeaveRoom}
+          title="Quitter la partie ?"
+        />
       </div>
 
       {/* Content */}
@@ -136,12 +173,12 @@ export default function MultiScoresPage() {
           </div>
 
           <div className="bg-white rounded-2xl border-[3px] border-[#1B1B1B] p-6 shadow-[4px_4px_0_#1B1B1B]">
-            {players.length === 0 ? (
+            {playersToShow.length === 0 ? (
               <div className="text-center text-[var(--color-text-secondary)] py-8">
                 Aucun joueur
               </div>
             ) : (
-              <Leaderboard players={players} currentPlayerId={currentPlayerId} />
+              <Leaderboard players={playersToShow} currentPlayerId={currentPlayerId} />
             )}
           </div>
         </div>

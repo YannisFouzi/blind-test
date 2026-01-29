@@ -19,6 +19,7 @@ import type { MysteryEffectsConfig } from "@/types";
 import { useAudioPlayer, useDoubleAudioPlayer } from "@/features/audio-player";
 import { WorkSelector, DoubleWorkSelector } from "@/components/game";
 import { PointsCelebration } from "@/components/game/PointsCelebration";
+import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { cn } from "@/lib/utils";
 import { pressable } from "@/styles/ui";
@@ -376,10 +377,19 @@ export const SoloGameClient = ({
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center p-6">
         <div className="text-center">
           <ErrorMessage message={game.error} />
-          <button onClick={handleGoHome} className="magic-button mt-6 px-6 py-3">
-            <HomeIcon className="inline mr-2" />
-            Retour a l&apos;accueil
-          </button>
+          <ConfirmActionButton
+            buttonLabel="Retour à l'accueil"
+            title="Retour à l'accueil ?"
+            message="Vous allez quitter la partie et retourner à l'accueil."
+            confirmText="Oui, retour"
+            cancelText="Annuler"
+            onConfirm={handleGoHome}
+            variant="warning"
+            className="magic-button mt-6 px-6 py-3 flex items-center gap-2"
+          >
+            <HomeIcon className="inline h-5 w-5" />
+            Retour à l&apos;accueil
+          </ConfirmActionButton>
         </div>
       </div>
     );
@@ -390,10 +400,19 @@ export const SoloGameClient = ({
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center p-6">
         <div className="text-center">
           <ErrorMessage message="Aucune oeuvre trouvee pour cet univers" />
-          <button onClick={handleGoHome} className="magic-button mt-6 px-6 py-3">
-            <HomeIcon className="inline mr-2" />
-            Retour a l&apos;accueil
-          </button>
+          <ConfirmActionButton
+            buttonLabel="Retour à l'accueil"
+            title="Retour à l'accueil ?"
+            message="Vous allez quitter la partie et retourner à l'accueil."
+            confirmText="Oui, retour"
+            cancelText="Annuler"
+            onConfirm={handleGoHome}
+            variant="warning"
+            className="magic-button mt-6 px-6 py-3 flex items-center gap-2"
+          >
+            <HomeIcon className="inline h-5 w-5" />
+            Retour à l&apos;accueil
+          </ConfirmActionButton>
         </div>
       </div>
     );
@@ -419,13 +438,19 @@ export const SoloGameClient = ({
       <div className="absolute inset-0 bg-gradient-to-r from-yellow-200/40 via-transparent to-blue-200/40 pointer-events-none" />
 
       <div className="fixed top-3 left-2 sm:top-6 sm:left-6 z-50">
-        <button
-          onClick={handleGoHome}
+        <ConfirmActionButton
+          buttonLabel="Accueil"
+          title="Retour à l'accueil ?"
+          message="Vous allez quitter la partie et retourner à l'accueil."
+          confirmText="Oui, retour"
+          cancelText="Annuler"
+          onConfirm={handleGoHome}
+          variant="warning"
           className="magic-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
         >
           <HomeIcon className="text-base sm:text-lg" />
           <span className="hidden sm:inline">Accueil</span>
-        </button>
+        </ConfirmActionButton>
       </div>
 
       <div className="container mx-auto px-4 py-8 pb-24 relative z-10">

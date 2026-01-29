@@ -3,7 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import type { Work } from "@/types";
 import { useGameConfiguration, useCanSelectMoreWorks } from "@/stores";
-import { getAllWorks, getSongsByWork, getWorksByUniverse, getUniverses } from "@/services/firebase";
+import { getAllWorks, getSongsByWork, getWorksByUniverse, getActiveUniverses } from "@/services/firebase";
 import { pressable } from "@/styles/ui";
 
 const MYSTERY_INTENSITY_PRESETS = [
@@ -47,12 +47,16 @@ const UniverseCustomizeModalComponent = ({
     mysteryEffects,
     toggleWork,
     setAllowedWorks,
+    setAllowedWorksWithNames,
     setNoSeek,
     setMaxSongs,
     closeCustomize,
     setMysteryEffectsEnabled,
     setMysteryEffectsFrequency,
     toggleMysteryEffect,
+    setTotalSongsForPreview,
+    setTotalWorksInUniverse,
+    setEffectiveSongsForPreview,
   } = useGameConfiguration();
 
   const canSelectMoreWorks = useCanSelectMoreWorks();
@@ -85,9 +89,23 @@ const UniverseCustomizeModalComponent = ({
             ? getAllWorks()
             : getWorksByUniverse(customizingUniverse.id),
           isCustomMode
-            ? getUniverses()
+            ? getActiveUniverses()
             : Promise.resolve({ success: true, data: [] }),
         ]);
+
+        if (process.env.NODE_ENV === "development") {
+          console.info("[UNIVERS-INCONNU] loadWorksAndCounts après Promise.all", {
+            isCustomMode,
+            worksSuccess: worksResult.success,
+            worksCount: Array.isArray((worksResult as { data?: unknown[] }).data)
+              ? (worksResult as { data: unknown[] }).data.length
+              : 0,
+            universesSuccess: universesResult.success,
+            universesDataLength: universesResult.data?.length ?? 0,
+            universesError: (universesResult as { error?: string }).error,
+            universesSample: universesResult.data?.slice(0, 3).map((u) => ({ id: u.id, name: u.name })),
+          });
+        }
 
         if (!worksResult.success || !worksResult.data) {
           throw new Error("Impossible de charger les oeuvres");
@@ -102,8 +120,23 @@ const UniverseCustomizeModalComponent = ({
             for (const universe of universesResult.data) {
               nextUniverses[universe.id] = universe.name;
             }
+            if (process.env.NODE_ENV === "development") {
+              console.info("[UNIVERS-INCONNU] universesById rempli (mode custom)", {
+                count: Object.keys(nextUniverses).length,
+                keys: Object.keys(nextUniverses),
+                sample: Object.entries(nextUniverses).slice(0, 5),
+              });
+            }
             setUniversesById(nextUniverses);
           } else {
+            if (process.env.NODE_ENV === "development") {
+              console.warn("[UNIVERS-INCONNU] universesById vide car getActiveUniverses() a échoué ou data vide", {
+                success: universesResult.success,
+                hasData: Boolean(universesResult.data),
+                dataLength: universesResult.data?.length ?? 0,
+                error: (universesResult as { error?: string }).error,
+              });
+            }
             setUniversesById({});
           }
         } else {
@@ -127,6 +160,8 @@ const UniverseCustomizeModalComponent = ({
           counts[workId] = count;
         }
         setSongCountByWork(counts);
+        setTotalWorksInUniverse(loadedWorks.length);
+        setTotalSongsForPreview(Object.values(counts).reduce((a, b) => a + b, 0));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Erreur inconnue");
       } finally {
@@ -135,7 +170,7 @@ const UniverseCustomizeModalComponent = ({
     };
 
     loadWorksAndCounts();
-  }, [customizingUniverse, isCustomMode]);
+  }, [customizingUniverse, isCustomMode, setTotalSongsForPreview, setTotalWorksInUniverse]);
 
   // ========== COMPUTED VALUES ==========
   const totalSongsAvailable = useMemo(() => {
@@ -144,13 +179,26 @@ const UniverseCustomizeModalComponent = ({
     }, 0);
   }, [allowedWorks, songCountByWork]);
 
+  // Synchroniser la préview invités avec ce que l'hôte voit (0 si 0 œuvres, sinon maxSongs ?? total sélection)
+  useEffect(() => {
+    const effective = totalSongsAvailable === 0 ? 0 : (maxSongs ?? totalSongsAvailable);
+    setEffectiveSongsForPreview(effective);
+  }, [totalSongsAvailable, maxSongs, setEffectiveSongsForPreview]);
+
   const effectiveMaxSongs = maxSongs ?? totalSongsAvailable;
   const sliderMin = totalSongsAvailable === 0 ? 0 : 1;
   const sliderMax = totalSongsAvailable === 0 ? 0 : totalSongsAvailable;
-  const sliderValue = totalSongsAvailable === 0
-    ? 0
-    : Math.min(sliderMax, Math.max(1, effectiveMaxSongs));
+  const sliderValue =
+    totalSongsAvailable === 0 ? 0 : Math.min(sliderMax, Math.max(1, effectiveMaxSongs));
   const sliderDisabled = loading || totalSongsAvailable === 0;
+
+  // 100 % double + nombre impair de musiques = impossible (dernière manche ne peut pas être double)
+  const isDouble100Odd =
+    mysteryEffects.enabled &&
+    mysteryEffects.frequency === 100 &&
+    mysteryEffects.selectedEffects.includes("double") &&
+    sliderValue > 0 &&
+    sliderValue % 2 !== 0;
   const allWorkIds = useMemo(() => works.map((work) => work.id), [works]);
   const allSelectableWorkIds = useMemo(() => {
     if (!maxWorksAllowed || allWorkIds.length <= maxWorksAllowed) {
@@ -183,12 +231,30 @@ const UniverseCustomizeModalComponent = ({
         return a.title.localeCompare(b.title, "fr", { sensitivity: "base" });
       });
 
+      const name = universesById[universeId] || "Univers inconnu";
+      if (process.env.NODE_ENV === "development" && name === "Univers inconnu") {
+        console.warn("[UNIVERS-INCONNU] groupe sans nom: universeId non trouvé dans universesById", {
+          universeId,
+          universesByIdKeys: Object.keys(universesById),
+          universesByIdCount: Object.keys(universesById).length,
+          worksCount: groupWorks.length,
+        });
+      }
+
       return {
         universeId,
-        universeName: universesById[universeId] || "Univers inconnu",
+        universeName: name,
         works: sortedWorks,
       };
     });
+
+    if (process.env.NODE_ENV === "development" && sortedGroups.length > 0) {
+      console.info("[UNIVERS-INCONNU] groupedWorks calculé", {
+        groupsCount: sortedGroups.length,
+        universesByIdCount: Object.keys(universesById).length,
+        groupNames: sortedGroups.map((g) => ({ id: g.universeId, name: g.universeName })),
+      });
+    }
 
     sortedGroups.sort((a, b) =>
       a.universeName.localeCompare(b.universeName, "fr", { sensitivity: "base" })
@@ -212,9 +278,16 @@ const UniverseCustomizeModalComponent = ({
   const handleSelectAllWorks = useCallback(
     (nextChecked: boolean) => {
       if (allSelectableWorkIds.length === 0) return;
-      setAllowedWorks(nextChecked ? allSelectableWorkIds : []);
+      if (nextChecked) {
+        setAllowedWorksWithNames(
+          allSelectableWorkIds,
+          allSelectableWorkIds.map((id) => works.find((w) => w.id === id)?.title ?? id)
+        );
+      } else {
+        setAllowedWorks([]);
+      }
     },
-    [allSelectableWorkIds, setAllowedWorks]
+    [allSelectableWorkIds, works, setAllowedWorksWithNames, setAllowedWorks]
   );
   const renderWorkItem = useCallback(
     (work: Work) => {
@@ -234,7 +307,7 @@ const UniverseCustomizeModalComponent = ({
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={() => !isDisabled && toggleWork(work.id)}
+            onChange={() => !isDisabled && toggleWork(work.id, work.title)}
             disabled={isDisabled}
             className="w-4 h-4 mt-0.5 rounded border-2 border-black accent-yellow-400"
           />
@@ -266,17 +339,10 @@ const UniverseCustomizeModalComponent = ({
         }`}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-center">
           <h3 className="text-xl font-extrabold text-[var(--color-text-primary)]">
             {customizingUniverse.name}
           </h3>
-          <button
-            type="button"
-            onClick={closeCustomize}
-            className="magic-button px-3 py-2 text-xs font-bold bg-[#fca5a5] hover:bg-[#f87171]"
-          >
-            Fermer
-          </button>
         </div>
 
         <div className={isCustomMode ? "flex flex-col gap-4 flex-1 min-h-0" : "space-y-4"}>
@@ -485,20 +551,32 @@ const UniverseCustomizeModalComponent = ({
           {error && <div className="text-xs text-red-600">{error}</div>}
         </div>
 
-        <div className="flex justify-end gap-3 pt-2">
-          <button
-            onClick={closeCustomize}
-            className={`px-4 py-2 text-sm font-bold bg-white hover:bg-[var(--color-surface-overlay)] ${pressable}`}
-          >
-            Annuler
-          </button>
-          <button
-            onClick={onApply}
-            className="magic-button px-4 py-2 text-sm font-bold"
-            disabled={isApplying || allowedWorks.length < 2 || totalSongsAvailable === 0}
-          >
-            {isApplying ? "Patiente..." : "Appliquer et jouer"}
-          </button>
+        <div className="flex flex-col items-end gap-2 pt-2">
+          {isDouble100Odd && (
+            <p className="text-sm text-red-600 w-full text-center sm:text-left">
+              Avec « Deux musiques en même temps » à 100 %, le nombre de musiques doit être pair.
+            </p>
+          )}
+          <div className="flex justify-end gap-3 w-full">
+            <button
+              onClick={closeCustomize}
+              className={`px-4 py-2 text-sm font-bold bg-white hover:bg-[var(--color-surface-overlay)] ${pressable}`}
+            >
+              Annuler
+            </button>
+            <button
+              onClick={onApply}
+              className="magic-button px-4 py-2 text-sm font-bold"
+              disabled={
+                isApplying ||
+                allowedWorks.length < 2 ||
+                totalSongsAvailable === 0 ||
+                isDouble100Odd
+              }
+            >
+              {isApplying ? "Patiente..." : "Appliquer et jouer"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

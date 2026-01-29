@@ -1,4 +1,4 @@
-﻿/**
+/**
  * UI Components Library
  *
  * Design System basé sur CVA (class-variance-authority) + Tailwind CSS
@@ -36,6 +36,8 @@ export { Badge, BadgeGroup, type BadgeProps } from "./Badge";
 // === COMPOSANTS EXISTANTS ===
 
 export { ConfirmModal } from "./ConfirmModal";
+export { ConfirmActionButton, type ConfirmActionButtonProps } from "./ConfirmActionButton";
+export { QuitRoomButton, type QuitRoomButtonProps } from "./QuitRoomButton";
 export { ErrorMessage } from "./ErrorMessage";
 export { LoadingSpinner } from "./LoadingSpinner";
 export { Toaster } from "./Toaster";
