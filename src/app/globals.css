@@ -42,8 +42,8 @@
   --shadow-glow-gold: 4px 4px 0 #1B1B1B;
 
   /* Curseurs : default 48×48 (flèche 3 3), pointer 32×32 (main 10 6) */
-  --cursor-default: url("/cursors/cursor-default.svg") 3 3, auto;
-  --cursor-pointer: url("/cursors/cursor-pointer.svg") 10 6, pointer;
+  --cursor-default: url("/cursors/cursor-default.svg") 16 15, auto;
+  --cursor-pointer: url("/cursors/cursor-pointer.svg") 13 1, pointer;
 }
 
 @theme inline {
