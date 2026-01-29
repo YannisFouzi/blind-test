@@ -14,6 +14,7 @@ export type ServerStateSnapshot = {
   displayedTotalSongs?: number;
   state?: string;
   allowedWorks?: string[];
+  worksPerRound?: number;
   options?: { noSeek?: boolean };
   players?: RoomPlayer[];
 };
@@ -43,7 +44,7 @@ export type RoomMachineEvent =
       sessionToken?: string;
     }
   | { type: "players_update"; players: RoomPlayer[] }
-  | { type: "room_configured"; universeId?: string; songs?: Song[]; allowedWorks?: string[]; options?: { noSeek?: boolean } }
+  | { type: "room_configured"; universeId?: string; songs?: Song[]; allowedWorks?: string[]; worksPerRound?: number; options?: { noSeek?: boolean } }
   | { type: "game_starting"; state: "starting"; songs?: Song[]; totalSongs?: number; currentSongIndex?: number; currentRoundIndex?: number; currentRound?: GameRound; roundCount?: number; displayedSongIndex?: number; displayedTotalSongs?: number }
   | { type: "all_players_ready"; startIn: number }
   | { type: "game_started"; currentSongIndex?: number; currentRoundIndex?: number; currentRound?: GameRound; roundCount?: number; displayedSongIndex?: number; displayedTotalSongs?: number; state?: "playing"; songs?: Song[] }
@@ -138,6 +139,7 @@ export const roomMachine = setup({
           displayedTotalSongs: snapshot.displayedTotalSongs,
           state: nextState,
           allowedWorks: snapshot.allowedWorks,
+          worksPerRound: snapshot.worksPerRound,
           options: snapshot.options ? normalizeOptions(snapshot.options) : context.room.options,
         },
         players: nextPlayers,
@@ -171,6 +173,7 @@ export const roomMachine = setup({
           universeId: event.universeId || context.room.universeId,
           songs: event.songs || context.room.songs || [],
           allowedWorks: event.allowedWorks,
+          worksPerRound: event.worksPerRound,
           options: event.options ? normalizeOptions(event.options) : context.room.options,
           currentSongIndex: 0,
           state: "configured" as Room["state"],

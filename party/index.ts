@@ -139,6 +139,7 @@ const MessageSchema = z.discriminatedUnion("type", [
       })
     ),
     allowedWorks: z.array(z.string()).optional(),
+    worksPerRound: z.number().int().min(2).max(8).optional(),
     options: z.object({ noSeek: z.boolean() }).optional(),
     hostId: z.string().optional(),
     mysteryEffectsConfig: z
@@ -289,6 +290,7 @@ interface RoomState {
   players: Map<string, Player>; // key: playerId
   responses: Map<string, Response>; // key: `${songId}-${playerId}`
   allowedWorks?: string[];
+  worksPerRound?: number;
   options?: { noSeek: boolean };
   createdAt: number;
   passwordHash?: string;
@@ -805,6 +807,7 @@ export default class BlindTestRoom implements Party.Server {
       universeId,
       songs,
       allowedWorks,
+      worksPerRound,
       options,
       hostId: hostIdFromClient,
       mysteryEffectsConfig,
@@ -832,6 +835,7 @@ export default class BlindTestRoom implements Party.Server {
     this.state.universeId = universeId;
     this.state.songs = songs;
     this.state.allowedWorks = allowedWorks;
+    this.state.worksPerRound = worksPerRound;
     this.state.options = options;
 
     // Effets mystères : calculer les rounds si configurés
@@ -878,6 +882,7 @@ export default class BlindTestRoom implements Party.Server {
       songsCount: songs.length,
       songs,
       allowedWorks,
+      worksPerRound,
       options,
     };
     this.broadcast(broadcastMessage);
@@ -1627,6 +1632,7 @@ export default class BlindTestRoom implements Party.Server {
     this.state.currentRoundIndex = undefined;
     this.state.mysteryEffectsConfig = undefined;
     this.state.allowedWorks = undefined;
+    this.state.worksPerRound = undefined;
     this.state.options = undefined;
     this.state.state = "idle";
 
@@ -1812,6 +1818,7 @@ export default class BlindTestRoom implements Party.Server {
       state: this.state.state,
       players: this.getPlayersArray(),
       allowedWorks: this.state.allowedWorks,
+      worksPerRound: this.state.worksPerRound,
       options: this.state.options,
     };
   }

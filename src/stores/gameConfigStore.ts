@@ -68,6 +68,16 @@ interface GameConfigStore {
   maxWorksAllowed: number | null;
 
   /**
+   * Mode aléatoire : pool d'œuvres + X par manche
+   */
+  isRandomMode: boolean;
+
+  /**
+   * Nombre d'œuvres affichées par manche (mode aléatoire, 5–8)
+   */
+  worksPerRound: number | null;
+
+  /**
    * Configuration des effets mystères (solo + multi)
    */
   mysteryEffects: {
@@ -83,7 +93,9 @@ interface GameConfigStore {
    */
   openCustomize: (universe: Universe, options?: {
     isCustomMode?: boolean;
+    isRandomMode?: boolean;
     maxWorksAllowed?: number | null;
+    worksPerRound?: number | null;
   }) => void;
 
   /**
@@ -132,6 +144,11 @@ interface GameConfigStore {
   setMaxSongs: (value: number | null) => void;
 
   /**
+   * Définir le nombre d'œuvres par manche (mode aléatoire, 5–8)
+   */
+  setWorksPerRound: (value: number | null) => void;
+
+  /**
    * Reset complet de la configuration
    */
   reset: () => void;
@@ -171,7 +188,9 @@ const INITIAL_STATE = {
   maxSongs: null,
   isCustomMode: false,
   maxWorksAllowed: null,
-   mysteryEffects: {
+  isRandomMode: false,
+  worksPerRound: null,
+  mysteryEffects: {
     enabled: false,
     frequency: 10,
     selectedEffects: [],
@@ -224,7 +243,9 @@ export const useGameConfig = create<GameConfigStore>((set) => ({
   openCustomize: (universe, options = {}) => set({
     customizingUniverse: universe,
     isCustomMode: options.isCustomMode ?? false,
+    isRandomMode: options.isRandomMode ?? false,
     maxWorksAllowed: options.maxWorksAllowed ?? null,
+    worksPerRound: options.worksPerRound ?? null,
     // Reset options lors de l'ouverture
     allowedWorks: [],
     noSeek: false,
@@ -278,6 +299,10 @@ export const useGameConfig = create<GameConfigStore>((set) => ({
   setNoSeek: (value) => set({ noSeek: value }),
 
   setMaxSongs: (value) => set({ maxSongs: value }),
+
+  setWorksPerRound: (value) => set({
+    worksPerRound: value === null ? null : Math.max(2, Math.min(8, value)),
+  }),
 
   reset: () => set(INITIAL_STATE),
 
@@ -340,6 +365,8 @@ export const gameConfigSelectors = {
   maxSongs: (state: GameConfigStore) => state.maxSongs,
   isCustomMode: (state: GameConfigStore) => state.isCustomMode,
   maxWorksAllowed: (state: GameConfigStore) => state.maxWorksAllowed,
+  isRandomMode: (state: GameConfigStore) => state.isRandomMode,
+  worksPerRound: (state: GameConfigStore) => state.worksPerRound,
   mysteryEffects: (state: GameConfigStore) => state.mysteryEffects,
 
   // Actions
@@ -353,6 +380,7 @@ export const gameConfigSelectors = {
   setEffectiveSongsForPreview: (state: GameConfigStore) => state.setEffectiveSongsForPreview,
   setNoSeek: (state: GameConfigStore) => state.setNoSeek,
   setMaxSongs: (state: GameConfigStore) => state.setMaxSongs,
+  setWorksPerRound: (state: GameConfigStore) => state.setWorksPerRound,
   reset: (state: GameConfigStore) => state.reset,
   resetOptions: (state: GameConfigStore) => state.resetOptions,
   setMysteryEffectsEnabled: (state: GameConfigStore) => state.setMysteryEffectsEnabled,
@@ -392,6 +420,8 @@ export const useGameConfiguration = () => ({
   maxSongs: useGameConfig(gameConfigSelectors.maxSongs),
   isCustomMode: useGameConfig(gameConfigSelectors.isCustomMode),
   maxWorksAllowed: useGameConfig(gameConfigSelectors.maxWorksAllowed),
+  isRandomMode: useGameConfig(gameConfigSelectors.isRandomMode),
+  worksPerRound: useGameConfig(gameConfigSelectors.worksPerRound),
   mysteryEffects: useGameConfig(gameConfigSelectors.mysteryEffects),
 
   // Actions
@@ -405,6 +435,7 @@ export const useGameConfiguration = () => ({
   setEffectiveSongsForPreview: useGameConfig(gameConfigSelectors.setEffectiveSongsForPreview),
   setNoSeek: useGameConfig(gameConfigSelectors.setNoSeek),
   setMaxSongs: useGameConfig(gameConfigSelectors.setMaxSongs),
+  setWorksPerRound: useGameConfig(gameConfigSelectors.setWorksPerRound),
   reset: useGameConfig(gameConfigSelectors.reset),
   resetOptions: useGameConfig(gameConfigSelectors.resetOptions),
   setMysteryEffectsEnabled: useGameConfig(gameConfigSelectors.setMysteryEffectsEnabled),

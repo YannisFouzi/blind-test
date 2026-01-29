@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import type { Work } from "@/types";
 import { useGameConfiguration, useCanSelectMoreWorks } from "@/stores";
+import { WORKS_PER_ROUND_MIN, WORKS_PER_ROUND_MAX, WORKS_PER_ROUND_DEFAULT } from "@/constants/gameModes";
 import { getAllWorks, getSongsByWork, getWorksByUniverse, getActiveUniverses } from "@/services/firebase";
 import { pressable } from "@/styles/ui";
 
@@ -43,13 +44,16 @@ const UniverseCustomizeModalComponent = ({
     noSeek,
     maxSongs,
     isCustomMode,
+    isRandomMode,
     maxWorksAllowed,
+    worksPerRound,
     mysteryEffects,
     toggleWork,
     setAllowedWorks,
     setAllowedWorksWithNames,
     setNoSeek,
     setMaxSongs,
+    setWorksPerRound,
     closeCustomize,
     setMysteryEffectsEnabled,
     setMysteryEffectsFrequency,
@@ -83,12 +87,12 @@ const UniverseCustomizeModalComponent = ({
       setError(null);
 
       try {
-        // Charger les works de l'univers (ou toutes les oeuvres en mode custom)
+        // Charger les works de l'univers (ou toutes les oeuvres en mode custom / aléatoire)
         const [worksResult, universesResult] = await Promise.all([
-          isCustomMode
+          isCustomMode || isRandomMode
             ? getAllWorks()
             : getWorksByUniverse(customizingUniverse.id),
-          isCustomMode
+          isCustomMode || isRandomMode
             ? getActiveUniverses()
             : Promise.resolve({ success: true, data: [] }),
         ]);
@@ -96,6 +100,7 @@ const UniverseCustomizeModalComponent = ({
         if (process.env.NODE_ENV === "development") {
           console.info("[UNIVERS-INCONNU] loadWorksAndCounts après Promise.all", {
             isCustomMode,
+            isRandomMode,
             worksSuccess: worksResult.success,
             worksCount: Array.isArray((worksResult as { data?: unknown[] }).data)
               ? (worksResult as { data: unknown[] }).data.length
@@ -114,14 +119,14 @@ const UniverseCustomizeModalComponent = ({
         const loadedWorks = worksResult.data;
         setWorks(loadedWorks);
 
-        if (isCustomMode) {
+        if (isCustomMode || isRandomMode) {
           if (universesResult.success && universesResult.data) {
             const nextUniverses: Record<string, string> = {};
             for (const universe of universesResult.data) {
               nextUniverses[universe.id] = universe.name;
             }
             if (process.env.NODE_ENV === "development") {
-              console.info("[UNIVERS-INCONNU] universesById rempli (mode custom)", {
+              console.info("[UNIVERS-INCONNU] universesById rempli (mode custom/aléatoire)", {
                 count: Object.keys(nextUniverses).length,
                 keys: Object.keys(nextUniverses),
                 sample: Object.entries(nextUniverses).slice(0, 5),
@@ -170,7 +175,7 @@ const UniverseCustomizeModalComponent = ({
     };
 
     loadWorksAndCounts();
-  }, [customizingUniverse, isCustomMode, setTotalSongsForPreview, setTotalWorksInUniverse]);
+  }, [customizingUniverse, isCustomMode, isRandomMode, setTotalSongsForPreview, setTotalWorksInUniverse]);
 
   // ========== COMPUTED VALUES ==========
   const totalSongsAvailable = useMemo(() => {
@@ -201,18 +206,20 @@ const UniverseCustomizeModalComponent = ({
     sliderValue % 2 !== 0;
   const allWorkIds = useMemo(() => works.map((work) => work.id), [works]);
   const allSelectableWorkIds = useMemo(() => {
+    // Mode aléatoire : pas de limite d'œuvres
+    if (isRandomMode) return allWorkIds;
     if (!maxWorksAllowed || allWorkIds.length <= maxWorksAllowed) {
       return allWorkIds;
     }
     return allWorkIds.slice(0, maxWorksAllowed);
-  }, [allWorkIds, maxWorksAllowed]);
+  }, [allWorkIds, maxWorksAllowed, isRandomMode]);
   const allWorksSelected = useMemo(() => {
     if (allSelectableWorkIds.length === 0) return false;
     return allSelectableWorkIds.every((workId) => allowedWorks.includes(workId));
   }, [allSelectableWorkIds, allowedWorks]);
   const selectAllDisabled = loading || allSelectableWorkIds.length === 0;
   const groupedWorks = useMemo(() => {
-    if (!isCustomMode) return [];
+    if (!isCustomMode && !isRandomMode) return [];
     const groups = new Map<string, Work[]>();
 
     for (const work of works) {
@@ -261,7 +268,17 @@ const UniverseCustomizeModalComponent = ({
     );
 
     return sortedGroups;
-  }, [isCustomMode, works, universesById]);
+  }, [isCustomMode, isRandomMode, works, universesById]);
+
+  // Mode aléatoire : recaler worksPerRound si le pool a diminué (ex. 5 œuvres puis 2 retirées → max 3)
+  useEffect(() => {
+    if (!isRandomMode || allowedWorks.length < 2) return;
+    const effectiveMax = Math.min(WORKS_PER_ROUND_MAX, allowedWorks.length);
+    const current = worksPerRound ?? WORKS_PER_ROUND_DEFAULT;
+    if (current > effectiveMax) {
+      setWorksPerRound(effectiveMax);
+    }
+  }, [isRandomMode, allowedWorks.length, worksPerRound, setWorksPerRound]);
 
   // ========== HANDLERS ==========
   const handleMaxSongsChange = useCallback(
@@ -335,7 +352,7 @@ const UniverseCustomizeModalComponent = ({
     >
       <div
         className={`w-full max-w-3xl bg-white border-[3px] border-black rounded-3xl p-6 mx-4 shadow-[6px_6px_0_#1B1B1B] flex flex-col ${
-          isCustomMode ? "min-h-[70vh] max-h-[85vh]" : "space-y-4"
+          isCustomMode || isRandomMode ? "min-h-[70vh] max-h-[85vh]" : "space-y-4"
         }`}
         onClick={(event) => event.stopPropagation()}
       >
@@ -345,7 +362,7 @@ const UniverseCustomizeModalComponent = ({
           </h3>
         </div>
 
-        <div className={isCustomMode ? "flex flex-col gap-4 flex-1 min-h-0" : "space-y-4"}>
+        <div className={isCustomMode || isRandomMode ? "flex flex-col gap-4 flex-1 min-h-0" : "space-y-4"}>
           {/* Mode sans avance */}
           <div className="space-y-1">
             <label className="flex items-center gap-2 text-[var(--color-text-primary)] text-sm font-semibold">
@@ -439,10 +456,10 @@ const UniverseCustomizeModalComponent = ({
           </div>
 
           {/* Œuvres incluses */}
-          <div className={`space-y-2 ${isCustomMode ? "flex flex-col flex-1 min-h-0" : ""}`}>
+          <div className={`space-y-2 ${isCustomMode || isRandomMode ? "flex flex-col flex-1 min-h-0 overflow-hidden" : ""}`}>
             <div className="flex items-center justify-between">
               <span className="text-[var(--color-text-primary)] text-sm font-semibold">Oeuvres incluses</span>
-              {isCustomMode && maxWorksAllowed && (
+              {!isRandomMode && isCustomMode && maxWorksAllowed && (
                 <span
                   className={`text-xs ${
                     allowedWorks.length >= maxWorksAllowed
@@ -453,8 +470,13 @@ const UniverseCustomizeModalComponent = ({
                   {allowedWorks.length}/{maxWorksAllowed} sélectionnées
                 </span>
               )}
+            {isRandomMode && (
+                <span className="text-xs text-[var(--color-text-secondary)]">
+                  {allowedWorks.length} œuvre{allowedWorks.length !== 1 ? "s" : ""} dans le pool
+                </span>
+              )}
             </div>
-            {!isCustomMode && (
+            {(!isCustomMode || isRandomMode) && (
               <div className="flex items-center">
                 <label
                   className={`flex items-center gap-2 text-xs font-bold ${
@@ -494,10 +516,10 @@ const UniverseCustomizeModalComponent = ({
             ) : (
               <div
                 className={`overflow-y-auto pr-2 pb-2 pt-1 space-y-4 scrollbar-dark ${
-                  isCustomMode ? "flex-1 min-h-0" : "max-h-48"
+                  isCustomMode || isRandomMode ? "flex-1 min-h-0" : "max-h-48"
                 }`}
               >
-                {isCustomMode ? (
+                {(isCustomMode || isRandomMode) ? (
                   groupedWorks.map((group) => (
                     <div key={group.universeId} className="space-y-2">
                       <div className="text-xs font-bold uppercase tracking-[0.25em] text-[var(--color-text-secondary)]">
@@ -516,6 +538,45 @@ const UniverseCustomizeModalComponent = ({
               </div>
             )}
           </div>
+
+          {/* Œuvres par manche (mode aléatoire) : min 2, max = min(8, taille du pool) */}
+          {isRandomMode && (() => {
+            const poolSize = allowedWorks.length;
+            const effectiveMax = Math.max(WORKS_PER_ROUND_MIN, Math.min(WORKS_PER_ROUND_MAX, poolSize));
+            const rawValue = worksPerRound ?? WORKS_PER_ROUND_DEFAULT;
+            const clampedValue = Math.max(WORKS_PER_ROUND_MIN, Math.min(effectiveMax, rawValue));
+            return (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--color-text-primary)] text-sm font-semibold">Œuvres par manche</span>
+                  <span className="text-[var(--color-text-secondary)] text-xs">
+                    {clampedValue} choix (max {effectiveMax} avec {poolSize} œuvre{poolSize !== 1 ? "s" : ""} dans le pool)
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 min-h-[52px]">
+                  <input
+                    type="range"
+                    min={WORKS_PER_ROUND_MIN}
+                    max={effectiveMax}
+                    value={clampedValue}
+                    onChange={(e) => setWorksPerRound(Math.max(WORKS_PER_ROUND_MIN, Math.min(effectiveMax, Number(e.target.value))))}
+                    className="flex-1 h-2 bg-white border-2 border-black rounded-full appearance-none cursor-pointer accent-yellow-400 shadow-[2px_2px_0_#1B1B1B]"
+                  />
+                  <input
+                    type="number"
+                    min={WORKS_PER_ROUND_MIN}
+                    max={effectiveMax}
+                    value={clampedValue}
+                    onChange={(e) => setWorksPerRound(Math.max(WORKS_PER_ROUND_MIN, Math.min(effectiveMax, Number(e.target.value))))}
+                    className="w-14 px-2 py-1 bg-white border-2 border-black rounded text-[var(--color-text-primary)] text-sm text-center shadow-[2px_2px_0_#1B1B1B]"
+                  />
+                </div>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  À chaque manche, ce nombre d&apos;œuvres sera proposé comme réponses (dont la bonne). Min 2, max {effectiveMax} avec ce pool.
+                </p>
+              </div>
+            );
+          })()}
 
           {/* Nombre de musiques */}
           <div className="space-y-2">

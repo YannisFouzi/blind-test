@@ -14,6 +14,7 @@ interface UniverseGridProps {
   onSelect: (id: string) => void;
   onCustomize?: (universe: Universe) => void;
   onCustomMode?: () => void;
+  onRandomMode?: () => void;
 }
 
 const DEFAULT_COLOR = "#3B82F6";
@@ -33,6 +34,7 @@ const UniverseGridComponent = ({
   onSelect,
   onCustomize,
   onCustomMode,
+  onRandomMode,
 }: UniverseGridProps) => {
   const router = useRouter();
   const prefetchedUniversesRef = useRef<Set<string>>(new Set());
@@ -155,6 +157,36 @@ const UniverseGridComponent = ({
                 <button
                   type="button"
                   onClick={onCustomMode}
+                  className={`px-5 py-2 text-xs font-extrabold bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-light)] ${pressClasses}`}
+                >
+                  Personnaliser
+                </button>
+              </div>
+            </div>
+          </div>
+        </article>
+      )}
+
+      {onRandomMode && (
+        <article>
+          <div
+            className="relative w-full overflow-hidden rounded-3xl border-2 border-black bg-white p-5 md:p-8 text-left shadow-[4px_4px_0_#1B1B1B]"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(16, 185, 129, 0.2) 0%, rgba(255, 255, 255, 0.95) 60%)",
+            }}
+          >
+            <div className="relative z-10 flex flex-col items-center gap-4">
+              <h2 className="text-center text-2xl font-extrabold uppercase tracking-wide text-[var(--color-text-primary)]">
+                Mode aléatoire
+              </h2>
+              <p className="text-center text-sm text-[var(--color-text-secondary)]">
+                Choisis un pool d&apos;œuvres ; à chaque manche, un tirage aléatoire affiche 5 à 8 choix.
+              </p>
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={onRandomMode}
                   className={`px-5 py-2 text-xs font-extrabold bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-light)] ${pressClasses}`}
                 >
                   Personnaliser

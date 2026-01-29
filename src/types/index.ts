@@ -161,6 +161,8 @@ export const RoomSchema = z.object({
     .optional(),
   allowedWorks: z
     .preprocess((value) => (value === null ? undefined : value), z.array(z.string().min(1)).optional()),
+  /** Mode aléatoire : nombre d'œuvres affichées par manche (5–8) */
+  worksPerRound: z.number().int().min(5).max(8).optional(),
   startedAt: timestampSchema.nullable().optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema.optional(),

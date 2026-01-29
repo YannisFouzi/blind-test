@@ -10,6 +10,7 @@ import type {
   MysteryEffectsConfig,
 } from "@/types";
 import { getSongsByWork, getWorksByUniverse, getWorksByIds } from "@/services/firebase";
+import { RANDOM_UNIVERSE_ID } from "@/constants/gameModes";
 import { generateId, shuffleArray } from "@/utils/formatters";
 import { calculateGameRounds, getCurrentRound } from "@/utils/mysteryEffects";
 
@@ -97,16 +98,37 @@ export const useSoloGame = ({
       let fetchedWorks: Work[] = [];
       let filteredWorks: Work[] = [];
 
-      // Mode Custom : charger les works par leurs IDs directement
-      if (universeId === CUSTOM_UNIVERSE_ID && allowedWorks && allowedWorks.length > 0) {
+      const isCustomOrRandom =
+        (universeId === CUSTOM_UNIVERSE_ID || universeId === RANDOM_UNIVERSE_ID) &&
+        allowedWorks &&
+        allowedWorks.length > 0;
+
+      // Mode Custom ou Mode aléatoire : charger les works par leurs IDs (URL ?works=...)
+      if (isCustomOrRandom) {
+        if (process.env.NODE_ENV === "development") {
+          console.info("[SOLO-GAME] Chargement works par IDs (custom/random)", {
+            universeId,
+            allowedWorksCount: allowedWorks.length,
+            allowedWorksSample: allowedWorks.slice(0, 3),
+          });
+        }
         const worksResult = await getWorksByIds(allowedWorks);
         fetchedWorks = worksResult.success && worksResult.data ? worksResult.data : [];
-        filteredWorks = fetchedWorks; // Tous les works récupérés sont déjà filtrés
+        filteredWorks = fetchedWorks;
+        if (process.env.NODE_ENV === "development") {
+          console.info("[SOLO-GAME] getWorksByIds résultat", {
+            success: worksResult.success,
+            fetchedCount: fetchedWorks.length,
+            error: (worksResult as { error?: string }).error,
+          });
+        }
       } else {
         // Mode normal : charger les works de l'univers
+        if (process.env.NODE_ENV === "development") {
+          console.info("[SOLO-GAME] Chargement works par univers", { universeId });
+        }
         const worksResult = await getWorksByUniverse(universeId);
         fetchedWorks = worksResult.success && worksResult.data ? worksResult.data : [];
-
         filteredWorks =
           allowedWorks && allowedWorks.length
             ? fetchedWorks.filter((w) => allowedWorks.includes(w.id))
@@ -114,7 +136,13 @@ export const useSoloGame = ({
       }
 
       if (!fetchedWorks.length) {
-        setError(`Aucune œuvre trouvée pour l'univers "${universeId}"`);
+        const msg = isCustomOrRandom
+          ? `Aucune œuvre trouvée pour les IDs sélectionnés (${universeId}). Vérifiez que ?works=... contient des IDs valides.`
+          : `Aucune œuvre trouvée pour l'univers "${universeId}"`;
+        if (process.env.NODE_ENV === "development") {
+          console.error("[SOLO-GAME] Aucune œuvre", { universeId, isCustomOrRandom, allowedWorksCount: allowedWorks?.length });
+        }
+        setError(msg);
         setLoading(false);
         return;
       }

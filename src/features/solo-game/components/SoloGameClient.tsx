@@ -396,10 +396,24 @@ export const SoloGameClient = ({
   }
 
   if (!game.loading && game.works.length === 0) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[SOLO-GAME] Affichage erreur « Aucune oeuvre »", {
+        universeId,
+        allowedWorksCount: allowedWorks?.length ?? 0,
+        error: game.error,
+      });
+    }
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center p-6">
         <div className="text-center">
-          <ErrorMessage message="Aucune oeuvre trouvee pour cet univers" />
+          <ErrorMessage
+            message={
+              game.error ||
+              (universeId === "__custom__" || universeId === "__random__"
+                ? "Aucune œuvre (mode custom/aléatoire). Passe des œuvres dans l'URL : ?works=id1,id2,..."
+                : "Aucune oeuvre trouvee pour cet univers")
+            }
+          />
           <ConfirmActionButton
             buttonLabel="Retour à l'accueil"
             title="Retour à l'accueil ?"

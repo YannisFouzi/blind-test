@@ -39,6 +39,7 @@ type IncomingMessage =
       songsCount?: number;
       songs?: Song[];
       allowedWorks?: string[];
+      worksPerRound?: number;
       options?: { noSeek?: boolean };
     }
   | {

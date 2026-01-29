@@ -48,3 +48,39 @@ const getSecureRandom = (): number => {
   }
   return Math.random();
 };
+
+/**
+ * Générateur pseudo-aléatoire déterministe à partir d'une chaîne (seed).
+ * Permet à tous les clients d'obtenir le même ordre pour un même seed (ex: mode aléatoire multi).
+ */
+function seededRandom(seed: string): () => number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
+  }
+  let s = h >>> 0;
+  return () => {
+    s ^= s << 13;
+    s ^= s >>> 17;
+    s ^= s << 5;
+    return (s >>> 0) / 0xffffffff;
+  };
+}
+
+/**
+ * Mélange un tableau de façon déterministe à partir d'un seed.
+ * Même seed → même ordre sur tous les clients (multiplayer).
+ *
+ * @param array - Tableau à mélanger
+ * @param seed - Chaîne de seed (ex: "roundIndex-songId")
+ * @returns Nouveau tableau mélangé de manière reproductible
+ */
+export const shuffleWithSeed = <T>(array: T[], seed: string): T[] => {
+  const copy = [...array];
+  const random = seededRandom(seed);
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+};

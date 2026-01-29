@@ -5,3 +5,4 @@
  */
 
 export { useWorksQuery } from "./useWorksQuery";
+export { useWorksByIdsQuery } from "./useWorksByIdsQuery";

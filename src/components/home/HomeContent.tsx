@@ -9,6 +9,7 @@ import { HomePageSkeleton } from "@/components/home/HomePageSkeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useUniverses } from "@/hooks/useUniverses";
 import { CUSTOM_UNIVERSE, MAX_WORKS_CUSTOM_MODE } from "@/hooks/useUniverseCustomization";
+import { RANDOM_UNIVERSE, WORKS_PER_ROUND_DEFAULT } from "@/constants/gameModes";
 import { useGameConfiguration, useRoomAuthStore } from "@/stores";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -76,11 +77,18 @@ export const HomeContent = () => {
     openCustomizeStore(universe);
   }, [openCustomizeStore]);
 
-  // Mode custom : toutes les Å“uvres de tous les univers
-  const openCustomMode = useCallback(async () => {
+  // Mode custom : toutes les œuvres de tous les univers
+  const openCustomMode = useCallback(() => {
     openCustomizeStore(CUSTOM_UNIVERSE, {
       isCustomMode: true,
       maxWorksAllowed: MAX_WORKS_CUSTOM_MODE,
+    });
+  }, [openCustomizeStore]);
+
+  const openRandomMode = useCallback(() => {
+    openCustomizeStore(RANDOM_UNIVERSE, {
+      isRandomMode: true,
+      worksPerRound: WORKS_PER_ROUND_DEFAULT,
     });
   }, [openCustomizeStore]);
 
@@ -547,6 +555,7 @@ export const HomeContent = () => {
           onSelect={handleUniverseClick}
           onCustomize={openCustomize}
           onCustomMode={openCustomMode}
+          onRandomMode={openRandomMode}
         />
       )}
 
