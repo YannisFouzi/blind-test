@@ -28,6 +28,7 @@ export interface SoloGameClientProps {
   universeId: string;
   allowedWorks?: string[];
   maxSongs?: number;
+  worksPerRound?: number;
   noSeek?: boolean;
   mysteryEffectsConfig?: MysteryEffectsConfig;
 }

@@ -89,6 +89,7 @@ type IncomingMessage =
       allWorksSelected?: boolean;
       maxSongs?: number | null;
       totalSongs?: number;
+      worksPerRound?: number;
     }
   | { type: "host_preview_clear" }
   | { type: "error"; message: string }
@@ -104,6 +105,7 @@ export type HostPreview = {
   allWorksSelected?: boolean;
   maxSongs?: number | null;
   totalSongs?: number;
+  worksPerRound?: number;
 };
 
 export const usePartyKitRoom = ({
@@ -431,6 +433,7 @@ export const usePartyKitRoom = ({
             allWorksSelected: message.allWorksSelected,
             maxSongs: message.maxSongs,
             totalSongs: message.totalSongs,
+            worksPerRound: message.worksPerRound,
           }));
           return;
         }
@@ -761,6 +764,7 @@ export const usePartyKitRoom = ({
       allWorksSelected?: boolean;
       maxSongs?: number | null;
       totalSongs?: number;
+      worksPerRound?: number;
     }) => {
       if (!socketRef.current) return;
       socketRef.current.send(JSON.stringify({ type: "host_preview_options", ...payload }));
@@ -783,7 +787,8 @@ export const usePartyKitRoom = ({
         enabled: boolean;
         frequency: number;
         effects: ("double" | "reverse")[];
-      }
+      },
+      worksPerRound?: number
     ) => {
       if (!socketRef.current) {
         return { success: false, error: "Not connected" };
@@ -800,6 +805,7 @@ export const usePartyKitRoom = ({
         allowedWorks: allowedWorks || [],
         options: options || { noSeek: false },
         mysteryEffectsConfig,
+        ...(worksPerRound != null && { worksPerRound }),
       };
       socketRef.current.send(JSON.stringify(configureMessage));
 

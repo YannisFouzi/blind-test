@@ -1,6 +1,6 @@
 "use client";
 
-import { Cog, Star as StarIcon } from "lucide-react";
+import { Cog } from "lucide-react";
 
 interface HeroSectionProps {
   isAdmin: boolean;
