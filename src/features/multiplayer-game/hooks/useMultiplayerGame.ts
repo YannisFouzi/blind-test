@@ -27,6 +27,9 @@ export interface UseMultiplayerGameOptions {
 
   /** Callback appelé avant redirection vers waiting room (pour cleanup audio, etc.) */
   onRedirect?: () => void;
+
+  /** Navigation client (ex. router.push). Passe à usePartyKitRoom pour show_scores et redirect_to_waiting_room. */
+  navigate?: (url: string) => void;
 }
 
 /**
@@ -64,6 +67,7 @@ export const useMultiplayerGame = ({
   displayName,
   preloadNextTrack,
   onRedirect,
+  navigate,
 }: UseMultiplayerGameOptions) => {
   // ============================================================
   // WebSocket Connection (PartyKit)
@@ -91,7 +95,7 @@ export const useMultiplayerGame = ({
     authError,
     submitPassword,
     allPlayersAnswered,
-  } = usePartyKitRoom({ roomId, playerId, displayName, onRedirect });
+  } = usePartyKitRoom({ roomId, playerId, displayName, onRedirect, navigate });
 
   // ============================================================
   // Works Data (TanStack Query avec cache)

@@ -122,6 +122,7 @@ export const MultiGameClient = ({
       }
     },
     onRedirect: handleRedirect,
+    navigate: (url) => router.push(url),
   });
 
   const {

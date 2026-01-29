@@ -75,6 +75,15 @@ export default function WaitingRoomPage() {
       : {}
   );
 
+  /** Hôte effectif : serveur (join_success) ou URL (créateur redirigé avec host=1). Évite d'afficher "En attente de l'hôte..." au créateur avant la première synchro. Utilise l'URL dès le premier rendu pour afficher la vue hôte sans écran de chargement. */
+  const isHostEffective = useMemo(
+    () =>
+      isHost ||
+      (searchParams.get("host") === "1" &&
+        (Boolean(playerId) || Boolean(searchParams.get("player")))),
+    [isHost, searchParams, playerId]
+  );
+
   useEffect(() => {
     if (roomId && isAuthenticated) {
       clearPendingPassword(roomId);
@@ -126,7 +135,7 @@ export default function WaitingRoomPage() {
 
   // Appliquer les paramètres et lancer le jeu (logique spécifique multi avec PartyKit)
   const applyCustomizeAndPlay = useCallback(async () => {
-    if (!customizingUniverse || !isHost || !configureRoom) return;
+    if (!customizingUniverse || !isHostEffective || !configureRoom) return;
 
     // ⭐ FIX: sauvegarder avant closeCustomize() (qui reset le store)
     const savedMysteryEffects = { ...mysteryEffects };
@@ -223,7 +232,7 @@ export default function WaitingRoomPage() {
     }
   }, [
     customizingUniverse,
-    isHost,
+    isHostEffective,
     configureRoom,
     startGame,
     customAllowedWorks,
@@ -237,7 +246,7 @@ export default function WaitingRoomPage() {
   // Handler pour quand le HOST clique sur un univers (sans personnalisation)
   const handleUniverseClick = useCallback(
     async (universeId: string) => {
-      if (!isHost || !configureRoom) {
+      if (!isHostEffective || !configureRoom) {
         console.warn("[WaitingRoomPage] Only host can select universe");
         return;
       }
@@ -307,7 +316,7 @@ export default function WaitingRoomPage() {
         setIsConfiguringRoom(false);
       }
     },
-    [isHost, configureRoom, startGame, roomId, mysteryEffects.enabled, mysteryEffects.frequency, mysteryEffects.selectedEffects]
+    [isHostEffective, configureRoom, startGame, roomId, mysteryEffects.enabled, mysteryEffects.frequency, mysteryEffects.selectedEffects]
   );
 
   const passwordGate = authRequired ? (
@@ -399,16 +408,16 @@ export default function WaitingRoomPage() {
     navigate(targetUrl);
   }, [room?.universeId, room?.state, allowedWorks, options?.noSeek, roomId, playerId, displayName, identityReady, state, isConnected, navigate]);
 
-  if (!roomId || !identityReady || !playerId) {
+  if (!roomId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--color-surface-base)] text-[var(--color-text-primary)]">
-        {!identityReady ? <LoadingSpinner /> : <ErrorMessage message="Room introuvable" />}
+        <ErrorMessage message="Room introuvable" />
       </div>
     );
   }
 
-  // Si le HOST : afficher la sélection d'univers
-  if (isHost && !room?.universeId) {
+  // Si le HOST (serveur ou URL host=1) : afficher la sélection d'univers
+  if (isHostEffective && !room?.universeId) {
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)]">
         <div className="container mx-auto px-4 py-12 space-y-10">
@@ -441,11 +450,7 @@ export default function WaitingRoomPage() {
             </div>
           </div>
 
-          {universesLoading ? (
-            <div className="flex justify-center">
-              <LoadingSpinner />
-            </div>
-          ) : isConfiguringRoom ? (
+          {universesLoading ? null : isConfiguringRoom ? (
             <div className="flex flex-col items-center gap-4">
               <LoadingSpinner />
               <p className="text-[var(--color-text-primary)]">Configuration de la room...</p>

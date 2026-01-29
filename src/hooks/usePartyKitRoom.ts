@@ -17,6 +17,8 @@ type UsePartyKitRoomOptions = {
   password?: string;
   /** Callback appelé avant redirection vers waiting room (pour cleanup audio, etc.) */
   onRedirect?: () => void;
+  /** Navigation client (ex. router.push). Si fourni, remplace navigateToUrl pour show_scores et redirect_to_waiting_room. */
+  navigate?: (url: string) => void;
 };
 
 type IncomingMessage =
@@ -73,6 +75,7 @@ export const usePartyKitRoom = ({
   displayName,
   password,
   onRedirect,
+  navigate: navigateClient,
 }: UsePartyKitRoomOptions) => {
   const [machineState, send] = useMachine(roomMachine);
   const { room, players, responses, allPlayersAnswered, isConnected } =
@@ -85,6 +88,11 @@ export const usePartyKitRoom = ({
   );
   // Flag pour ignorer les state_sync après un redirect_to_waiting_room
   const isRedirectingToWaitingRef = useRef(false);
+  // WORKAROUND: listener 'open' not always triggered after room→game nav; see docs/AUDIT §11 + v2 root cause.
+  const socketOpenSentRef = useRef(false);
+  const sendRef = useRef(send);
+  sendRef.current = send;
+  const sendJoinRef = useRef<(options?: { password?: string; token?: string }) => void>(() => {});
 
   type AnswerResult = {
     success: boolean;
@@ -166,7 +174,7 @@ export const usePartyKitRoom = ({
   }, [roomId]);
 
   const sendJoin = useCallback(
-    (options?: { password?: string; token?: string }) => {
+    (options?: { password?: string; token?: string; _attempt?: number }) => {
       if (!socketRef.current || !playerId || !displayName) {
         console.warn("[usePartyKitRoom] ⚠️ sendJoin called but conditions not met", {
           hasSocket: !!socketRef.current,
@@ -176,6 +184,33 @@ export const usePartyKitRoom = ({
         });
         return;
       }
+
+      const attempt = options?._attempt ?? 1;
+      const maxAttempts = 10; // Max 10 tentatives (500ms total)
+
+      // FIX: Wait for PartySocket wrapper readyState to sync with internal socket
+      // The Provider callback fires when internal socket is OPEN, but wrapper.readyState may still be 0
+      if (socketRef.current.readyState !== WebSocket.OPEN) {
+        if (attempt >= maxAttempts) {
+          console.error("[usePartyKitRoom] ❌ Failed to send join after", maxAttempts, "attempts", {
+            readyState: socketRef.current.readyState,
+            playerId,
+            displayName,
+          });
+          return;
+        }
+
+        console.warn(`[usePartyKitRoom] ⚠️ Socket not OPEN (readyState: ${socketRef.current.readyState}), retry ${attempt}/${maxAttempts} in 50ms`);
+
+        setTimeout(() => {
+          if (socketRef.current && playerId && displayName) {
+            sendJoin({ ...options, _attempt: attempt + 1 });
+          }
+        }, 50);
+        return;
+      }
+
+      // Socket is OPEN, send the join message
       const storedToken = options?.token ?? getSessionToken();
       const payload = {
         type: "join",
@@ -184,18 +219,22 @@ export const usePartyKitRoom = ({
         ...(options?.password ? { password: options.password } : {}),
         ...(storedToken ? { token: storedToken } : {}),
       };
+
       console.log("[usePartyKitRoom] 📤 SENDING join", {
         playerId,
         displayName,
         hasToken: !!storedToken,
         socketReadyState: socketRef.current.readyState,
+        attempt,
         timestamp: Date.now(),
       });
+
       setAuthError(null);
       socketRef.current.send(JSON.stringify(payload));
     },
     [displayName, getSessionToken, playerId]
   );
+  sendJoinRef.current = sendJoin;
 
   // ============================================================================
   // MESSAGE HANDLER
@@ -311,9 +350,13 @@ export const usePartyKitRoom = ({
         }
 
         case "show_scores": {
-          // Rediriger vers la page scores
           if (message.roomId && typeof window !== "undefined") {
-            navigateToUrl(`/scores/${message.roomId}`);
+            const url = `/scores/${message.roomId}`;
+            if (navigateClient) {
+              navigateClient(url);
+            } else {
+              navigateToUrl(url);
+            }
           }
           return;
         }
@@ -339,9 +382,13 @@ export const usePartyKitRoom = ({
               params.set("host", "1");
             }
 
-            // Utiliser navigateToUrl pour garantir un état propre lors de la redirection
-            // Le callback onRedirect sera appelé automatiquement par navigateToUrl
-            navigateToUrl(`/room/${message.roomId}?${params.toString()}`, onRedirect);
+            const url = `/room/${message.roomId}?${params.toString()}`;
+            if (navigateClient) {
+              onRedirect?.();
+              navigateClient(url);
+            } else {
+              navigateToUrl(url, onRedirect);
+            }
           }
           return;
         }
@@ -366,6 +413,7 @@ export const usePartyKitRoom = ({
     [
       currentSongId,
       displayName,
+      navigateClient,
       playerId,
       room.hostId,
       room.state,
@@ -393,13 +441,70 @@ export const usePartyKitRoom = ({
     }
 
     connectionKeyRef.current = key;
+    socketOpenSentRef.current = false;
+
+    // Callback appelé par le Provider quand la socket s'ouvre (fix: listener "open" du hook pas appelé, readyState pas mis à jour sur PartySocket)
+    const onOpenFromProvider = (openedSocket: PartySocket) => {
+      if (socketOpenSentRef.current) return;
+      socketOpenSentRef.current = true;
+      console.log("[usePartyKitRoom] socket_open via PROVIDER CALLBACK", { roomId, playerId, timestamp: Date.now() });
+
+      // FIX: The useEffect attached listeners on `socket`, but we need them on `openedSocket`
+      // If socket !== openedSocket, messages will be sent/received on different instances
+      // Solution: Always use openedSocket for everything
+      socketRef.current = openedSocket;
+
+      send({ type: "socket_open" });
+      setIsAuthenticated(false);
+      setAuthRequired(false);
+      setAuthError(null);
+
+      // Send join message
+      if (!playerId || !displayName) return;
+
+      const storedToken = getSessionToken();
+      const payload = {
+        type: "join",
+        playerId,
+        displayName,
+        ...(initialPasswordRef.current ? { password: initialPasswordRef.current } : {}),
+        ...(storedToken ? { token: storedToken } : {}),
+      };
+
+      console.log("[usePartyKitRoom] 📤 SENDING join (via Provider socket)", {
+        playerId,
+        displayName,
+        hasToken: !!storedToken,
+        socketReadyState: openedSocket.readyState,
+        timestamp: Date.now(),
+      });
+
+      openedSocket.send(JSON.stringify(payload));
+
+      // FIX: Manually handle join_success since listeners may be on a different socket instance
+      // Listen for the first "message" event on openedSocket to get join_success
+      const tempMessageHandler = (event: MessageEvent) => {
+        try {
+          const message = JSON.parse(event.data) as IncomingMessage;
+          console.log("[usePartyKitRoom] 📨 MESSAGE via Provider socket", { type: message.type, timestamp: Date.now() });
+          handleMessageRef.current?.(message);
+        } catch (error) {
+          console.error("[usePartyKitRoom] Invalid message:", error);
+        }
+      };
+
+      openedSocket.addEventListener("message", tempMessageHandler);
+
+      // Cleanup: remove temp handler when component unmounts (will be handled by useEffect cleanup)
+    };
 
     const partyHost =
       process.env.NEXT_PUBLIC_PARTYKIT_HOST || "127.0.0.1:1999";
     const managedSocket = partyKitProvider?.getSocket(
       roomId,
       playerId,
-      displayName
+      displayName,
+      onOpenFromProvider
     );
     const socket =
       socketRef.current && connectionKeyRef.current === key
@@ -413,6 +518,8 @@ export const usePartyKitRoom = ({
           });
 
     const handleOpen = () => {
+      // WORKAROUND: si le polling readyState a déjà envoyé socket_open, ne pas double-envoyer
+      if (socketOpenSentRef.current) return;
       // Éviter le double appel UNIQUEMENT si on a déjà des songs dans le state
       // (car la socket peut être réutilisée entre la waiting room et la page de jeu)
       const hasSongs = (room.songs?.length ?? 0) > 0;
@@ -428,6 +535,7 @@ export const usePartyKitRoom = ({
         return;
       }
       socketWithFlag.__handleOpenCalled = true;
+      socketOpenSentRef.current = true;
       console.log("[usePartyKitRoom] 🔌 socket_open handler called", {
         roomId,
         playerId,
@@ -437,6 +545,7 @@ export const usePartyKitRoom = ({
         songsCount: room.songs?.length ?? 0,
         timestamp: Date.now(),
       });
+      console.log("[usePartyKitRoom] socket_open via EVENT");
       send({ type: "socket_open" });
       setIsAuthenticated(false);
       setAuthRequired(false);
@@ -483,6 +592,12 @@ export const usePartyKitRoom = ({
     // ⚠️ IMPORTANT: Assigner socketRef AVANT d'appeler handleOpen() si la socket est déjà ouverte
     // Sinon sendJoin() ne trouvera pas socketRef.current et ne pourra pas envoyer le join
     socketRef.current = socket;
+    console.log("[usePartyKitRoom] 🔌 socketRef assigned", {
+      roomId,
+      playerId,
+      readyState: socket.readyState,
+      timestamp: Date.now(),
+    });
 
     // Si la socket est déjà ouverte (réutilisée), envoyer le join immédiatement
     if (socket.readyState === WebSocket.OPEN) {
@@ -508,14 +623,64 @@ export const usePartyKitRoom = ({
       socket.removeEventListener("message", handleMessageEvent);
       socket.removeEventListener("close", handleClose);
       socket.removeEventListener("error", handleError);
-      if (!managedSocket && socketRef.current === socket) {
+      if (managedSocket && partyKitProvider?.closeSocket) {
+        partyKitProvider.closeSocket(roomId);
+      } else if (!managedSocket && socketRef.current === socket) {
         socket.close();
         socketRef.current = null;
       }
       connectionKeyRef.current = null;
       send({ type: "socket_close" });
     };
-  }, [roomId, playerId, displayName, partyKitProvider, send, sendJoin, room.songs?.length]);
+    // getSessionToken utilisé dans onOpenFromProvider. room.songs volontairement omis (évite re-run à chaque state_sync).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, playerId, displayName, partyKitProvider, send, sendJoin, getSessionToken]);
+
+  // WORKAROUND: listener 'open' not always triggered after room→game nav; see docs/AUDIT §11 + v2 root cause.
+  // Poll readyState until OPEN; when OPEN and machine not connected, send socket_open once (fallback to event handler).
+  // Refs for send/sendJoin to avoid effect re-run (and clearing interval) when those identities change.
+  useEffect(() => {
+    if (!roomId || !playerId || isConnected) return;
+    console.log("[usePartyKitRoom] 📡 polling effect started", { roomId, playerId, timestamp: Date.now() });
+    let tickCount = 0;
+    const id = setInterval(() => {
+      const socket = socketRef.current;
+      tickCount += 1;
+      if (!socket) {
+        if (tickCount <= 3 || tickCount % 20 === 0) {
+          console.log("[usePartyKitRoom] 📡 polling tick: no socket yet", { tick: tickCount, timestamp: Date.now() });
+        }
+        return;
+      }
+      if (socket.readyState !== WebSocket.OPEN) {
+        if (tickCount <= 3 || tickCount % 20 === 0) {
+          console.log("[usePartyKitRoom] 📡 polling tick: waiting for OPEN", {
+            tick: tickCount,
+            readyState: socket.readyState,
+            timestamp: Date.now(),
+          });
+        }
+        return;
+      }
+      if (socketOpenSentRef.current) return;
+      socketOpenSentRef.current = true;
+      console.log("[usePartyKitRoom] socket_open via READYSTATE POLLING", {
+        roomId,
+        playerId,
+        tick: tickCount,
+        timestamp: Date.now(),
+      });
+      sendRef.current({ type: "socket_open" });
+      setIsAuthenticated(false);
+      setAuthRequired(false);
+      setAuthError(null);
+      sendJoinRef.current({ password: initialPasswordRef.current });
+    }, 100);
+    return () => {
+      console.log("[usePartyKitRoom] 📡 polling effect cleanup", { roomId, playerId, tickCount, timestamp: Date.now() });
+      clearInterval(id);
+    };
+  }, [roomId, playerId, isConnected]);
 
   // ============================================================================
   // ACTIONS

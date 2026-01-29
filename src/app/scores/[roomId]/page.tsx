@@ -31,6 +31,7 @@ export default function MultiScoresPage() {
           roomId,
           playerId: queryPlayerId || playerId,
           displayName: queryDisplayName || displayName || `Joueur-${playerId.slice(0, 4)}`,
+          navigate: (url) => router.push(url),
         }
       : {}
   );

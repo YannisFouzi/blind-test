@@ -19,7 +19,6 @@ import type { MysteryEffectsConfig } from "@/types";
 import { useAudioPlayer, useDoubleAudioPlayer } from "@/features/audio-player";
 import { WorkSelector, DoubleWorkSelector } from "@/components/game";
 import { PointsCelebration } from "@/components/game/PointsCelebration";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { cn } from "@/lib/utils";
 import { pressable } from "@/styles/ui";
@@ -372,19 +371,6 @@ export const SoloGameClient = ({
     [effectiveDuration, effectiveCurrentTime]
   );
 
-  if (game.loading) {
-    return (
-      <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center">
-        <div className="text-center">
-          <LoadingSpinner />
-          <p className="text-[var(--color-text-primary)] mt-4 font-semibold">
-            Chargement de l&apos;univers...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if (game.error) {
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center p-6">
@@ -399,7 +385,7 @@ export const SoloGameClient = ({
     );
   }
 
-  if (game.works.length === 0) {
+  if (!game.loading && game.works.length === 0) {
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center p-6">
         <div className="text-center">
@@ -445,7 +431,7 @@ export const SoloGameClient = ({
       <div className="container mx-auto px-4 py-8 pb-24 relative z-10">
         <div className="flex flex-col items-center justify-center gap-4 min-h-[calc(100svh-220px)] sm:min-h-[calc(100svh-240px)] md:min-h-[calc(100svh-280px)]">
           <div className="w-full flex justify-center">
-            {isDoubleMode && currentRoundSongs.length >= 1 ? (
+            {game.loading ? null : isDoubleMode && currentRoundSongs.length >= 1 ? (
               <DoubleWorkSelector
                 works={works}
                 roundSongs={currentRoundSongs}
@@ -487,6 +473,7 @@ export const SoloGameClient = ({
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#FBCFE8]/40 rounded-full blur-3xl" />
       </div>
 
+      {!game.loading && (
       <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
         <div className="player-dome mx-auto w-[calc(100%-1.5rem)] sm:w-[calc(100%-3rem)] max-w-6xl bg-white border-[3px] border-b-0 border-[#1B1B1B] shadow-[0_-6px_0_#1B1B1B] pointer-events-auto overflow-hidden">
           <div className="px-4 py-3 sm:px-6 sm:py-4">
@@ -613,12 +600,13 @@ export const SoloGameClient = ({
           </div>
         </div>
       </div>
+      )}
 
-      {effectiveError && (
+      {!game.loading && effectiveError && (
         <div className="mt-4 text-center text-sm text-red-600">{effectiveError}</div>
       )}
 
-      {playbackUnavailable && (
+      {!game.loading && playbackUnavailable && (
         <div className="mt-4 text-center text-sm text-[var(--color-text-secondary)]">
           Aucun extrait audio n&apos;est disponible pour ce morceau.
         </div>

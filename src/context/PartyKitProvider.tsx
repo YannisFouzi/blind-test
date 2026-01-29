@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode }
 import PartySocket from "partysocket";
 
 type PartyKitContextValue = {
-  getSocket: (roomId: string, playerId: string, displayName: string) => PartySocket;
+  getSocket: (roomId: string, playerId: string, displayName: string, onOpen?: (socket: PartySocket) => void) => PartySocket;
   closeSocket: (roomId: string) => void;
 };
 
@@ -14,10 +14,17 @@ export const PartyKitProvider = ({ children }: { children: ReactNode }) => {
   const socketsRef = useRef<Map<string, PartySocket>>(new Map());
 
   const value = useMemo<PartyKitContextValue>(() => {
-    const getSocket = (roomId: string, playerId: string, displayName: string) => {
+    const getSocket = (roomId: string, playerId: string, displayName: string, onOpen?: (socket: PartySocket) => void) => {
       const key = `${roomId}|${playerId}`;
       const existing = socketsRef.current.get(key);
       if (existing) {
+        if (onOpen) {
+          if (existing.readyState === WebSocket.OPEN) {
+            onOpen(existing);
+          } else {
+            existing.addEventListener("open", () => onOpen(existing), { once: true });
+          }
+        }
         return existing;
       }
 
@@ -28,9 +35,11 @@ export const PartyKitProvider = ({ children }: { children: ReactNode }) => {
         party: "game",
       });
 
-      // Log minimal pour suivre l'état de la connexion partagée
+      // Log minimal + callback hook (fix room→game: listener "open" du hook pas appelé, readyState pas mis à jour sur PartySocket)
       socket.addEventListener("open", () => {
         console.info("[PartyKitProvider] socket open", { roomId, playerId, displayName });
+        // FIX: Pass the socket to callback so it can use it directly (readyState of wrapper is not synced)
+        onOpen?.(socket);
       });
       socket.addEventListener("close", (event) => {
         console.info("[PartyKitProvider] socket close", {

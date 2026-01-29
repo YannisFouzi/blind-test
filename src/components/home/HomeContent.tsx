@@ -36,15 +36,16 @@ export const HomeContent = () => {
   const { user } = useAuth();
   const { universes, loading: universesLoading, error: universesError } = useUniverses();
 
-  // Hook PartyKit Lobby pour les rooms en temps rÃ©el
+  const [mode, setMode] = useState<Mode>("solo");
+
+  // Hook PartyKit Lobby : ne connecter qu'en mode multi (évite une connexion inutile en solo)
   const {
     rooms: partyKitRooms,
     isConnected: lobbyConnected,
     createRoom: createPartyKitRoom,
     error: lobbyError,
-  } = usePartyKitLobby();
+  } = usePartyKitLobby({ enabled: mode === "multi" });
 
-  const [mode, setMode] = useState<Mode>("solo");
   const { playerId, displayName: storedDisplayName, ready: identityReady, setIdentity } = useIdentity();
   const playerIdRef = useRef<string>("");
   const setPendingPassword = useRoomAuthStore((state) => state.setPendingPassword);

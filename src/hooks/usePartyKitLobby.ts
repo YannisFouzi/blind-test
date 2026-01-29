@@ -17,11 +17,20 @@ export interface RoomMetadata {
   hasPassword?: boolean;
 }
 
+export interface UsePartyKitLobbyOptions {
+  /**
+   * Si false, aucune connexion WebSocket au lobby n'est établie.
+   * Utile pour ne connecter qu'en mode multi (évite une connexion inutile en solo).
+   * @default true
+   */
+  enabled?: boolean;
+}
+
 /**
  * Hook amélioré pour gérer le Lobby PartyKit
  *
  * Fonctionnalités :
- * - Connexion temps réel au Lobby Party
+ * - Connexion temps réel au Lobby Party (uniquement si enabled)
  * - Affichage de la liste des rooms disponibles
  * - Création de room (génération d'ID unique)
  * - État de connexion et erreurs
@@ -29,6 +38,10 @@ export interface RoomMetadata {
  * Remplace complètement les fonctions Firebase :
  * - subscribeIdleRooms() → rooms en temps réel
  * - createRoom() → createRoom() locale (pas d'appel serveur)
+ *
+ * @example
+ * // Ne connecter le lobby qu'en mode multi
+ * const { rooms, isConnected, createRoom } = usePartyKitLobby({ enabled: mode === "multi" });
  *
  * @example
  * function Lobby() {
@@ -47,7 +60,9 @@ export interface RoomMetadata {
  *   );
  * }
  */
-export const usePartyKitLobby = () => {
+export const usePartyKitLobby = (options: UsePartyKitLobbyOptions = {}) => {
+  const { enabled = true } = options;
+
   // ============================================================================
   // STATE
   // ============================================================================
@@ -58,10 +73,17 @@ export const usePartyKitLobby = () => {
   const [error, setError] = useState<string | null>(null);
 
   // ============================================================================
-  // WEBSOCKET CONNECTION - LOBBY
+  // WEBSOCKET CONNECTION - LOBBY (uniquement si enabled)
   // ============================================================================
 
   useEffect(() => {
+    if (!enabled) {
+      setRooms([]);
+      setIsConnected(false);
+      setError(null);
+      return;
+    }
+
     // Configuration de l'hôte PartyKit
     const partyHost =
       process.env.NEXT_PUBLIC_PARTYKIT_HOST || "http://127.0.0.1:1999";
@@ -105,11 +127,11 @@ export const usePartyKitLobby = () => {
       setError("Erreur de connexion au lobby");
     });
 
-    // Cleanup: Fermer la connexion au démontage du composant
+    // Cleanup: Fermer la connexion au démontage ou quand enabled passe à false
     return () => {
       socket.close();
     };
-  }, []); // Pas de dépendances : se connecte une seule fois
+  }, [enabled]);
 
   // ============================================================================
   // ACTIONS
