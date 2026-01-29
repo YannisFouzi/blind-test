@@ -36,6 +36,7 @@ export const SoloGameClient = ({
   universeId,
   allowedWorks,
   maxSongs,
+  worksPerRound,
   noSeek = false,
   mysteryEffectsConfig,
 }: SoloGameClientProps) => {
@@ -108,6 +109,7 @@ export const SoloGameClient = ({
     universeId,
     allowedWorks,
     maxSongs,
+    worksPerRound,
     preloadNextTrack: (song) => {
       // Précharger l'URL normale (le reverse sera chargé à la volée si nécessaire)
       if (song.audioUrl) {

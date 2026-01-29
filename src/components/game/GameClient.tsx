@@ -80,6 +80,7 @@ export function GameClient({ universeId }: GameClientProps) {
   const queryNoSeek = searchParams?.get("noseek") === "1";
   const queryWorks = searchParams?.get("works") || "";
   const queryMaxSongs = searchParams?.get("maxsongs");
+  const queryWorksPerRound = searchParams?.get("wpr");
   const queryMysteryEnabled = searchParams?.get("me") === "1";
   const queryMysteryFrequency = searchParams?.get("mef");
   const queryMysteryEffects = searchParams?.get("mee") || "";
@@ -123,6 +124,13 @@ export function GameClient({ universeId }: GameClientProps) {
     () => (queryMaxSongs ? parseInt(queryMaxSongs, 10) : undefined),
     [queryMaxSongs]
   );
+
+  const worksPerRound = useMemo(() => {
+    if (!queryWorksPerRound) return undefined;
+    const n = parseInt(queryWorksPerRound, 10);
+    if (Number.isNaN(n)) return undefined;
+    return Math.max(2, Math.min(8, n));
+  }, [queryWorksPerRound]);
 
   const mysteryEffectsConfig = useMemo(() => {
     if (!queryMysteryEnabled) return undefined;
@@ -176,6 +184,7 @@ export function GameClient({ universeId }: GameClientProps) {
       universeId={universeId}
       allowedWorks={allowedWorks}
       maxSongs={maxSongs}
+      worksPerRound={worksPerRound}
       noSeek={queryNoSeek}
       mysteryEffectsConfig={mysteryEffectsConfig}
     />

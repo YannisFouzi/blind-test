@@ -180,9 +180,6 @@ const UniverseGridComponent = ({
               <h2 className="text-center text-2xl font-extrabold uppercase tracking-wide text-[var(--color-text-primary)]">
                 Mode aléatoire
               </h2>
-              <p className="text-center text-sm text-[var(--color-text-secondary)]">
-                Choisis un pool d&apos;œuvres ; à chaque manche, un tirage aléatoire affiche 5 à 8 choix.
-              </p>
               <div className="flex justify-center">
                 <button
                   type="button"

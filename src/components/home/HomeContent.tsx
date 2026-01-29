@@ -9,7 +9,7 @@ import { HomePageSkeleton } from "@/components/home/HomePageSkeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useUniverses } from "@/hooks/useUniverses";
 import { CUSTOM_UNIVERSE, MAX_WORKS_CUSTOM_MODE } from "@/hooks/useUniverseCustomization";
-import { RANDOM_UNIVERSE, WORKS_PER_ROUND_DEFAULT } from "@/constants/gameModes";
+import { RANDOM_UNIVERSE_ID, RANDOM_UNIVERSE, WORKS_PER_ROUND_DEFAULT } from "@/constants/gameModes";
 import { useGameConfiguration, useRoomAuthStore } from "@/stores";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -66,6 +66,7 @@ export const HomeContent = () => {
     allowedWorks: customAllowedWorks,
     noSeek: customNoSeek,
     maxSongs: customMaxSongs,
+    worksPerRound: customWorksPerRound,
     mysteryEffects,
     openCustomize: openCustomizeStore,
     closeCustomize,
@@ -314,12 +315,13 @@ export const HomeContent = () => {
     const savedAllowedWorks = [...customAllowedWorks];
     const savedNoSeek = customNoSeek;
     const savedMaxSongs = customMaxSongs;
-    
-    // DÃ©terminer si c'est le mode custom (toutes les Å“uvres)
+    const savedWorksPerRound = customWorksPerRound ?? null;
+
+    // Déterminer si c'est le mode custom (toutes les œuvres) ou aléatoire
     const isCustomModeActive = customizingUniverse.id === CUSTOM_UNIVERSE.id;
-    // En mode custom, on utilise "__custom__" comme universeId
-    const universeId = isCustomModeActive ? "__custom__" : customizingUniverse.id;
-    
+    const isRandomModeActive = customizingUniverse.id === RANDOM_UNIVERSE_ID;
+    const universeId = isCustomModeActive ? "__custom__" : isRandomModeActive ? "__random__" : customizingUniverse.id;
+
     closeCustomize();
 
     const ensuredPlayerId = ensurePlayerId();
@@ -345,6 +347,11 @@ export const HomeContent = () => {
         params.set("me", "1");
         params.set("mef", String(savedMysteryEffects.frequency));
         params.set("mee", savedMysteryEffects.selectedEffects.join(","));
+      }
+
+      // Mode aléatoire solo : nombre d'œuvres par manche (2–8)
+      if (isRandomModeActive && savedWorksPerRound != null) {
+        params.set("wpr", String(Math.max(2, Math.min(8, savedWorksPerRound))));
       }
 
       router.push(`/game/${universeId}?${params.toString()}`);
@@ -392,6 +399,7 @@ export const HomeContent = () => {
     customAllowedWorks,
     customNoSeek,
     customMaxSongs,
+    customWorksPerRound,
     mysteryEffects,
     router,
     displayName,

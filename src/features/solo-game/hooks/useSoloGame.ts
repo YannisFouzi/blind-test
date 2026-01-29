@@ -11,7 +11,7 @@ import type {
 } from "@/types";
 import { getSongsByWork, getWorksByUniverse, getWorksByIds } from "@/services/firebase";
 import { RANDOM_UNIVERSE_ID } from "@/constants/gameModes";
-import { generateId, shuffleArray } from "@/utils/formatters";
+import { generateId, shuffleArray, shuffleWithSeed } from "@/utils/formatters";
 import { calculateGameRounds, getCurrentRound } from "@/utils/mysteryEffects";
 
 /**
@@ -34,6 +34,8 @@ export interface UseSoloGameOptions {
 
   /** Nombre maximum de chansons */
   maxSongs?: number;
+  /** Mode aléatoire solo : nombre d'œuvres affichées par manche (2–8), depuis URL ?wpr= */
+  worksPerRound?: number;
   /**
    * Configuration des effets mystères (optionnelle).
    * Si non fournie ou disabled, le jeu reste en mode "normal".
@@ -71,6 +73,7 @@ export const useSoloGame = ({
   preloadNextTrack,
   allowedWorks,
   maxSongs,
+  worksPerRound,
   mysteryEffectsConfig,
 }: UseSoloGameOptions) => {
   // État principal
@@ -725,6 +728,30 @@ export const useSoloGame = ({
     [gameSession, showAnswer]
   );
 
+  // Mode aléatoire solo : X œuvres par manche (dont la bonne), ordre déterministe par chanson
+  const currentSongIndex = gameSession?.currentSongIndex ?? 0;
+  const displayWorks = useMemo(() => {
+    if (!worksPerRound || !currentSong || works.length === 0) {
+      if (process.env.NODE_ENV === "development" && universeId === RANDOM_UNIVERSE_ID && works.length > 0 && !worksPerRound) {
+        console.warn("[SOLO-GAME] worksPerRound non passé en mode aléatoire → affichage des", works.length, "œuvres (pas d'échantillonnage)");
+      }
+      return works;
+    }
+    const correctId = currentSong.workId;
+    const wrongWorks = works.filter((w) => w.id !== correctId);
+    const count = Math.min(worksPerRound - 1, wrongWorks.length);
+    const seed = `${currentSongIndex}-${currentSong.id}`;
+    const shuffledWrong = shuffleWithSeed([...wrongWorks], seed);
+    const selectedWrong = shuffledWrong.slice(0, count);
+    const correctWork = works.find((w) => w.id === correctId);
+    const pool = correctWork ? [correctWork, ...selectedWrong] : selectedWrong;
+    const result = shuffleWithSeed(pool, `${seed}-final`);
+    if (process.env.NODE_ENV === "development") {
+      console.info("[SOLO-GAME] worksPerRound actif", { worksPerRound, currentSongIndex, displayCount: result.length, totalWorks: works.length });
+    }
+    return result;
+  }, [works, worksPerRound, currentSong, currentSongIndex, universeId]);
+
   // ========================================
   // RETURN
   // ========================================
@@ -732,7 +759,7 @@ export const useSoloGame = ({
   return {
     // État
     gameSession,
-    works,
+    works: displayWorks,
     currentSong,
     selectedWork,
     gameAnswer,

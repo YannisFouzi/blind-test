@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { usePartyKitRoom } from "@/hooks/usePartyKitRoom";
 import { CUSTOM_UNIVERSE, MAX_WORKS_CUSTOM_MODE } from "@/hooks/useUniverseCustomization";
+import { RANDOM_UNIVERSE_ID, RANDOM_UNIVERSE, WORKS_PER_ROUND_DEFAULT } from "@/constants/gameModes";
 import { useGameConfiguration, useRoomAuthStore } from "@/stores";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -111,9 +112,11 @@ export default function WaitingRoomPage() {
     allowedWorkNames: customAllowedWorkNames,
     noSeek: customNoSeek,
     maxSongs: customMaxSongs,
+    worksPerRound: customWorksPerRound,
     effectiveSongsForPreview,
     totalWorksInUniverse,
     isCustomMode,
+    isRandomMode,
     mysteryEffects,
     openCustomize: openCustomizeStore,
     closeCustomize,
@@ -169,6 +172,7 @@ export default function WaitingRoomPage() {
       allWorksSelected: allWorksSelected || undefined,
       maxSongs: maxSongsValue,
       totalSongs: totalSongsValue,
+      worksPerRound: isRandomMode && customWorksPerRound != null ? customWorksPerRound : undefined,
     });
   }, [
     isHostEffective,
@@ -183,12 +187,21 @@ export default function WaitingRoomPage() {
     totalWorksInUniverse,
     effectiveSongsForPreview,
     customMaxSongs,
+    isRandomMode,
+    customWorksPerRound,
   ]);
 
   const openCustomMode = useCallback(() => {
     openCustomizeStore(CUSTOM_UNIVERSE, {
       isCustomMode: true,
       maxWorksAllowed: MAX_WORKS_CUSTOM_MODE,
+    });
+  }, [openCustomizeStore]);
+
+  const openRandomMode = useCallback(() => {
+    openCustomizeStore(RANDOM_UNIVERSE, {
+      isRandomMode: true,
+      worksPerRound: WORKS_PER_ROUND_DEFAULT,
     });
   }, [openCustomizeStore]);
 
@@ -208,21 +221,26 @@ export default function WaitingRoomPage() {
     const savedNoSeek = customNoSeek;
     const savedMaxSongs = customMaxSongs;
     const savedIsCustomMode = isCustomMode;
+    const savedIsRandomMode = isRandomMode || customizingUniverse.id === RANDOM_UNIVERSE_ID;
+    const savedWorksPerRound = customWorksPerRound ?? (savedIsRandomMode ? WORKS_PER_ROUND_DEFAULT : undefined);
 
-    // Déterminer si c'est le mode custom
     const isCustomModeActive = savedIsCustomMode || customizingUniverse.id === CUSTOM_UNIVERSE.id;
-    const universeId = isCustomModeActive ? CUSTOM_UNIVERSE.id : customizingUniverse.id;
-    
+    const isRandomModeActive = savedIsRandomMode;
+    const universeId = isRandomModeActive
+      ? RANDOM_UNIVERSE_ID
+      : isCustomModeActive
+        ? CUSTOM_UNIVERSE.id
+        : customizingUniverse.id;
+
     closeCustomize();
     setIsConfiguringRoom(true);
     setConfigError(null);
 
     try {
-      // En mode custom, on utilise TOUJOURS les works sélectionnés (pas de fallback)
-      // En mode normal, si aucune sélection spécifique, on utilise tous les works
-      const worksResult = isCustomModeActive
-        ? await getAllWorks()
-        : await getWorksByUniverse(customizingUniverse.id);
+      const worksResult =
+        isCustomModeActive || isRandomModeActive
+          ? await getAllWorks()
+          : await getWorksByUniverse(customizingUniverse.id);
 
       if (!worksResult.success || !worksResult.data || worksResult.data.length === 0) {
         setConfigError("Aucune oeuvre trouvée");
@@ -268,12 +286,12 @@ export default function WaitingRoomPage() {
         : shuffled.length;
       const selectedSongs = shuffled.slice(0, maxCount);
 
-      // En mode custom, on passe TOUJOURS les allowedWorkIds
-      const allowedWorkIds = isCustomModeActive
-        ? savedAllowedWorks
-        : (savedAllowedWorks.length > 0 && savedAllowedWorks.length !== availableWorks.length
+      const allowedWorkIds =
+        isCustomModeActive || isRandomModeActive
+          ? savedAllowedWorks
+          : savedAllowedWorks.length > 0 && savedAllowedWorks.length !== availableWorks.length
             ? savedAllowedWorks
-            : undefined);
+            : undefined;
 
       // Effets mystères pour mode multi
       const mysteryEffectsConfig =
@@ -299,7 +317,14 @@ export default function WaitingRoomPage() {
         return;
       }
 
-      await configureRoom(universeId, selectedSongs, allowedWorkIds, { noSeek: savedNoSeek }, mysteryEffectsConfig);
+      await configureRoom(
+        universeId,
+        selectedSongs,
+        allowedWorkIds,
+        { noSeek: savedNoSeek },
+        mysteryEffectsConfig,
+        savedWorksPerRound ?? undefined
+      );
 
       if (startGame) {
         await startGame();
@@ -317,9 +342,11 @@ export default function WaitingRoomPage() {
     customAllowedWorks,
     customNoSeek,
     customMaxSongs,
+    customWorksPerRound,
     mysteryEffects,
     closeCustomize,
     isCustomMode,
+    isRandomMode,
   ]);
 
   // Handler pour quand le HOST clique sur un univers (sans personnalisation)
@@ -540,6 +567,7 @@ export default function WaitingRoomPage() {
               onSelect={handleUniverseClick}
               onCustomize={openCustomize}
               onCustomMode={openCustomMode}
+              onRandomMode={openRandomMode}
               error={null}
             />
           )}
@@ -624,7 +652,8 @@ export default function WaitingRoomPage() {
             (hostPreview.allowedWorks?.length ?? 0) > 0 ||
             (hostPreview.allowedWorkNames?.length ?? 0) > 0 ||
             hostPreview.maxSongs != null ||
-            hostPreview.totalSongs != null) && (
+            hostPreview.totalSongs != null ||
+            hostPreview.worksPerRound != null) && (
           <div className="max-w-lg mx-auto bg-white border-[3px] border-[#1B1B1B] rounded-2xl p-4 shadow-[3px_3px_0_#1B1B1B]">
             {/* Titre avec barre d’accent brand */}
             <div className="flex items-center gap-2 mb-3">
@@ -680,6 +709,18 @@ export default function WaitingRoomPage() {
                       </span>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Œuvres par manche (mode aléatoire) */}
+              {hostPreview.worksPerRound != null && (
+                <div className="flex items-center justify-between gap-2 flex-wrap bg-[var(--color-surface-overlay)] px-3 py-2 rounded-xl border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                    Œuvres par manche
+                  </span>
+                  <span className="px-2 py-0.5 text-sm font-bold bg-emerald-100 border-2 border-[#1B1B1B] rounded-lg shadow-[2px_2px_0_#1B1B1B] text-[var(--color-text-primary)]">
+                    {hostPreview.worksPerRound} choix
+                  </span>
                 </div>
               )}
 
