@@ -11,7 +11,6 @@ interface HeroSectionProps {
 export const HeroSection = ({
   isAdmin,
   onAdminClick,
-  showSubtitle = true,
 }: HeroSectionProps) => {
   return (
     <>
@@ -26,19 +25,8 @@ export const HeroSection = ({
           </button>
         )}
         <h1 className="fantasy-text text-5xl md:text-7xl font-bold mb-4">
-          BLIND TEST
+          ULTIMATE BLIND TEST
         </h1>
-        <div className="flex items-center justify-center gap-3 mb-5">
-          <div className="w-12 h-1 bg-black rounded-full" />
-          <StarIcon className="text-yellow-400 w-5 h-5" />
-          <div className="w-12 h-1 bg-black rounded-full" />
-        </div>
-        {showSubtitle && (
-          <p className="text-lg md:text-xl text-[var(--color-text-secondary)] max-w-3xl mx-auto leading-relaxed">
-            Plongez dans vos univers favoris et testez vos connaissances
-            musicales !
-          </p>
-        )}
       </div>
     </>
   );

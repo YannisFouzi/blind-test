@@ -5,6 +5,11 @@ import { Play as PlayIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Universe } from "@/types";
 import { generateStylesFromColor } from "@/utils/colorGenerator";
+import {
+  getUniverseBackgroundImage,
+  CUSTOM_UNIVERSE_ID,
+  RANDOM_UNIVERSE_ID,
+} from "@/constants/gameModes";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { pressable } from "@/styles/ui";
 
@@ -19,13 +24,33 @@ interface UniverseGridProps {
 
 const DEFAULT_COLOR = "#3B82F6";
 
+/** Taille fixe pour toutes les cartes (même hauteur et largeur via la grille) */
+const CARD_SIZE_CLASSES =
+  "h-[280px] flex flex-col justify-between p-5 md:p-6";
+
+/** Overlay semi-transparent pour garder le texte lisible sur l'image de fond */
+const IMAGE_OVERLAY =
+  "linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.2) 40%, rgba(0,0,0,0.5) 100%)";
+
 const buildUniverseStyles = (universe: Universe) => {
   const color = universe.color.startsWith("#") ? universe.color : DEFAULT_COLOR;
   const styles = generateStylesFromColor(color);
-
+  const bgImage = getUniverseBackgroundImage(universe.id, universe.name);
   return {
     inlineStyles: styles.inlineStyles,
+    bgImage,
   };
+};
+
+const getCardBackgroundStyle = (bgImage: string | null, fallbackGradient: string) => {
+  if (bgImage) {
+    return {
+      backgroundImage: `${IMAGE_OVERLAY}, url(${bgImage})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    } as React.CSSProperties;
+  }
+  return { background: fallbackGradient } as React.CSSProperties;
 };
 
 const UniverseGridComponent = ({
@@ -102,15 +127,17 @@ const UniverseGridComponent = ({
             onFocus={() => handlePrefetch(universe.id)}
           >
             <div
-              className="relative w-full overflow-hidden rounded-3xl border-2 border-black bg-white p-5 md:p-8 text-left shadow-[4px_4px_0_#1B1B1B]"
+              className={`relative w-full overflow-hidden rounded-3xl border-2 border-black text-left shadow-[4px_4px_0_#1B1B1B] ${CARD_SIZE_CLASSES}`}
               style={{
-                background: styles.inlineStyles.background,
+                ...getCardBackgroundStyle(styles.bgImage, styles.inlineStyles.background),
                 borderColor: styles.inlineStyles.borderColor,
                 boxShadow: styles.inlineStyles.boxShadow,
               }}
             >
-              <div className="relative z-10 flex flex-col items-center gap-4">
-                <h2 className="text-center text-2xl font-extrabold uppercase tracking-wide text-[var(--color-text-primary)]">
+              <div
+                className={`relative z-10 flex flex-col items-center gap-2 flex-1 justify-center ${styles.bgImage ? "text-white [--color-text-primary:white]" : ""}`}
+              >
+                <h2 className="text-center text-2xl font-extrabold uppercase tracking-wide text-[var(--color-text-primary)] drop-shadow-md">
                   {universe.name}
                 </h2>
 
@@ -142,14 +169,14 @@ const UniverseGridComponent = ({
       {onCustomMode && (
         <article>
           <div
-            className="relative w-full overflow-hidden rounded-3xl border-2 border-black bg-white p-5 md:p-8 text-left shadow-[4px_4px_0_#1B1B1B]"
-            style={{
-              background:
-                "linear-gradient(180deg, rgba(167, 139, 250, 0.25) 0%, rgba(255, 255, 255, 0.95) 60%)",
-            }}
+            className={`relative w-full overflow-hidden rounded-3xl border-2 border-black text-left shadow-[4px_4px_0_#1B1B1B] ${CARD_SIZE_CLASSES}`}
+            style={getCardBackgroundStyle(
+              getUniverseBackgroundImage(CUSTOM_UNIVERSE_ID),
+              "linear-gradient(180deg, rgba(167, 139, 250, 0.25) 0%, rgba(255, 255, 255, 0.95) 60%)"
+            )}
           >
-            <div className="relative z-10 flex flex-col items-center gap-4">
-              <h2 className="text-center text-2xl font-extrabold uppercase tracking-wide text-[var(--color-text-primary)]">
+            <div className="relative z-10 flex flex-col items-center gap-2 flex-1 justify-center text-white [--color-text-primary:white]">
+              <h2 className="text-center text-2xl font-extrabold uppercase tracking-wide text-[var(--color-text-primary)] drop-shadow-md">
                 Mode Custom
               </h2>
 
@@ -170,14 +197,14 @@ const UniverseGridComponent = ({
       {onRandomMode && (
         <article>
           <div
-            className="relative w-full overflow-hidden rounded-3xl border-2 border-black bg-white p-5 md:p-8 text-left shadow-[4px_4px_0_#1B1B1B]"
-            style={{
-              background:
-                "linear-gradient(180deg, rgba(16, 185, 129, 0.2) 0%, rgba(255, 255, 255, 0.95) 60%)",
-            }}
+            className={`relative w-full overflow-hidden rounded-3xl border-2 border-black text-left shadow-[4px_4px_0_#1B1B1B] ${CARD_SIZE_CLASSES}`}
+            style={getCardBackgroundStyle(
+              getUniverseBackgroundImage(RANDOM_UNIVERSE_ID),
+              "linear-gradient(180deg, rgba(16, 185, 129, 0.2) 0%, rgba(255, 255, 255, 0.95) 60%)"
+            )}
           >
-            <div className="relative z-10 flex flex-col items-center gap-4">
-              <h2 className="text-center text-2xl font-extrabold uppercase tracking-wide text-[var(--color-text-primary)]">
+            <div className="relative z-10 flex flex-col items-center gap-2 flex-1 justify-center text-white [--color-text-primary:white]">
+              <h2 className="text-center text-2xl font-extrabold uppercase tracking-wide text-[var(--color-text-primary)] drop-shadow-md">
                 Mode aléatoire
               </h2>
               <div className="flex justify-center">
