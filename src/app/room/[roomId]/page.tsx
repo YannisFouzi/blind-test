@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { usePartyKitRoom } from "@/hooks/usePartyKitRoom";
 import { CUSTOM_UNIVERSE, MAX_WORKS_CUSTOM_MODE } from "@/hooks/useUniverseCustomization";
-import { RANDOM_UNIVERSE_ID, RANDOM_UNIVERSE, WORKS_PER_ROUND_DEFAULT } from "@/constants/gameModes";
+import { RANDOM_UNIVERSE_ID, WORKS_PER_ROUND_DEFAULT } from "@/constants/gameModes";
 import { useGameConfiguration, useRoomAuthStore } from "@/stores";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
@@ -195,13 +195,6 @@ export default function WaitingRoomPage() {
     openCustomizeStore(CUSTOM_UNIVERSE, {
       isCustomMode: true,
       maxWorksAllowed: MAX_WORKS_CUSTOM_MODE,
-    });
-  }, [openCustomizeStore]);
-
-  const openRandomMode = useCallback(() => {
-    openCustomizeStore(RANDOM_UNIVERSE, {
-      isRandomMode: true,
-      worksPerRound: WORKS_PER_ROUND_DEFAULT,
     });
   }, [openCustomizeStore]);
 
@@ -567,7 +560,6 @@ export default function WaitingRoomPage() {
               onSelect={handleUniverseClick}
               onCustomize={openCustomize}
               onCustomMode={openCustomMode}
-              onRandomMode={openRandomMode}
               error={null}
             />
           )}

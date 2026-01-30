@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useState } from "react";
 import { getWorksByUniverse, getSongsByWork, getAllWorks } from "@/services/firebase";
 import type { Universe, Work } from "@/types";
+import { CUSTOM_UNIVERSE_ID, MAX_WORKS_CUSTOM_MODE } from "@/constants/gameModes";
 
-// Univers virtuel pour le mode custom
+// Univers virtuel pour le mode custom (réutilisé partout)
 export const CUSTOM_UNIVERSE: Universe = {
-  id: "__custom__",
+  id: CUSTOM_UNIVERSE_ID,
   name: "Mode Custom",
   description: "Sélectionnez jusqu'à 8 œuvres parmi tous les univers",
   color: "#8B5CF6",
@@ -12,7 +13,7 @@ export const CUSTOM_UNIVERSE: Universe = {
   createdAt: new Date(),
 };
 
-export const MAX_WORKS_CUSTOM_MODE = 8;
+export { MAX_WORKS_CUSTOM_MODE };
 
 export interface UniverseCustomizationState {
   customizingUniverse: Universe | null;

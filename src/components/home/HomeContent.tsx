@@ -9,7 +9,7 @@ import { HomePageSkeleton } from "@/components/home/HomePageSkeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useUniverses } from "@/hooks/useUniverses";
 import { CUSTOM_UNIVERSE, MAX_WORKS_CUSTOM_MODE } from "@/hooks/useUniverseCustomization";
-import { RANDOM_UNIVERSE_ID, RANDOM_UNIVERSE, WORKS_PER_ROUND_DEFAULT } from "@/constants/gameModes";
+import { RANDOM_UNIVERSE_ID } from "@/constants/gameModes";
 import { useGameConfiguration, useRoomAuthStore } from "@/stores";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -67,6 +67,7 @@ export const HomeContent = () => {
     noSeek: customNoSeek,
     maxSongs: customMaxSongs,
     worksPerRound: customWorksPerRound,
+    isRandomMode: customIsRandomMode,
     mysteryEffects,
     openCustomize: openCustomizeStore,
     closeCustomize,
@@ -83,13 +84,6 @@ export const HomeContent = () => {
     openCustomizeStore(CUSTOM_UNIVERSE, {
       isCustomMode: true,
       maxWorksAllowed: MAX_WORKS_CUSTOM_MODE,
-    });
-  }, [openCustomizeStore]);
-
-  const openRandomMode = useCallback(() => {
-    openCustomizeStore(RANDOM_UNIVERSE, {
-      isRandomMode: true,
-      worksPerRound: WORKS_PER_ROUND_DEFAULT,
     });
   }, [openCustomizeStore]);
 
@@ -317,10 +311,10 @@ export const HomeContent = () => {
     const savedMaxSongs = customMaxSongs;
     const savedWorksPerRound = customWorksPerRound ?? null;
 
-    // Déterminer si c'est le mode custom (toutes les œuvres) ou aléatoire
+    // Un seul bouton Mode Custom : le toggle dans la modal choisit personnalisé ou aléatoire
     const isCustomModeActive = customizingUniverse.id === CUSTOM_UNIVERSE.id;
-    const isRandomModeActive = customizingUniverse.id === RANDOM_UNIVERSE_ID;
-    const universeId = isCustomModeActive ? "__custom__" : isRandomModeActive ? "__random__" : customizingUniverse.id;
+    const isRandomModeActive = customIsRandomMode || customizingUniverse.id === RANDOM_UNIVERSE_ID;
+    const universeId = isRandomModeActive ? "__random__" : isCustomModeActive ? "__custom__" : customizingUniverse.id;
 
     closeCustomize();
 
@@ -350,7 +344,7 @@ export const HomeContent = () => {
       }
 
       // Mode aléatoire solo : nombre d'œuvres par manche (2–8)
-      if (isRandomModeActive && savedWorksPerRound != null) {
+      if (isRandomModeActive && savedWorksPerRound !== null && savedWorksPerRound !== undefined) {
         params.set("wpr", String(Math.max(2, Math.min(8, savedWorksPerRound))));
       }
 
@@ -393,6 +387,7 @@ export const HomeContent = () => {
     }
   }, [
     customizingUniverse,
+    customIsRandomMode,
     mode,
     isHost,
     hostRoomId,
@@ -563,7 +558,6 @@ export const HomeContent = () => {
           onSelect={handleUniverseClick}
           onCustomize={openCustomize}
           onCustomMode={openCustomMode}
-          onRandomMode={openRandomMode}
         />
       )}
 

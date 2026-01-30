@@ -3,7 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import type { Work } from "@/types";
 import { useGameConfiguration, useCanSelectMoreWorks } from "@/stores";
-import { WORKS_PER_ROUND_MIN, WORKS_PER_ROUND_MAX, WORKS_PER_ROUND_DEFAULT } from "@/constants/gameModes";
+import { CUSTOM_UNIVERSE_ID, WORKS_PER_ROUND_MIN, WORKS_PER_ROUND_MAX, WORKS_PER_ROUND_DEFAULT } from "@/constants/gameModes";
 import { getAllWorks, getSongsByWork, getWorksByUniverse, getActiveUniverses } from "@/services/firebase";
 import { pressable } from "@/styles/ui";
 
@@ -54,6 +54,7 @@ const UniverseCustomizeModalComponent = ({
     setNoSeek,
     setMaxSongs,
     setWorksPerRound,
+    setUnifiedCustomSubMode,
     closeCustomize,
     setMysteryEffectsEnabled,
     setMysteryEffectsFrequency,
@@ -361,6 +362,34 @@ const UniverseCustomizeModalComponent = ({
             {customizingUniverse.name}
           </h3>
         </div>
+
+        {/* Toggle Personnalisé / Aléatoire (un seul bouton Mode Custom) */}
+        {customizingUniverse.id === CUSTOM_UNIVERSE_ID && (
+          <div className="flex items-center justify-center gap-3">
+            <span className={`text-sm font-semibold ${!isRandomMode ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}>
+              Personnalisé
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isRandomMode}
+              aria-label={isRandomMode ? "Mode aléatoire actif" : "Mode personnalisé actif"}
+              onClick={() => setUnifiedCustomSubMode(isRandomMode ? "custom" : "random")}
+              className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full border-2 border-black transition-colors ${
+                isRandomMode ? "bg-[#10B981]" : "bg-[#8B5CF6]"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full border-2 border-black bg-white shadow-[2px_2px_0_#1B1B1B] transition-transform ${
+                  isRandomMode ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+            <span className={`text-sm font-semibold ${isRandomMode ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}>
+              Aléatoire
+            </span>
+          </div>
+        )}
 
         <div className={isCustomMode || isRandomMode ? "flex flex-col gap-4 flex-1 min-h-0" : "space-y-4"}>
           {/* Mode sans avance */}

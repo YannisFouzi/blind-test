@@ -5,11 +5,7 @@ import { Play as PlayIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Universe } from "@/types";
 import { generateStylesFromColor } from "@/utils/colorGenerator";
-import {
-  getUniverseBackgroundImage,
-  CUSTOM_UNIVERSE_ID,
-  RANDOM_UNIVERSE_ID,
-} from "@/constants/gameModes";
+import { getUniverseBackgroundImage, CUSTOM_UNIVERSE_ID } from "@/constants/gameModes";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { pressable } from "@/styles/ui";
 
@@ -19,7 +15,6 @@ interface UniverseGridProps {
   onSelect: (id: string) => void;
   onCustomize?: (universe: Universe) => void;
   onCustomMode?: () => void;
-  onRandomMode?: () => void;
 }
 
 const DEFAULT_COLOR = "#3B82F6";
@@ -53,13 +48,28 @@ const getCardBackgroundStyle = (bgImage: string | null, fallbackGradient: string
   return { background: fallbackGradient } as React.CSSProperties;
 };
 
+/** Placement xl : 2 lignes × 3 carrés (colonnes 1–3), pour Tailwind JIT */
+const XL_GRID_PLACEMENT = [
+  "xl:col-start-1 xl:row-start-1",
+  "xl:col-start-2 xl:row-start-1",
+  "xl:col-start-3 xl:row-start-1",
+  "xl:col-start-1 xl:row-start-2",
+  "xl:col-start-2 xl:row-start-2",
+  "xl:col-start-3 xl:row-start-2",
+  "xl:col-start-1 xl:row-start-3",
+  "xl:col-start-2 xl:row-start-3",
+  "xl:col-start-3 xl:row-start-3",
+  "xl:col-start-1 xl:row-start-4",
+  "xl:col-start-2 xl:row-start-4",
+  "xl:col-start-3 xl:row-start-4",
+] as const;
+
 const UniverseGridComponent = ({
   universes,
   error,
   onSelect,
   onCustomize,
   onCustomMode,
-  onRandomMode,
 }: UniverseGridProps) => {
   const router = useRouter();
   const prefetchedUniversesRef = useRef<Set<string>>(new Set());
@@ -111,18 +121,26 @@ const UniverseGridComponent = ({
   }
 
   const pressClasses = pressable;
+  const totalCards = universes.length + (onCustomMode ? 1 : 0);
+  const isLastCardAlone = totalCards % 2 === 1;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
-      {universes.map((universe) => {
+    <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_minmax(0,6rem)] gap-4 md:gap-6 md:gap-8 max-w-6xl mx-auto">
+      {universes.map((universe, index) => {
         const styles = styleCache.get(universe.id);
         if (!styles) {
           return null;
         }
+        const isLastUniverseAndAlone =
+          index === universes.length - 1 && !onCustomMode && isLastCardAlone;
+        const spanFullRowMobile =
+          isLastUniverseAndAlone ? "col-span-2 md:col-span-2" : "";
+        const xlPlacement = XL_GRID_PLACEMENT[index] ?? "";
 
         return (
           <article
             key={universe.id}
+            className={`${spanFullRowMobile} ${xlPlacement}`}
             onMouseEnter={() => handlePrefetch(universe.id)}
             onFocus={() => handlePrefetch(universe.id)}
           >
@@ -141,20 +159,20 @@ const UniverseGridComponent = ({
                   {universe.name}
                 </h2>
 
-                <div className="flex justify-center gap-3">
+                <div className="flex flex-col items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => onSelect(universe.id)}
-                    className={`px-5 py-2 text-xs font-extrabold bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-light)] ${pressClasses}`}
+                    className={`px-3 py-1.5 text-[10px] font-extrabold bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-light)] ${pressClasses}`}
                   >
-                    <PlayIcon className="h-4 w-4" />
+                    <PlayIcon className="h-3 w-3 inline-block mr-1" />
                     Mode Rapide
                   </button>
                   {onCustomize && (
                     <button
                       type="button"
                       onClick={() => onCustomize(universe)}
-                      className={`px-5 py-2 text-xs font-extrabold bg-white hover:bg-[var(--color-surface-overlay)] ${pressClasses}`}
+                      className={`px-3 py-1.5 text-[10px] font-extrabold bg-white hover:bg-[var(--color-surface-overlay)] ${pressClasses}`}
                     >
                       Personnaliser
                     </button>
@@ -167,51 +185,26 @@ const UniverseGridComponent = ({
       })}
 
       {onCustomMode && (
-        <article>
+        <article
+          className={`${isLastCardAlone ? "col-span-2 md:col-span-2 " : ""}xl:col-start-4 xl:row-start-1 xl:row-span-2`}
+        >
           <div
-            className={`relative w-full overflow-hidden rounded-3xl border-2 border-black text-left shadow-[4px_4px_0_#1B1B1B] ${CARD_SIZE_CLASSES}`}
+            className={`relative w-full overflow-hidden rounded-3xl border-2 border-black text-left shadow-[4px_4px_0_#1B1B1B] h-[280px] xl:h-full flex flex-col justify-center items-center p-3 xl:p-4 gap-2`}
             style={getCardBackgroundStyle(
               getUniverseBackgroundImage(CUSTOM_UNIVERSE_ID),
               "linear-gradient(180deg, rgba(167, 139, 250, 0.25) 0%, rgba(255, 255, 255, 0.95) 60%)"
             )}
           >
-            <div className="relative z-10 flex flex-col items-center gap-2 flex-1 justify-center text-white [--color-text-primary:white]">
-              <h2 className="text-center text-2xl font-extrabold uppercase tracking-wide text-[var(--color-text-primary)] drop-shadow-md">
+            <div className="relative z-10 flex flex-col items-center gap-2 flex-1 justify-center text-white [--color-text-primary:white] xl:justify-center xl:py-4">
+              <h2 className="text-center text-2xl xl:text-sm xl:leading-tight font-extrabold uppercase tracking-wide text-[var(--color-text-primary)] drop-shadow-md">
                 Mode Custom
               </h2>
 
-              <div className="flex justify-center">
+              <div className="flex flex-col items-center gap-1.5">
                 <button
                   type="button"
                   onClick={onCustomMode}
-                  className={`px-5 py-2 text-xs font-extrabold bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-light)] ${pressClasses}`}
-                >
-                  Personnaliser
-                </button>
-              </div>
-            </div>
-          </div>
-        </article>
-      )}
-
-      {onRandomMode && (
-        <article>
-          <div
-            className={`relative w-full overflow-hidden rounded-3xl border-2 border-black text-left shadow-[4px_4px_0_#1B1B1B] ${CARD_SIZE_CLASSES}`}
-            style={getCardBackgroundStyle(
-              getUniverseBackgroundImage(RANDOM_UNIVERSE_ID),
-              "linear-gradient(180deg, rgba(16, 185, 129, 0.2) 0%, rgba(255, 255, 255, 0.95) 60%)"
-            )}
-          >
-            <div className="relative z-10 flex flex-col items-center gap-2 flex-1 justify-center text-white [--color-text-primary:white]">
-              <h2 className="text-center text-2xl font-extrabold uppercase tracking-wide text-[var(--color-text-primary)] drop-shadow-md">
-                Mode aléatoire
-              </h2>
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  onClick={onRandomMode}
-                  className={`px-5 py-2 text-xs font-extrabold bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-light)] ${pressClasses}`}
+                  className={`px-3 py-1.5 text-[10px] font-extrabold bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-light)] ${pressClasses}`}
                 >
                   Personnaliser
                 </button>

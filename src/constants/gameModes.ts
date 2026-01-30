@@ -16,6 +16,9 @@ export const RANDOM_UNIVERSE: Universe = {
   createdAt: new Date(),
 };
 
+/** Limite d'œuvres sélectionnables en mode custom (personnalisé) */
+export const MAX_WORKS_CUSTOM_MODE = 8;
+
 /** Nombre d'œuvres proposées par manche : min fixe, max = cap ou taille du pool */
 export const WORKS_PER_ROUND_MIN = 2;
 export const WORKS_PER_ROUND_MAX = 8;

@@ -10,6 +10,7 @@
 
 import { create } from 'zustand';
 import type { Universe } from '@/types';
+import { MAX_WORKS_CUSTOM_MODE, WORKS_PER_ROUND_DEFAULT } from '@/constants/gameModes';
 
 /**
  * État de la configuration du jeu
@@ -304,6 +305,13 @@ export const useGameConfig = create<GameConfigStore>((set) => ({
     worksPerRound: value === null ? null : Math.max(2, Math.min(8, value)),
   }),
 
+  setUnifiedCustomSubMode: (subMode) => set({
+    isCustomMode: subMode === 'custom',
+    isRandomMode: subMode === 'random',
+    maxWorksAllowed: subMode === 'custom' ? MAX_WORKS_CUSTOM_MODE : null,
+    worksPerRound: subMode === 'random' ? WORKS_PER_ROUND_DEFAULT : null,
+  }),
+
   reset: () => set(INITIAL_STATE),
 
   resetOptions: () => set({
@@ -381,6 +389,7 @@ export const gameConfigSelectors = {
   setNoSeek: (state: GameConfigStore) => state.setNoSeek,
   setMaxSongs: (state: GameConfigStore) => state.setMaxSongs,
   setWorksPerRound: (state: GameConfigStore) => state.setWorksPerRound,
+  setUnifiedCustomSubMode: (state: GameConfigStore) => state.setUnifiedCustomSubMode,
   reset: (state: GameConfigStore) => state.reset,
   resetOptions: (state: GameConfigStore) => state.resetOptions,
   setMysteryEffectsEnabled: (state: GameConfigStore) => state.setMysteryEffectsEnabled,
@@ -436,6 +445,7 @@ export const useGameConfiguration = () => ({
   setNoSeek: useGameConfig(gameConfigSelectors.setNoSeek),
   setMaxSongs: useGameConfig(gameConfigSelectors.setMaxSongs),
   setWorksPerRound: useGameConfig(gameConfigSelectors.setWorksPerRound),
+  setUnifiedCustomSubMode: useGameConfig(gameConfigSelectors.setUnifiedCustomSubMode),
   reset: useGameConfig(gameConfigSelectors.reset),
   resetOptions: useGameConfig(gameConfigSelectors.resetOptions),
   setMysteryEffectsEnabled: useGameConfig(gameConfigSelectors.setMysteryEffectsEnabled),
