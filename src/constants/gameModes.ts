@@ -33,8 +33,9 @@ export const UNIVERSE_BACKGROUND_IMAGES: Record<string, string> = {
   disney: "/image/disney.webp",
   "star-wars": "/image/star-wars.webp",
   "harry-potter": "/image/harry_potter.webp",
-  "lord-of-the-rings": "/image/lord-of-the-rings.webp",
   "seigneur-des-anneaux": "/image/lord-of-the-rings.webp",
+  "the-last-of-us": "/image/the-last-of-us.webp",
+  "from-software": "/image/from-software.webp",
 };
 
 /** Normalise le nom d'univers pour la recherche d'image (lowercase, espaces → tirets) */
