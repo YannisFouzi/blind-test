@@ -150,6 +150,11 @@ interface GameConfigStore {
   setWorksPerRound: (value: number | null) => void;
 
   /**
+   * Basculer entre mode personnalisé et mode aléatoire (un seul bouton Mode Custom)
+   */
+  setUnifiedCustomSubMode: (subMode: 'custom' | 'random') => void;
+
+  /**
    * Reset complet de la configuration
    */
   reset: () => void;
@@ -305,7 +310,7 @@ export const useGameConfig = create<GameConfigStore>((set) => ({
     worksPerRound: value === null ? null : Math.max(2, Math.min(8, value)),
   }),
 
-  setUnifiedCustomSubMode: (subMode) => set({
+  setUnifiedCustomSubMode: (subMode: 'custom' | 'random') => set({
     isCustomMode: subMode === 'custom',
     isRandomMode: subMode === 'random',
     maxWorksAllowed: subMode === 'custom' ? MAX_WORKS_CUSTOM_MODE : null,
