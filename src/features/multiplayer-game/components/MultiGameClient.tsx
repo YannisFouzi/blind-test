@@ -634,18 +634,18 @@ export const MultiGameClient = ({
 
     if (isDoubleMode && currentRoundSongs.length > 0) {
       return (
-        <div className="flex flex-col items-center justify-center gap-3">
-          <div className="px-5 py-3 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B] space-y-1.5">
+        <div className="flex flex-col items-center justify-center gap-2 sm:gap-3">
+          <div className="px-3 py-1.5 sm:px-5 sm:py-3 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B] space-y-0.5 sm:space-y-1.5">
             {currentRoundSongs.map((song) => {
               const work = works.find((candidate) => candidate.id === song.workId);
               return (
                 <p
                   key={song.id}
-                  className="text-xs sm:text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide"
+                  className="text-[0.65rem] sm:text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide leading-tight"
                 >
                   {song.artist} &mdash; <span className="text-[#B45309]">{song.title}</span>
                   {work && (
-                    <span className="ml-2 text-[0.75rem] sm:text-xs text-[var(--color-text-secondary)]">
+                    <span className="ml-2 text-[0.65rem] sm:text-xs text-[var(--color-text-secondary)]">
                       ({work.title})
                     </span>
                   )}
@@ -659,10 +659,10 @@ export const MultiGameClient = ({
     }
 
     return (
-      <div className="flex flex-col items-center justify-center gap-3">
+      <div className="flex flex-col items-center justify-center gap-2 sm:gap-3">
         {(currentSong?.artist ?? currentSong?.title) && (
-          <div className="px-5 py-3 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B]">
-            <p className="text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide">
+          <div className="px-3 py-2 sm:px-5 sm:py-3 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B]">
+            <p className="text-[0.7rem] sm:text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide">
               {currentSong?.artist}{" "}
               {currentSong?.artist && currentSong?.title ? "&mdash; " : ""}
               <span className="text-[#B45309]">{currentSong?.title ?? ""}</span>
@@ -802,12 +802,12 @@ export const MultiGameClient = ({
         <PlayersScoreboard players={players} currentPlayerId={playerId} />
       </div>
 
-      <div className="container mx-auto px-4 py-8 pb-24 relative z-10">
-        <div className="lg:hidden flex justify-center mb-6">
+      <div className="container mx-auto px-4 py-6 sm:py-8 pb-16 sm:pb-24 relative z-10">
+        <div className="lg:hidden flex justify-center mb-4 sm:mb-6">
           <PlayersScoreboard players={players} currentPlayerId={playerId} />
         </div>
 
-        <div className="flex flex-col items-center justify-center gap-4 min-h-[calc(100svh-220px)] sm:min-h-[calc(100svh-240px)] md:min-h-[calc(100svh-280px)]">
+        <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 min-h-[calc(100svh-180px)] sm:min-h-[calc(100svh-240px)] md:min-h-[calc(100svh-280px)]">
           <div className="w-full flex justify-center">
             {isDoubleMode && currentRoundSongs.length >= 1 ? (
               <DoubleWorkSelector
@@ -858,9 +858,57 @@ export const MultiGameClient = ({
 
       <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
         <div className="player-dome mx-auto w-[calc(100%-1.5rem)] sm:w-[calc(100%-3rem)] max-w-6xl bg-white border-[3px] border-b-0 border-[#1B1B1B] shadow-[0_-6px_0_#1B1B1B] pointer-events-auto overflow-hidden">
-          <div className="px-4 py-3 sm:px-6 sm:py-4">
-            <div className="flex flex-col items-center gap-2 sm:gap-3">
-              <div className="flex items-center justify-center gap-4 sm:gap-5">
+          <div className="px-3 py-2 sm:px-6 sm:py-4">
+            <div className="flex flex-col items-center gap-1.5 sm:gap-3">
+              {/* MOBILE: Ligne fusionnée durées + boutons */}
+              <div className="sm:hidden w-full max-w-4xl">
+                <div className="flex items-center justify-between w-full text-[var(--color-text-primary)] text-[0.7rem] font-semibold mb-1.5">
+                  <span className="min-w-[2rem]">{formatTime(effectiveCurrentTime)}</span>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handlePlayToggle}
+                      disabled={playbackUnavailable}
+                      className={cn(
+                        "magic-button rounded-full p-2",
+                        playbackUnavailable && "opacity-60 cursor-not-allowed"
+                      )}
+                    >
+                      {effectiveIsPlaying ? (
+                        <Pause className="w-3.5 h-3.5 text-[#1B1B1B]" />
+                      ) : (
+                        <PlayIcon className="w-3.5 h-3.5 text-[#1B1B1B]" />
+                      )}
+                    </button>
+
+                    {isHost && (
+                      <button
+                        onClick={handleNextSong}
+                        disabled={!canGoNext}
+                        className={cn(
+                          "magic-button p-1 rounded-full bg-white hover:bg-[var(--color-surface-overlay)]",
+                          !canGoNext && "opacity-60"
+                        )}
+                      >
+                        <SkipForward className="w-3 h-3" />
+                      </button>
+                    )}
+
+                    {isReverseMode && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-[#f97316] px-1.5 py-0.5 text-[0.55rem] font-extrabold uppercase text-[#1B1B1B] border-2 border-[#1B1B1B] shadow-[1px_1px_0_#1B1B1B]">
+                        <span className="inline-block rotate-180">
+                          <PlayIcon className="w-2 h-2" />
+                        </span>
+                      </span>
+                    )}
+                  </div>
+
+                  <span className="min-w-[2rem] text-right">{formatTime(effectiveDuration)}</span>
+                </div>
+              </div>
+
+              {/* DESKTOP: Layout original avec boutons séparés */}
+              <div className="hidden sm:flex items-center justify-center gap-4">
                 <button
                   onClick={handlePlayToggle}
                   disabled={playbackUnavailable}
@@ -890,8 +938,9 @@ export const MultiGameClient = ({
                 )}
               </div>
 
-              <div className="w-full max-w-4xl flex flex-col items-center gap-2 sm:gap-3">
-                <div className="flex items-center justify-between w-full text-[var(--color-text-primary)] text-xs font-semibold">
+              <div className="w-full max-w-4xl flex flex-col items-center gap-1.5 sm:gap-3">
+                {/* Durées (desktop uniquement) */}
+                <div className="hidden sm:flex items-center justify-between w-full text-[var(--color-text-primary)] text-xs font-semibold">
                   <span>{formatTime(effectiveCurrentTime)}</span>
                   <div className="flex items-center gap-2">
                     {isReverseMode && (
@@ -902,39 +951,38 @@ export const MultiGameClient = ({
                         <span>Reverse</span>
                       </span>
                     )}
-                    {isDoubleMode && !isReverseMode && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-3 py-1 text-[0.65rem] font-extrabold uppercase tracking-wide text-[#1B1B1B] border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] whitespace-nowrap">
-                        <span className="text-xs font-black leading-none">x2</span>
-                        <span>Double</span>
-                      </span>
-                    )}
                   </div>
                   <span>{formatTime(effectiveDuration)}</span>
                 </div>
 
                 <div
-                  className="w-full magic-progress-bar h-3 cursor-pointer"
+                  className="w-full magic-progress-bar h-2 sm:h-3 cursor-pointer"
                   onClick={handleTimelineClick}
                 >
                   <div className="magic-progress-fill h-full" style={{ width: `${progress}%` }} />
                 </div>
 
-                <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center text-sm gap-3 pt-1">
+                <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center text-xs sm:text-sm gap-2 sm:gap-3 pt-0.5 sm:pt-1">
                   <span className="text-[#B45309] font-semibold">
                     {isDoubleMode && currentRoundSongs.length === 2
                       ? `Morceau ${displayedSongIndex}+${displayedSongIndex + 1} / ${displayedTotalSongs}`
                       : `Morceau ${displayedSongIndex} / ${displayedTotalSongs}`}
                   </span>
 
-                  <div className="flex items-center justify-center gap-3 text-xs">
-                    <span className="px-3 py-1 rounded-full bg-[#86efac] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">
+                  <div className="flex items-center justify-center gap-2 sm:gap-3 text-xs">
+                    <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#86efac] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">
                       <Check className="w-3 h-3" />
                       {currentPlayerScore.correct}
                     </span>
-                    <span className="px-3 py-1 rounded-full bg-[#fca5a5] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">
+                    <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#fca5a5] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">
                       <X className="w-3 h-3" />
                       {currentPlayerScore.incorrect}
                     </span>
+                    {isDoubleMode && !isReverseMode && (
+                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#22c55e] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1 text-[0.65rem] sm:text-xs whitespace-nowrap">
+                        <span className="text-[0.7rem] sm:text-xs font-black leading-none">x2</span>
+                      </span>
+                    )}
                   </div>
 
                   <div className="hidden md:flex items-center justify-end gap-3 text-[var(--color-text-primary)] text-xs">

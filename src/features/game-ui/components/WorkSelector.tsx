@@ -131,14 +131,14 @@ const WorkSelectorComponent = ({
   return (
     <>
       <div className="relative">
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-4 md:space-y-6">
           {/* Grille de cartes responsive avec tailles uniformes */}
           <div className="uniform-card-grid">{workCards}</div>
 
           {/* Zone d'actions reservee (valider ou resultat) */}
           <div
             ref={validateButtonRef}
-            className="flex items-center justify-center min-h-[120px] sm:min-h-[124px]"
+            className="flex items-center justify-center min-h-[72px] sm:min-h-[96px] md:min-h-[120px]"
           >
             {!isAnswerRevealed ? (
               canValidate ? (
@@ -153,7 +153,7 @@ const WorkSelectorComponent = ({
 
       {/* Boutons fixes - au-dessus de la barre de lecteur */}
       {canValidate && !isCurrentSongAnswered && !isValidateButtonVisible && (
-        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
+        <div className="fixed bottom-48 sm:bottom-32 md:bottom-24 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
           <GameActionButton label={validateLabel} onClick={onValidateAnswer} />
         </div>
       )}

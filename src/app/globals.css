@@ -485,11 +485,21 @@ a:focus-visible {
     max-height: 128px;
   }
 
-  @media (max-width: 640px) {
+  /* Très petits écrans (mobile portrait) */
+  @media (max-width: 480px) {
     .uniform-card {
-      height: 104px;
-      min-height: 104px;
-      max-height: 104px;
+      height: 88px;
+      min-height: 88px;
+      max-height: 88px;
+    }
+  }
+
+  /* Petits écrans (mobile landscape) */
+  @media (min-width: 481px) and (max-width: 640px) {
+    .uniform-card {
+      height: 96px;
+      min-height: 96px;
+      max-height: 96px;
     }
   }
 
@@ -691,20 +701,27 @@ a:focus-visible {
  * ========================================
  */
 
+/* Mobile: grille 2 colonnes avec cards plus compactes */
 @media (max-width: 768px) {
   .uniform-card-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-  }
-
-  .uniform-card {
-    height: 120px;
-    min-height: 120px;
-    max-height: 120px;
+    gap: 1rem;
   }
 
   .uniform-card-title {
     font-size: 0.875rem;
+    line-height: 1.1;
+  }
+}
+
+/* Très petits écrans: réduire encore les gaps */
+@media (max-width: 480px) {
+  .uniform-card-grid {
+    gap: 0.625rem;
+  }
+
+  .uniform-card-title {
+    font-size: 0.8125rem;
     line-height: 1.1;
   }
 }

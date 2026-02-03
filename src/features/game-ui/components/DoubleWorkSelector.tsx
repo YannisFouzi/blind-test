@@ -372,7 +372,7 @@ const DoubleWorkSelectorComponent = ({
 
   return (
     <div className="relative">
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4 md:space-y-6">
         <div className="uniform-card-grid">
           {workCardStates.map((state) => (
             <div
@@ -413,7 +413,7 @@ const DoubleWorkSelectorComponent = ({
           ))}
         </div>
 
-        <div className="flex items-center justify-center min-h-[120px] sm:min-h-[124px]">
+        <div className="flex items-center justify-center min-h-[72px] sm:min-h-[96px] md:min-h-[120px]">
           {canInteract ? (
             canValidate ? (
               <GameActionButton label="Valider mes 2 reponses" onClick={onValidateAnswer} />
