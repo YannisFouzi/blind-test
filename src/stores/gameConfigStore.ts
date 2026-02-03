@@ -1,188 +1,60 @@
-/**
- * Game Configuration Store
- *
- * Gestion de la configuration du jeu (customization modal).
- * **CRITIQUE** : Élimine 16 props de UniverseCustomizeModal !
- *
- * Ce store remplace le props drilling massif et centralise toute la logique
- * de configuration du jeu (sélection d'œuvres, options audio, etc.).
+﻿/**
+ * Game configuration store used by the customization modal.
  */
-
 import { create } from 'zustand';
 import type { Universe } from '@/types';
 import { MAX_WORKS_CUSTOM_MODE, WORKS_PER_ROUND_DEFAULT } from '@/constants/gameModes';
 
-/**
- * État de la configuration du jeu
- */
+type MysteryEffect = 'double' | 'reverse';
+
+type CustomizeOptions = {
+  isCustomMode?: boolean;
+  isRandomMode?: boolean;
+  maxWorksAllowed?: number | null;
+  worksPerRound?: number | null;
+};
+
 interface GameConfigStore {
-  // ========== STATE ==========
-
-  /**
-   * Univers en cours de customization (null si modal fermée)
-   */
   customizingUniverse: Universe | null;
-
-  /**
-   * Liste des IDs d'œuvres sélectionnées
-   */
   allowedWorks: string[];
-
-  /**
-   * Noms des œuvres sélectionnées (pour préview invités)
-   */
   allowedWorkNames: string[];
-
-  /**
-   * Nombre total de chansons disponibles (pour préview quand maxSongs = null)
-   */
   totalSongsForPreview: number | null;
-
-  /**
-   * Nombre total d'œuvres dans l'univers (pour préview "toutes" œuvres)
-   */
   totalWorksInUniverse: number | null;
-
-  /**
-   * Nombre de chansons effectif pour la préview invités (= ce que l'hôte voit : 0 si aucune œuvre, sinon maxSongs ?? total des œuvres sélectionnées)
-   */
   effectiveSongsForPreview: number | null;
-
-  /**
-   * Mode sans avance rapide (timeline non cliquable)
-   */
   noSeek: boolean;
-
-  /**
-   * Nombre maximum de chansons (null = toutes)
-   */
   maxSongs: number | null;
-
-  /**
-   * Mode custom (toutes les œuvres avec limite)
-   */
   isCustomMode: boolean;
-
-  /**
-   * Limite d'œuvres sélectionnables (mode custom)
-   */
   maxWorksAllowed: number | null;
-
-  /**
-   * Mode aléatoire : pool d'œuvres + X par manche
-   */
   isRandomMode: boolean;
-
-  /**
-   * Nombre d'œuvres affichées par manche (mode aléatoire, 5–8)
-   */
   worksPerRound: number | null;
-
-  /**
-   * Configuration des effets mystères (solo + multi)
-   */
   mysteryEffects: {
     enabled: boolean;
-    frequency: number; // 1-100
-    selectedEffects: ("double" | "reverse")[];
+    frequency: number;
+    selectedEffects: MysteryEffect[];
   };
 
-  // ========== ACTIONS ==========
-
-  /**
-   * Ouvrir la modal de customization pour un univers
-   */
-  openCustomize: (universe: Universe, options?: {
-    isCustomMode?: boolean;
-    isRandomMode?: boolean;
-    maxWorksAllowed?: number | null;
-    worksPerRound?: number | null;
-  }) => void;
-
-  /**
-   * Fermer la modal de customization
-   */
+  openCustomize: (universe: Universe, options?: CustomizeOptions) => void;
   closeCustomize: () => void;
-
-  /**
-   * Toggle une œuvre (ajouter/retirer de la sélection). workTitle optionnel pour la préview invités.
-   */
   toggleWork: (workId: string, workTitle?: string) => void;
-
-  /**
-   * Sélectionner plusieurs œuvres d'un coup
-   */
   setAllowedWorks: (workIds: string[]) => void;
-
-  /**
-   * Sélectionner œuvres avec noms (pour "tout sélectionner" + préview)
-   */
   setAllowedWorksWithNames: (workIds: string[], workNames: string[]) => void;
-
-  /**
-   * Définir le total de chansons disponibles (modal)
-   */
   setTotalSongsForPreview: (n: number | null) => void;
-
-  /**
-   * Définir le nombre total d'œuvres dans l'univers (modal)
-   */
   setTotalWorksInUniverse: (n: number | null) => void;
-
-  /**
-   * Définir le nombre de chansons effectif pour la préview (modal : 0 si 0 œuvres, sinon maxSongs ?? total sélection)
-   */
   setEffectiveSongsForPreview: (n: number | null) => void;
-
-  /**
-   * Activer/désactiver le mode sans avance rapide
-   */
   setNoSeek: (value: boolean) => void;
-
-  /**
-   * Définir le nombre maximum de chansons
-   */
   setMaxSongs: (value: number | null) => void;
-
-  /**
-   * Définir le nombre d'œuvres par manche (mode aléatoire, 5–8)
-   */
   setWorksPerRound: (value: number | null) => void;
-
-  /**
-   * Basculer entre mode personnalisé et mode aléatoire (un seul bouton Mode Custom)
-   */
   setUnifiedCustomSubMode: (subMode: 'custom' | 'random') => void;
-
-  /**
-   * Reset complet de la configuration
-   */
   reset: () => void;
-
-  /**
-   * Reset uniquement les options (garde l'univers et les œuvres)
-   */
   resetOptions: () => void;
-
-  /**
-   * Activer / désactiver les effets mystères
-   */
   setMysteryEffectsEnabled: (enabled: boolean) => void;
-
-  /**
-   * Modifier la fréquence des effets mystères (1-100%)
-   */
   setMysteryEffectsFrequency: (frequency: number) => void;
-
-  /**
-   * Activer / désactiver un effet donné (double / reverse)
-   */
-  toggleMysteryEffect: (effect: "double" | "reverse") => void;
+  toggleMysteryEffect: (effect: MysteryEffect) => void;
 }
 
-/**
- * État initial
- */
+const clampNumber = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+
 const INITIAL_STATE = {
   customizingUniverse: null,
   allowedWorks: [],
@@ -199,102 +71,64 @@ const INITIAL_STATE = {
   mysteryEffects: {
     enabled: false,
     frequency: 10,
-    selectedEffects: [],
+    selectedEffects: [] as MysteryEffect[],
   },
 };
 
-/**
- * Store Zustand pour la configuration du jeu
- *
- * @example
- * ```tsx
- * // Dans HomeContent.tsx (parent)
- * import { useGameConfig } from '@/stores';
- *
- * function HomeContent() {
- *   const openCustomize = useGameConfig((state) => state.openCustomize);
- *
- *   return (
- *     <button onClick={() => openCustomize(universe)}>
- *       Customiser
- *     </button>
- *   );
- * }
- * ```
- *
- * @example
- * ```tsx
- * // Dans UniverseCustomizeModal.tsx (enfant)
- * import { useGameConfig } from '@/stores';
- *
- * function UniverseCustomizeModal() {
- *   // Plus besoin de props ! Tout vient du store
- *   const universe = useGameConfig((state) => state.customizingUniverse);
- *   const allowedWorks = useGameConfig((state) => state.allowedWorks);
- *   const toggleWork = useGameConfig((state) => state.toggleWork);
- *   const closeCustomize = useGameConfig((state) => state.closeCustomize);
- *
- *   if (!universe) return null;
- *
- *   return <div>...</div>;
- * }
- * ```
- */
 export const useGameConfig = create<GameConfigStore>((set) => ({
-  // ========== INITIAL STATE ==========
   ...INITIAL_STATE,
 
-  // ========== ACTIONS ==========
+  openCustomize: (universe, options = {}) =>
+    set({
+      customizingUniverse: universe,
+      isCustomMode: options.isCustomMode ?? false,
+      isRandomMode: options.isRandomMode ?? false,
+      maxWorksAllowed: options.maxWorksAllowed ?? null,
+      worksPerRound: options.worksPerRound ?? null,
+      allowedWorks: [],
+      noSeek: false,
+      maxSongs: null,
+    }),
 
-  openCustomize: (universe, options = {}) => set({
-    customizingUniverse: universe,
-    isCustomMode: options.isCustomMode ?? false,
-    isRandomMode: options.isRandomMode ?? false,
-    maxWorksAllowed: options.maxWorksAllowed ?? null,
-    worksPerRound: options.worksPerRound ?? null,
-    // Reset options lors de l'ouverture
-    allowedWorks: [],
-    noSeek: false,
-    maxSongs: null,
-  }),
+  closeCustomize: () =>
+    set({
+      ...INITIAL_STATE,
+    }),
 
-  closeCustomize: () => set({
-    // Reset complet à l'état initial
-    ...INITIAL_STATE,
-  }),
+  toggleWork: (workId, workTitle) =>
+    set((state) => {
+      const index = state.allowedWorks.indexOf(workId);
+      if (index !== -1) {
+        return {
+          allowedWorks: state.allowedWorks.filter((id) => id !== workId),
+          allowedWorkNames: state.allowedWorkNames.filter((_, i) => i !== index),
+        };
+      }
 
-  toggleWork: (workId, workTitle) => set((state) => {
-    const isSelected = state.allowedWorks.includes(workId);
-    const name = workTitle ?? workId;
-
-    if (isSelected) {
-      const idx = state.allowedWorks.indexOf(workId);
-      return {
-        allowedWorks: state.allowedWorks.filter(id => id !== workId),
-        allowedWorkNames: state.allowedWorkNames.filter((_, i) => i !== idx),
-      };
-    } else {
-      const canAdd = !state.maxWorksAllowed || state.allowedWorks.length < state.maxWorksAllowed;
-      if (!canAdd) {
-        console.warn(`Limite d'œuvres atteinte (${state.maxWorksAllowed})`);
+      const hasLimit = Boolean(state.maxWorksAllowed);
+      if (hasLimit && state.allowedWorks.length >= state.maxWorksAllowed!) {
+        console.warn(`Limite d'oeuvres atteinte (${state.maxWorksAllowed})`);
         return state;
       }
+
+      const name = workTitle ?? workId;
       return {
         allowedWorks: [...state.allowedWorks, workId],
         allowedWorkNames: [...state.allowedWorkNames, name],
       };
-    }
-  }),
+    }),
 
-  setAllowedWorks: (workIds) => set({
-    allowedWorks: workIds,
-    allowedWorkNames: workIds.length > 0 ? workIds.map(id => id) : [],
-  }),
+  setAllowedWorks: (workIds) =>
+    set({
+      allowedWorks: workIds,
+      allowedWorkNames: workIds.length > 0 ? workIds.map((id) => id) : [],
+    }),
 
-  setAllowedWorksWithNames: (workIds, workNames) => set({
-    allowedWorks: workIds,
-    allowedWorkNames: workNames,
-  }),
+  setAllowedWorksWithNames: (workIds, workNames) =>
+    set({
+      allowedWorks: workIds,
+      allowedWorkNames: workNames,
+    }),
 
   setTotalSongsForPreview: (n) => set({ totalSongsForPreview: n }),
 
@@ -306,23 +140,26 @@ export const useGameConfig = create<GameConfigStore>((set) => ({
 
   setMaxSongs: (value) => set({ maxSongs: value }),
 
-  setWorksPerRound: (value) => set({
-    worksPerRound: value === null ? null : Math.max(2, Math.min(8, value)),
-  }),
+  setWorksPerRound: (value) =>
+    set({
+      worksPerRound: value === null ? null : clampNumber(value, 2, 8),
+    }),
 
-  setUnifiedCustomSubMode: (subMode: 'custom' | 'random') => set({
-    isCustomMode: subMode === 'custom',
-    isRandomMode: subMode === 'random',
-    maxWorksAllowed: subMode === 'custom' ? MAX_WORKS_CUSTOM_MODE : null,
-    worksPerRound: subMode === 'random' ? WORKS_PER_ROUND_DEFAULT : null,
-  }),
+  setUnifiedCustomSubMode: (subMode: 'custom' | 'random') =>
+    set({
+      isCustomMode: subMode === 'custom',
+      isRandomMode: subMode === 'random',
+      maxWorksAllowed: subMode === 'custom' ? MAX_WORKS_CUSTOM_MODE : null,
+      worksPerRound: subMode === 'random' ? WORKS_PER_ROUND_DEFAULT : null,
+    }),
 
   reset: () => set(INITIAL_STATE),
 
-  resetOptions: () => set({
-    noSeek: false,
-    maxSongs: null,
-  }),
+  resetOptions: () =>
+    set({
+      noSeek: false,
+      maxSongs: null,
+    }),
 
   setMysteryEffectsEnabled: (enabled) =>
     set((state) => ({
@@ -336,13 +173,13 @@ export const useGameConfig = create<GameConfigStore>((set) => ({
     set((state) => ({
       mysteryEffects: {
         ...state.mysteryEffects,
-        frequency: Math.max(1, Math.min(100, frequency)),
+        frequency: clampNumber(frequency, 1, 100),
       },
     })),
 
   toggleMysteryEffect: (effect) =>
     set((state) => {
-      const selectedEffects = state.mysteryEffects.selectedEffects;
+      const { selectedEffects } = state.mysteryEffects;
       const isSelected = selectedEffects.includes(effect);
 
       if (isSelected) {
@@ -363,11 +200,7 @@ export const useGameConfig = create<GameConfigStore>((set) => ({
     }),
 }));
 
-/**
- * Sélecteurs optimisés pour éviter les re-renders inutiles
- */
 export const gameConfigSelectors = {
-  // State
   customizingUniverse: (state: GameConfigStore) => state.customizingUniverse,
   allowedWorks: (state: GameConfigStore) => state.allowedWorks,
   allowedWorkNames: (state: GameConfigStore) => state.allowedWorkNames,
@@ -382,7 +215,6 @@ export const gameConfigSelectors = {
   worksPerRound: (state: GameConfigStore) => state.worksPerRound,
   mysteryEffects: (state: GameConfigStore) => state.mysteryEffects,
 
-  // Actions
   openCustomize: (state: GameConfigStore) => state.openCustomize,
   closeCustomize: (state: GameConfigStore) => state.closeCustomize,
   toggleWork: (state: GameConfigStore) => state.toggleWork,
@@ -402,28 +234,7 @@ export const gameConfigSelectors = {
   toggleMysteryEffect: (state: GameConfigStore) => state.toggleMysteryEffect,
 };
 
-/**
- * Hook personnalisé pour accéder à la config du jeu (version optimisée)
- *
- * @example
- * ```tsx
- * function MyComponent() {
- *   const { allowedWorks, toggleWork } = useGameConfiguration();
- *
- *   return (
- *     <div>
- *       {allowedWorks.map(id => (
- *         <button key={id} onClick={() => toggleWork(id)}>
- *           Work {id}
- *         </button>
- *       ))}
- *     </div>
- *   );
- * }
- * ```
- */
 export const useGameConfiguration = () => ({
-  // State
   customizingUniverse: useGameConfig(gameConfigSelectors.customizingUniverse),
   allowedWorks: useGameConfig(gameConfigSelectors.allowedWorks),
   allowedWorkNames: useGameConfig(gameConfigSelectors.allowedWorkNames),
@@ -438,7 +249,6 @@ export const useGameConfiguration = () => ({
   worksPerRound: useGameConfig(gameConfigSelectors.worksPerRound),
   mysteryEffects: useGameConfig(gameConfigSelectors.mysteryEffects),
 
-  // Actions
   openCustomize: useGameConfig(gameConfigSelectors.openCustomize),
   closeCustomize: useGameConfig(gameConfigSelectors.closeCustomize),
   toggleWork: useGameConfig(gameConfigSelectors.toggleWork),
@@ -458,9 +268,6 @@ export const useGameConfiguration = () => ({
   toggleMysteryEffect: useGameConfig(gameConfigSelectors.toggleMysteryEffect),
 });
 
-/**
- * Hook utilitaire : vérifier si on peut sélectionner plus d'œuvres
- */
 export const useCanSelectMoreWorks = () => {
   const maxWorksAllowed = useGameConfig(gameConfigSelectors.maxWorksAllowed);
   const allowedWorks = useGameConfig(gameConfigSelectors.allowedWorks);

@@ -22,7 +22,8 @@ app.use("/api/import-playlist", importPlaylistRouter);
 app.use("/api/cookie-check", cookieCheckRouter);
 app.use("/api/upload-cookies", uploadCookiesRouter);
 
-const port = process.env.PORT || 4000;
+const parsedPort = Number.parseInt(process.env.PORT || "4000", 10);
+const port = Number.isNaN(parsedPort) ? 4000 : parsedPort;
 
 app.listen(port, () => {
   console.log(`[Server] Ingestion service ready on http://localhost:${port}`);

@@ -36,7 +36,8 @@
       "Bash(dir:*)",
       "Bash(if exist \".next\" rd /s /q .next)",
       "Bash(rd /s /q .next)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

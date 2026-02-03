@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Button } from "@/components/ui";
-import { Badge } from "@/components/ui/Badge";
-import { Users, Crown, Copy, Check } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, Copy, Crown, Users } from "lucide-react";
 import type { RoomPlayer } from "@/types";
-import { memo, useCallback, useMemo, useState } from "react";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 
 export interface WaitingRoomProps {
   roomId: string;
@@ -19,6 +19,13 @@ export interface WaitingRoomProps {
   songsCount?: number;
 }
 
+const COPY_RESET_DELAY_MS = 2000;
+
+const getPlayerInitial = (displayName: string) => {
+  const trimmed = displayName.trim();
+  return trimmed ? trimmed[0].toUpperCase() : "?";
+};
+
 const WaitingRoomComponent = ({
   roomId,
   players,
@@ -31,6 +38,7 @@ const WaitingRoomComponent = ({
   songsCount,
 }: WaitingRoomProps) => {
   const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const connectedPlayers = useMemo(
     () => players.filter((player) => player.connected !== false),
@@ -40,14 +48,31 @@ const WaitingRoomComponent = ({
     () => connectedPlayers.length >= minPlayers && isHost,
     [connectedPlayers.length, minPlayers, isHost]
   );
+  const remainingPlayers = Math.max(minPlayers - connectedPlayers.length, 0);
 
   const handleCopyInvite = useCallback(() => {
-    if (onCopyInvite) {
-      onCopyInvite();
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    if (!onCopyInvite) return;
+
+    onCopyInvite();
+    setCopied(true);
+
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current);
     }
+
+    copyTimeoutRef.current = setTimeout(() => {
+      setCopied(false);
+    }, COPY_RESET_DELAY_MS);
   }, [onCopyInvite]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+        copyTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center p-6">
@@ -113,7 +138,7 @@ const WaitingRoomComponent = ({
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-[var(--color-brand-primary)] border-2 border-[#1B1B1B] flex items-center justify-center text-[#1B1B1B] font-black">
-                          {player.displayName[0].toUpperCase()}
+                          {getPlayerInitial(player.displayName)}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
@@ -126,7 +151,11 @@ const WaitingRoomComponent = ({
                               </Badge>
                             )}
                             {player.isHost && (
-                              <Badge variant="warning" size="sm" leftIcon={<Crown className="w-3 h-3" />}>
+                              <Badge
+                                variant="warning"
+                                size="sm"
+                                leftIcon={<Crown className="w-3 h-3" />}
+                              >
                                 Hote
                               </Badge>
                             )}
@@ -141,24 +170,23 @@ const WaitingRoomComponent = ({
                 })}
               </div>
 
-              {connectedPlayers.length < minPlayers && (
+              {remainingPlayers > 0 && (
                 <div className="mt-4 p-3 bg-[#FFF1C9] border-2 border-[#1B1B1B] rounded-xl shadow-[2px_2px_0_#1B1B1B]">
                   <p className="text-[#92400E] text-sm text-center font-semibold">
-                    En attente de {minPlayers - connectedPlayers.length} joueur(s)
-                    supplementaire(s)...
+                    En attente de {remainingPlayers} joueur(s) supplementaire(s)...
                   </p>
                 </div>
               )}
             </div>
 
             <div className="space-y-3">
-                  {onCopyInvite && (
+              {onCopyInvite && (
                 <Button
-                  variant="outline"
-                  fullWidth
-                  leftIcon={copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  variant="secondary"
+                  className="w-full flex items-center justify-center gap-2"
                   onClick={handleCopyInvite}
                 >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   {copied ? "Lien copie !" : "Copier le lien d&apos;invitation"}
                 </Button>
               )}
@@ -166,13 +194,14 @@ const WaitingRoomComponent = ({
               {isHost && (
                 <Button
                   variant="primary"
-                  fullWidth
                   size="lg"
-                  glow
+                  className="w-full"
                   disabled={!canStart}
                   onClick={onStartGame}
                 >
-                  {canStart ? "Demarrer la partie" : `En attente de ${minPlayers} joueurs`}
+                  {canStart
+                    ? "Demarrer la partie"
+                    : `En attente de ${minPlayers} joueurs`}
                 </Button>
               )}
 

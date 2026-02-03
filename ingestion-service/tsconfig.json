@@ -8,7 +8,14 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared-types": ["../packages/shared-types/src/index.ts"],
+      "@shared-types/*": ["../packages/shared-types/src/*"],
+      "@shared-utils": ["../packages/shared-utils/src/index.ts"],
+      "@shared-utils/*": ["../packages/shared-utils/src/*"]
+    }
   },
   "include": ["src"]
 }

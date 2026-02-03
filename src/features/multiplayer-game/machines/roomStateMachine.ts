@@ -1,5 +1,7 @@
 import { assign, setup } from "xstate";
-import type { Room, RoomPlayer, RoomResponse, Song, GameRound } from "@/types";
+import type { GameRound, Room, RoomPlayer, RoomResponse, Song } from "@/types";
+
+type RoomOptions = { noSeek?: boolean };
 
 export type ServerStateSnapshot = {
   roomId?: string;
@@ -12,10 +14,10 @@ export type ServerStateSnapshot = {
   roundCount?: number;
   displayedSongIndex?: number;
   displayedTotalSongs?: number;
-  state?: string;
+  state?: Room["state"];
   allowedWorks?: string[];
   worksPerRound?: number;
-  options?: { noSeek?: boolean };
+  options?: RoomOptions;
   players?: RoomPlayer[];
 };
 
@@ -26,7 +28,6 @@ export type RoomMachineContext = {
   allPlayersAnswered: boolean;
   isConnected: boolean;
   error: string | null;
-  /** Timestamp absolu (Date.now()) auquel la partie démarre (après countdown Ready Check) */
   startAt?: number;
 };
 
@@ -39,17 +40,53 @@ export type RoomMachineEvent =
       type: "join_success";
       playerId: string;
       isHost?: boolean;
-      state?: string;
+      state?: Room["state"];
       hostId?: string;
       sessionToken?: string;
     }
   | { type: "players_update"; players: RoomPlayer[] }
-  | { type: "room_configured"; universeId?: string; songs?: Song[]; allowedWorks?: string[]; worksPerRound?: number; options?: { noSeek?: boolean } }
-  | { type: "game_starting"; state: "starting"; songs?: Song[]; totalSongs?: number; currentSongIndex?: number; currentRoundIndex?: number; currentRound?: GameRound; roundCount?: number; displayedSongIndex?: number; displayedTotalSongs?: number }
+  | {
+      type: "room_configured";
+      universeId?: string;
+      songs?: Song[];
+      allowedWorks?: string[];
+      worksPerRound?: number;
+      options?: RoomOptions;
+    }
+  | {
+      type: "game_starting";
+      state: "starting";
+      songs?: Song[];
+      totalSongs?: number;
+      currentSongIndex?: number;
+      currentRoundIndex?: number;
+      currentRound?: GameRound;
+      roundCount?: number;
+      displayedSongIndex?: number;
+      displayedTotalSongs?: number;
+    }
   | { type: "all_players_ready"; startIn: number }
-  | { type: "game_started"; currentSongIndex?: number; currentRoundIndex?: number; currentRound?: GameRound; roundCount?: number; displayedSongIndex?: number; displayedTotalSongs?: number; state?: "playing"; songs?: Song[] }
+  | {
+      type: "game_started";
+      currentSongIndex?: number;
+      currentRoundIndex?: number;
+      currentRound?: GameRound;
+      roundCount?: number;
+      displayedSongIndex?: number;
+      displayedTotalSongs?: number;
+      state?: "playing";
+      songs?: Song[];
+    }
   | { type: "configure_success" }
-  | { type: "song_changed"; currentSongIndex?: number; currentRoundIndex?: number; currentRound?: GameRound; roundCount?: number; displayedSongIndex?: number; displayedTotalSongs?: number }
+  | {
+      type: "song_changed";
+      currentSongIndex?: number;
+      currentRoundIndex?: number;
+      currentRound?: GameRound;
+      roundCount?: number;
+      displayedSongIndex?: number;
+      displayedTotalSongs?: number;
+    }
   | { type: "game_ended"; players?: RoomPlayer[]; state?: "results" }
   | { type: "answer_recorded"; response: RoomResponse }
   | { type: "player_answered"; playerId: string; songId: string }
@@ -66,7 +103,7 @@ const INITIAL_ROOM: Partial<Room> = {
   universeId: "",
 };
 
-const normalizeOptions = (options?: { noSeek?: boolean }) => {
+const normalizeOptions = (options?: RoomOptions) => {
   if (!options) return undefined;
   return { noSeek: Boolean(options.noSeek) };
 };
@@ -122,7 +159,7 @@ export const roomMachine = setup({
       if (event.type !== "state_sync") return {};
       const snapshot = event.state;
       const nextPlayers = snapshot.players ?? context.players;
-      const nextState = (snapshot.state as Room["state"]) || "idle";
+      const nextState = snapshot.state ?? context.room.state ?? "idle";
 
       return {
         room: {
@@ -130,20 +167,24 @@ export const roomMachine = setup({
           id: snapshot.roomId ?? context.room.id,
           hostId: snapshot.hostId ?? context.room.hostId,
           universeId: snapshot.universeId ?? context.room.universeId,
-          songs: snapshot.songs || [],
-          currentSongIndex: snapshot.currentSongIndex ?? 0,
-          currentRoundIndex: snapshot.currentRoundIndex,
-          currentRound: snapshot.currentRound,
-          roundCount: snapshot.roundCount,
-          displayedSongIndex: snapshot.displayedSongIndex,
-          displayedTotalSongs: snapshot.displayedTotalSongs,
+          songs: snapshot.songs ?? context.room.songs ?? [],
+          currentSongIndex:
+            snapshot.currentSongIndex ?? context.room.currentSongIndex ?? 0,
+          currentRoundIndex: snapshot.currentRoundIndex ?? context.room.currentRoundIndex,
+          currentRound: snapshot.currentRound ?? context.room.currentRound,
+          roundCount: snapshot.roundCount ?? context.room.roundCount,
+          displayedSongIndex: snapshot.displayedSongIndex ?? context.room.displayedSongIndex,
+          displayedTotalSongs:
+            snapshot.displayedTotalSongs ?? context.room.displayedTotalSongs,
           state: nextState,
-          allowedWorks: snapshot.allowedWorks,
-          worksPerRound: snapshot.worksPerRound,
+          allowedWorks: snapshot.allowedWorks ?? context.room.allowedWorks,
+          worksPerRound: snapshot.worksPerRound ?? context.room.worksPerRound,
           options: snapshot.options ? normalizeOptions(snapshot.options) : context.room.options,
         },
         players: nextPlayers,
-        allPlayersAnswered: snapshot.players ? areAllPlayersAnswered(nextPlayers) : context.allPlayersAnswered,
+        allPlayersAnswered: snapshot.players
+          ? areAllPlayersAnswered(nextPlayers)
+          : context.allPlayersAnswered,
         error: null,
       };
     }),
@@ -153,7 +194,7 @@ export const roomMachine = setup({
         room: {
           ...context.room,
           hostId: event.hostId ?? context.room.hostId,
-          state: (event.state as Room["state"]) ?? context.room.state,
+          state: event.state ?? context.room.state,
         },
         error: null,
       };
@@ -161,8 +202,8 @@ export const roomMachine = setup({
     applyPlayersUpdate: assign(({ event }) => {
       if (event.type !== "players_update") return {};
       return {
-        players: event.players || [],
-        allPlayersAnswered: areAllPlayersAnswered(event.players || []),
+        players: event.players,
+        allPlayersAnswered: areAllPlayersAnswered(event.players),
       };
     }),
     applyRoomConfigured: assign(({ context, event }) => {
@@ -170,10 +211,10 @@ export const roomMachine = setup({
       return {
         room: {
           ...context.room,
-          universeId: event.universeId || context.room.universeId,
-          songs: event.songs || context.room.songs || [],
-          allowedWorks: event.allowedWorks,
-          worksPerRound: event.worksPerRound,
+          universeId: event.universeId ?? context.room.universeId,
+          songs: event.songs ?? context.room.songs ?? [],
+          allowedWorks: event.allowedWorks ?? context.room.allowedWorks,
+          worksPerRound: event.worksPerRound ?? context.room.worksPerRound,
           options: event.options ? normalizeOptions(event.options) : context.room.options,
           currentSongIndex: 0,
           state: "configured" as Room["state"],
@@ -188,7 +229,7 @@ export const roomMachine = setup({
         room: {
           ...context.room,
           state: "starting" as Room["state"],
-          songs: event.songs || context.room.songs || [],
+          songs: event.songs ?? context.room.songs ?? [],
           currentSongIndex: event.currentSongIndex ?? 0,
           currentRoundIndex: event.currentRoundIndex,
           currentRound: event.currentRound,
@@ -218,7 +259,7 @@ export const roomMachine = setup({
           roundCount: event.roundCount,
           displayedSongIndex: event.displayedSongIndex,
           displayedTotalSongs: event.displayedTotalSongs,
-          songs: event.songs || context.room.songs || [],
+          songs: event.songs ?? context.room.songs ?? [],
         },
         startAt: undefined,
         allPlayersAnswered: false,
@@ -230,12 +271,14 @@ export const roomMachine = setup({
       return {
         room: {
           ...context.room,
-          currentSongIndex: event.currentSongIndex ?? context.room.currentSongIndex ?? 0,
+          currentSongIndex:
+            event.currentSongIndex ?? context.room.currentSongIndex ?? 0,
           currentRoundIndex: event.currentRoundIndex ?? context.room.currentRoundIndex,
           currentRound: event.currentRound ?? context.room.currentRound,
           roundCount: event.roundCount ?? context.room.roundCount,
           displayedSongIndex: event.displayedSongIndex ?? context.room.displayedSongIndex,
-          displayedTotalSongs: event.displayedTotalSongs ?? context.room.displayedTotalSongs,
+          displayedTotalSongs:
+            event.displayedTotalSongs ?? context.room.displayedTotalSongs,
         },
         allPlayersAnswered: false,
       };

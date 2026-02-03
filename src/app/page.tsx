@@ -1,5 +1,5 @@
-import { HomeBackground } from "@/components/home/HomeBackground";
-import { HomeContent } from "@/components/home/HomeContent";
+import { HomeBackground } from "@/features/home/components/HomeBackground";
+import { HomeContent } from "@/features/home/components/HomeContent";
 
 export default function HomePage() {
   return (

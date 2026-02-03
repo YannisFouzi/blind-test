@@ -1,66 +1,36 @@
+import type { HTMLAttributes } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import type { HTMLAttributes } from "react";
 
-/**
- * Card Component
- *
- * Composant Card atomique avec variants pour différents styles.
- * Utilise les design tokens de config/design-tokens.ts
- *
- * @example
- * ```tsx
- * <Card surface="elevated" glow="purple" size="lg" interactive>
- *   <CardContent />
- * </Card>
- * ```
- */
+type HeadingTag = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+
+type CardBaseProps<T> = HTMLAttributes<T> & { className?: string; children: React.ReactNode };
 
 const cardVariants = cva(
-  // Base styles - appliqués à tous les variants
   "relative rounded-2xl border-2 border-[var(--color-text-primary)] overflow-hidden transition-all duration-200",
   {
     variants: {
-      /**
-       * Surface variant - Niveau de profondeur visuelle
-       */
       surface: {
         base: "bg-[var(--color-surface-base)]",
         elevated: "bg-[var(--color-surface-elevated)]",
         overlay: "bg-[var(--color-surface-overlay)]",
       },
-
-      /**
-       * Glow variant - Effet de brillance colorée
-       */
       glow: {
         none: "",
         purple: "shadow-[var(--shadow-glow-purple)]",
         pink: "shadow-[var(--shadow-glow-pink)]",
         gold: "shadow-[var(--shadow-glow-gold)]",
       },
-
-      /**
-       * Size variant - Padding interne
-       */
       size: {
         sm: "p-4",
         md: "p-6",
         lg: "p-8",
         xl: "p-10",
       },
-
-      /**
-       * Interactive variant - Effets hover/active
-       */
       interactive: {
         true: "cursor-pointer",
         false: "",
       },
-
-      /**
-       * Border radius variant
-       */
       rounded: {
         sm: "rounded-lg",
         md: "rounded-xl",
@@ -68,11 +38,6 @@ const cardVariants = cva(
         xl: "rounded-3xl",
       },
     },
-
-    // Compound variants - Combinaisons spéciales
-    compoundVariants: [],
-
-    // Default variants
     defaultVariants: {
       surface: "base",
       glow: "none",
@@ -86,24 +51,9 @@ const cardVariants = cva(
 export interface CardProps
   extends HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof cardVariants> {
-  /**
-   * Contenu de la carte
-   */
   children: React.ReactNode;
-
-  /**
-   * Classes CSS additionnelles
-   */
   className?: string;
-
-  /**
-   * Si true, ajoute un effet de backdrop blur
-   */
   blur?: boolean;
-
-  /**
-   * Si true, ajoute un gradient animé sur la bordure
-   */
   animatedBorder?: boolean;
 }
 
@@ -124,7 +74,8 @@ export const Card = ({
       className={cn(
         cardVariants({ surface, glow, size, interactive, rounded }),
         blur && "backdrop-blur-sm",
-        animatedBorder && "before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-r before:from-purple-500 before:via-pink-500 before:to-purple-500 before:opacity-100 before:transition-opacity before:duration-500 before:-z-10",
+        animatedBorder &&
+          "before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-r before:from-purple-500 before:via-pink-500 before:to-purple-500 before:opacity-100 before:transition-opacity before:duration-500 before:-z-10",
         className
       )}
       {...props}
@@ -134,13 +85,7 @@ export const Card = ({
   );
 };
 
-/**
- * CardHeader - En-tête de carte avec titre et description
- */
-export interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-  className?: string;
-}
+export type CardHeaderProps = CardBaseProps<HTMLDivElement>;
 
 export const CardHeader = ({ children, className, ...props }: CardHeaderProps) => {
   return (
@@ -150,13 +95,8 @@ export const CardHeader = ({ children, className, ...props }: CardHeaderProps) =
   );
 };
 
-/**
- * CardTitle - Titre de carte
- */
-export interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {
-  children: React.ReactNode;
-  className?: string;
-  as?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+export interface CardTitleProps extends CardBaseProps<HTMLHeadingElement> {
+  as?: HeadingTag;
 }
 
 export const CardTitle = ({
@@ -175,13 +115,7 @@ export const CardTitle = ({
   );
 };
 
-/**
- * CardDescription - Description de carte
- */
-export interface CardDescriptionProps extends HTMLAttributes<HTMLParagraphElement> {
-  children: React.ReactNode;
-  className?: string;
-}
+export type CardDescriptionProps = CardBaseProps<HTMLParagraphElement>;
 
 export const CardDescription = ({
   children,
@@ -189,28 +123,15 @@ export const CardDescription = ({
   ...props
 }: CardDescriptionProps) => {
   return (
-    <p
-      className={cn("text-sm text-[var(--color-text-secondary)]", className)}
-      {...props}
-    >
+    <p className={cn("text-sm text-[var(--color-text-secondary)]", className)} {...props}>
       {children}
     </p>
   );
 };
 
-/**
- * CardContent - Contenu principal de la carte
- */
-export interface CardContentProps extends HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-  className?: string;
-}
+export type CardContentProps = CardBaseProps<HTMLDivElement>;
 
-export const CardContent = ({
-  children,
-  className,
-  ...props
-}: CardContentProps) => {
+export const CardContent = ({ children, className, ...props }: CardContentProps) => {
   return (
     <div className={cn("pt-0", className)} {...props}>
       {children}
@@ -218,28 +139,14 @@ export const CardContent = ({
   );
 };
 
-/**
- * CardFooter - Pied de page de la carte
- */
-export interface CardFooterProps extends HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-  className?: string;
-}
+export type CardFooterProps = CardBaseProps<HTMLDivElement>;
 
-export const CardFooter = ({
-  children,
-  className,
-  ...props
-}: CardFooterProps) => {
+export const CardFooter = ({ children, className, ...props }: CardFooterProps) => {
   return (
-    <div
-      className={cn("flex items-center pt-4", className)}
-      {...props}
-    >
+    <div className={cn("flex items-center pt-4", className)} {...props}>
       {children}
     </div>
   );
 };
 
-// Export all components
 export default Card;

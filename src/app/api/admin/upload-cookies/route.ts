@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
@@ -7,8 +7,8 @@ export async function POST(request: Request) {
     const response = await fetch(
       `${process.env.INGESTION_SERVICE_URL}/api/upload-cookies`,
       {
-        method: 'POST',
-        body: formData
+        method: "POST",
+        body: formData,
       }
     );
 
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('[UploadCookies] Erreur:', error);
+    console.error("[UploadCookies] Erreur:", error);
     return NextResponse.json(
       { success: false, error: "Erreur upload" },
       { status: 500 }

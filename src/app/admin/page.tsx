@@ -42,14 +42,14 @@ export default function AdminLoginPage() {
         const isAdmin = firebaseUser.email === ADMIN_EMAIL;
 
         if (isAdmin) {
-          const user: User = {
+          const nextUser: User = {
             uid: firebaseUser.uid,
             email: firebaseUser.email!,
             displayName: firebaseUser.displayName!,
             photoURL: firebaseUser.photoURL || undefined,
             isAdmin: true,
           };
-          setUser(user);
+          setUser(nextUser);
           router.push("/admin/dashboard");
         } else {
           setError(
@@ -165,9 +165,7 @@ export default function AdminLoginPage() {
               </h2>
               <p className="text-[var(--color-text-secondary)] mb-2">{user.email}</p>
               <div className="bg-[#ECFDF5] border-2 border-[#1B1B1B] rounded-xl p-2 mb-6 shadow-[2px_2px_0_#1B1B1B]">
-                <p className="text-[#166534] text-xs font-bold">
-                  Admin autorise
-                </p>
+                <p className="text-[#166534] text-xs font-bold">Admin autorise</p>
               </div>
 
               <div className="space-y-4">

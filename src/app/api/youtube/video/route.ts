@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 
 interface YouTubeVideoDetails {
@@ -31,8 +31,8 @@ const videoIdField = z.preprocess(
   (value) => (typeof value === "string" ? value : ""),
   z
     .string()
-    .min(1, "ID de vidéo requis")
-    .regex(/^[a-zA-Z0-9_-]+$/, "Format d'ID de vidéo invalide")
+    .min(1, "ID de video requis")
+    .regex(/^[a-zA-Z0-9_-]+$/, "Format d'ID de video invalide")
 );
 
 const videoIdSchema = z.object({
@@ -42,7 +42,7 @@ const videoIdSchema = z.object({
 const fetchVideoData = async (query: string) => {
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) {
-    throw new Error("Clé API YouTube manquante");
+    throw new Error("Cle API YouTube manquante");
   }
 
   const url = new URL(
@@ -94,14 +94,14 @@ export async function GET(request: Request) {
     const data = await fetchVideoData(`id=${parseResult.data.videoId}`);
 
     if (data.items.length === 0) {
-      return NextResponse.json({ error: "Vidéo non trouvée" }, { status: 404 });
+      return NextResponse.json({ error: "Video non trouvee" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, data: mapVideo(data.items[0]) });
   } catch (error) {
     console.error("[YouTube video] GET error:", error);
     return NextResponse.json(
-      { error: "Erreur lors de la récupération de la vidéo" },
+      { error: "Erreur lors de la recuperation de la video" },
       { status: 500 }
     );
   }

@@ -1,24 +1,10 @@
+﻿import { memo } from "react";
+import { Loader2, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Pause, Play, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { ProgressBar } from "./ProgressBar";
 import { VolumeControl } from "./VolumeControl";
 import type { UseAudioPlayerReturn } from "../types";
-import { memo } from "react";
-
-/**
- * AudioControls Component
- *
- * Contrôles complets du lecteur audio.
- * Utilise les composants Card, ProgressBar, VolumeControl.
- *
- * @example
- * ```tsx
- * const audio = useAudioPlayer({ initialAudioUrl: "/song.mp3" });
- *
- * <AudioControls {...audio} />
- * ```
- */
 
 export interface AudioControlsProps
   extends Pick<
@@ -37,21 +23,38 @@ export interface AudioControlsProps
     | "toggleMute"
     | "seek"
   > {
-  /** Désactivé */
   disabled?: boolean;
-
-  /** Classes CSS additionnelles */
   className?: string;
-
-  /** Afficher les contrôles de volume */
   showVolumeControl?: boolean;
-
-  /** Afficher la barre de progression */
   showProgressBar?: boolean;
-
-  /** Compact mode (bouton play/pause uniquement) */
   compact?: boolean;
 }
+
+const PlayPauseIcon = ({ isLoading, isPlaying }: { isLoading: boolean; isPlaying: boolean }) => {
+  if (isLoading) {
+    return <Loader2 className="w-7 h-7 text-[#1B1B1B] animate-spin" />;
+  }
+  if (isPlaying) {
+    return <Pause className="w-7 h-7 text-[#1B1B1B]" />;
+  }
+  return <Play className="w-7 h-7 text-[#1B1B1B] ml-1" />;
+};
+
+const CompactPlayPauseIcon = ({
+  isLoading,
+  isPlaying,
+}: {
+  isLoading: boolean;
+  isPlaying: boolean;
+}) => {
+  if (isLoading) {
+    return <Loader2 className="w-6 h-6 text-[#1B1B1B] animate-spin" />;
+  }
+  if (isPlaying) {
+    return <Pause className="w-6 h-6 text-[#1B1B1B]" />;
+  }
+  return <Play className="w-6 h-6 text-[#1B1B1B] ml-1" />;
+};
 
 const AudioControlsComponent = ({
   isPlaying,
@@ -74,7 +77,6 @@ const AudioControlsComponent = ({
   compact = false,
 }: AudioControlsProps) => {
   if (compact) {
-    // Mode compact : bouton play/pause uniquement
     return (
       <button
         onClick={togglePlay}
@@ -87,28 +89,19 @@ const AudioControlsComponent = ({
         )}
         aria-label={isPlaying ? "Pause" : "Play"}
       >
-        {isLoading ? (
-          <Loader2 className="w-6 h-6 text-[#1B1B1B] animate-spin" />
-        ) : isPlaying ? (
-          <Pause className="w-6 h-6 text-[#1B1B1B]" />
-        ) : (
-          <Play className="w-6 h-6 text-[#1B1B1B] ml-1" />
-        )}
+        <CompactPlayPauseIcon isLoading={isLoading} isPlaying={isPlaying} />
       </button>
     );
   }
 
-  // Mode complet
   return (
     <Card surface="elevated" className={cn("p-4", className)}>
-      {/* Message d'erreur */}
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
           {error}
         </div>
       )}
 
-      {/* Barre de progression */}
       {showProgressBar && (
         <ProgressBar
           progress={progress}
@@ -120,9 +113,7 @@ const AudioControlsComponent = ({
         />
       )}
 
-      {/* Contrôles principaux */}
       <div className="flex items-center gap-4">
-        {/* Bouton Play/Pause */}
         <button
           onClick={togglePlay}
           disabled={disabled || isLoading}
@@ -134,16 +125,9 @@ const AudioControlsComponent = ({
           )}
           aria-label={isPlaying ? "Pause" : "Play"}
         >
-          {isLoading ? (
-            <Loader2 className="w-7 h-7 text-[#1B1B1B] animate-spin" />
-          ) : isPlaying ? (
-            <Pause className="w-7 h-7 text-[#1B1B1B]" />
-          ) : (
-            <Play className="w-7 h-7 text-[#1B1B1B] ml-1" />
-          )}
+          <PlayPauseIcon isLoading={isLoading} isPlaying={isPlaying} />
         </button>
 
-        {/* Contrôle de volume */}
         {showVolumeControl && (
           <VolumeControl
             volume={volume}
@@ -155,10 +139,9 @@ const AudioControlsComponent = ({
         )}
       </div>
 
-      {/* Note no-seek */}
       {noSeek && showProgressBar && (
         <p className="mt-3 text-xs text-[var(--color-text-secondary)] text-center">
-          Mode découverte : le curseur de lecture est désactivé
+          Mode decouverte : le curseur de lecture est desactive
         </p>
       )}
     </Card>

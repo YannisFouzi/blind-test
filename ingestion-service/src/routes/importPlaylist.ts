@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Response } from "express";
 import { z } from "zod";
 import { addImportJob, getJobById, getQueueStatus } from "../services/queue.js";
 
@@ -8,6 +8,17 @@ const requestSchema = z.object({
 });
 
 export const router = Router();
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Erreur inconnue";
+
+const sendServerError = (res: Response, context: string, error: unknown) => {
+  console.error(`[Import] ${context}:`, error);
+  return res.status(500).json({
+    success: false,
+    error: getErrorMessage(error),
+  });
+};
 
 /**
  * POST /api/import-playlist
@@ -38,12 +49,8 @@ router.post("/", async (req, res) => {
       jobId: job.id,
       message: "Import ajouté à la queue",
     });
-  } catch (error) {
-    console.error("[Import] Erreur ajout queue:", error);
-    return res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+  } catch (error: unknown) {
+    return sendServerError(res, "Erreur ajout queue", error);
   }
 });
 
@@ -68,12 +75,8 @@ router.get("/status/:jobId", async (req, res) => {
       success: true,
       ...job,
     });
-  } catch (error) {
-    console.error("[Import] Erreur récupération status:", error);
-    return res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+  } catch (error: unknown) {
+    return sendServerError(res, "Erreur recuperation status", error);
   }
 });
 
@@ -89,11 +92,8 @@ router.get("/queue", async (_req, res) => {
       success: true,
       ...status,
     });
-  } catch (error) {
-    console.error("[Import] Erreur récupération queue:", error);
-    return res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+  } catch (error: unknown) {
+    return sendServerError(res, "Erreur recuperation queue", error);
   }
 });
+

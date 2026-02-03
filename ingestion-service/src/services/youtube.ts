@@ -1,4 +1,6 @@
 const ISO_DURATION = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
+const API_BASE_URL = "https://www.googleapis.com/youtube/v3";
+const MAX_RESULTS = 50;
 
 interface PlaylistItem {
   id: string;
@@ -26,7 +28,7 @@ export const fetchPlaylistVideos = async (playlistId: string): Promise<PlaylistI
 
   do {
     const playlistResp = await fetch(
-      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}${
+      `${API_BASE_URL}/playlistItems?part=snippet&maxResults=${MAX_RESULTS}&playlistId=${playlistId}${
         nextPageToken ? `&pageToken=${nextPageToken}` : ""
       }&key=${apiKey}`
     );
@@ -47,7 +49,7 @@ export const fetchPlaylistVideos = async (playlistId: string): Promise<PlaylistI
     }
 
     const videosResp = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoIds.join(",")}&key=${apiKey}`
+      `${API_BASE_URL}/videos?part=snippet,contentDetails&id=${videoIds.join(",")}&key=${apiKey}`
     );
 
     if (!videosResp.ok) {

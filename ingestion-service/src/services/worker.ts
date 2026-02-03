@@ -4,6 +4,7 @@ import { QUEUE_NAME, ImportJobData, ImportJobResult } from "./queue.js";
 import { processPlaylist } from "../utils/audioPipeline.js";
 
 let worker: Worker<ImportJobData, ImportJobResult> | null = null;
+const WORKER_CONCURRENCY = 1;
 
 export const startWorker = () => {
   if (worker) {
@@ -33,7 +34,7 @@ export const startWorker = () => {
     },
     {
       connection: getRedisConnection(),
-      concurrency: 1, // Une seule playlist à la fois (évite le rate limiting YouTube)
+      concurrency: WORKER_CONCURRENCY, // Une seule playlist à la fois (évite le rate limiting YouTube)
     }
   );
 
@@ -62,3 +63,4 @@ export const stopWorker = async () => {
 };
 
 export const getWorker = () => worker;
+

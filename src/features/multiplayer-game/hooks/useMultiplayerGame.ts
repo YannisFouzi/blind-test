@@ -2,66 +2,26 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GameAnswer, Song } from "@/types";
-import { usePartyKitRoom } from "@/hooks/usePartyKitRoom";
-import { useWorksQuery, useWorksByIdsQuery } from "@/hooks/queries";
+import { usePartyKitRoom } from "@/features/multiplayer-game/hooks/usePartyKitRoom";
+import { useWorksByIdsQuery, useWorksQuery } from "@/features/game-ui/queries";
 import { CUSTOM_UNIVERSE_ID, RANDOM_UNIVERSE_ID } from "@/constants/gameModes";
 import { shuffleWithSeed } from "@/utils/formatters";
 import type { GameRound } from "@/utils/mysteryEffects";
 
-/**
- * Options pour useMultiplayerGame
- */
+const GAME_NOT_STARTED_MESSAGE = "La partie n'a pas demarre";
+const SELECT_TWO_WORKS_MESSAGE = "Veuillez selectionner deux oeuvres";
+const PRELOAD_DELAY_MS = 1000;
+
 export interface UseMultiplayerGameOptions {
-  /** ID de l'univers musical */
   universeId: string;
-
-  /** ID de la room PartyKit */
   roomId?: string;
-
-  /** ID du joueur */
   playerId?: string;
-
-  /** Nom d'affichage du joueur */
   displayName?: string;
-
-  /** Callback pour précharger la prochaine chanson */
   preloadNextTrack?: (song: Song) => void;
-
-  /** Callback appelé avant redirection vers waiting room (pour cleanup audio, etc.) */
   onRedirect?: () => void;
-
-  /** Navigation client (ex. router.push). Passe à usePartyKitRoom pour show_scores et redirect_to_waiting_room. */
   navigate?: (url: string) => void;
 }
 
-/**
- * Hook useMultiplayerGame
- *
- * Gère toute la logique du mode multiplayer :
- * - Connexion WebSocket via PartyKit
- * - Synchronisation avec les autres joueurs
- * - Gestion des réponses et validation
- * - Navigation (next song, start game)
- * - Calcul du score en temps réel
- *
- * @example
- * ```tsx
- * const game = useMultiplayerGame({
- *   universeId: "disney",
- *   roomId: "abc123",
- *   playerId: "player-1",
- *   displayName: "Alice",
- *   preloadNextTrack: (song) => console.log("Preload", song.audioUrl),
- * });
- *
- * return (
- *   <div>
- *     <button onClick={() => game.handleAnswer(workId)}>Répondre</button>
- *     {game.isHost && <button onClick={game.handleNextSong}>Suivant</button>}
- *   </div>
- * );
- * ```
- */
 export const useMultiplayerGame = ({
   universeId,
   roomId,
@@ -71,10 +31,6 @@ export const useMultiplayerGame = ({
   onRedirect,
   navigate,
 }: UseMultiplayerGameOptions) => {
-  // ============================================================
-  // WebSocket Connection (PartyKit)
-  // ============================================================
-
   const {
     room,
     players,
@@ -103,116 +59,60 @@ export const useMultiplayerGame = ({
     allPlayersAnswered,
   } = usePartyKitRoom({ roomId, playerId, displayName, onRedirect, navigate });
 
-  // ============================================================
-  // Works Data (TanStack Query avec cache)
-  // ============================================================
-
-  // Mode custom/random : on charge par IDs (allowedWorks)
-  // Mode normal : on charge par universeId
   const isCustomOrRandomMode =
     universeId === CUSTOM_UNIVERSE_ID || universeId === RANDOM_UNIVERSE_ID;
 
-  // Pour useWorksQuery : désactivé si custom/random (passer "" → enabled: false)
   const universeQueryId = isCustomOrRandomMode ? "" : universeId;
-  const {
-    data: worksByUniverse = [],
-    isLoading: isLoadingByUniverse,
-  } = useWorksQuery(universeQueryId);
+  const { data: worksByUniverse = [], isLoading: isLoadingByUniverse } =
+    useWorksQuery(universeQueryId);
 
-  // Pour useWorksByIdsQuery : activé seulement si custom/random et allowedWorks non vide
   const workIdsForQuery = isCustomOrRandomMode && allowedWorks?.length ? allowedWorks : [];
-  const {
-    data: worksByIds = [],
-    isLoading: isLoadingByIds,
-  } = useWorksByIdsQuery(workIdsForQuery);
+  const { data: worksByIds = [], isLoading: isLoadingByIds } =
+    useWorksByIdsQuery(workIdsForQuery);
 
-  // Sélectionner les données du bon hook
   const works = isCustomOrRandomMode ? worksByIds : worksByUniverse;
   const isLoadingWorks = isCustomOrRandomMode ? isLoadingByIds : isLoadingByUniverse;
-
-  // ============================================================
-  // Local UI State
-  // ============================================================
 
   const [selectedWork, setSelectedWork] = useState<string | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [gameAnswer, setGameAnswer] = useState<GameAnswer | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [lastGain, setLastGain] = useState<{ points: number; key: number } | null>(null);
-  // Sélections en mode double : songId -> selectedWorkId
   const [doubleSelections, setDoubleSelections] = useState<Record<string, string | null>>({});
 
-  // ============================================================
-  // Computed Values
-  // ============================================================
-
-  /**
-   * Réponse du joueur actuel pour la chanson actuelle
-   */
   const currentSongAnswer = useMemo(() => {
     if (!currentSong || !playerId) return null;
-    return responses.find((r) => r.playerId === playerId && r.songId === currentSong.id) ?? null;
+    return (
+      responses.find(
+        (response) => response.playerId === playerId && response.songId === currentSong.id
+      ) ?? null
+    );
   }, [responses, playerId, currentSong]);
 
-  /**
-   * Le joueur a-t-il déjà répondu à la chanson actuelle ?
-   */
   const isCurrentSongAnswered = Boolean(currentSongAnswer);
 
-  /**
-   * Works filtrés selon allowedWorks (si défini)
-   */
   const filteredWorks = useMemo(() => {
-    if (allowedWorks && allowedWorks.length) {
-      return works.filter((w) => allowedWorks.includes(w.id));
+    if (allowedWorks && allowedWorks.length > 0) {
+      return works.filter((work) => allowedWorks.includes(work.id));
     }
     return works;
   }, [works, allowedWorks]);
 
-  /**
-   * Le joueur est-il l'hôte ?
-   */
-  const isHost = useMemo(() => {
-    return isHostFromRoom;
-  }, [isHostFromRoom]);
+  const isHost = isHostFromRoom;
+  const canGoPrev = false;
 
-  /**
-   * Peut-on revenir en arrière ? (Non en multiplayer)
-   */
-  const canGoPrev = false; // Multiplayer = pas de prev
+  const currentRound: GameRound | undefined = room?.currentRound;
+  const isReverseMode = currentRound?.type === "reverse";
+  const isDoubleMode = currentRound?.type === "double";
 
-  /**
-   * Round actuel (modèle "rounds" pour effets mystères)
-   */
-  const currentRound = useMemo<GameRound | undefined>(() => {
-    return room?.currentRound;
-  }, [room?.currentRound]);
-
-  /**
-   * Mode reverse activé ?
-   */
-  const isReverseMode = useMemo(() => {
-    return currentRound?.type === "reverse";
-  }, [currentRound]);
-
-  /**
-   * Mode double activé ?
-   */
-  const isDoubleMode = useMemo(() => {
-    return currentRound?.type === "double";
-  }, [currentRound]);
-
-  /**
-   * Chansons du round actuel (pour mode double : 2 chansons, sinon 1)
-   */
   const currentRoundSongs = useMemo<Song[]>(() => {
     if (!room?.songs || !currentRound) {
       return currentSong ? [currentSong] : [];
     }
 
     const songsForRound = currentRound.songIds
-      .map((id) => room.songs.find((s) => s.id === id))
-      .filter((s): s is Song => Boolean(s));
+      .map((id) => room.songs.find((song) => song.id === id))
+      .filter((song): song is Song => Boolean(song));
 
     if (!songsForRound.length && currentSong) {
       return [currentSong];
@@ -221,38 +121,36 @@ export const useMultiplayerGame = ({
     return songsForRound;
   }, [room?.songs, currentRound, currentSong]);
 
-  /**
-   * Œuvres affichées comme choix (mode aléatoire multi).
-   * Si worksPerRound est défini : échantillonne X œuvres par manche (dont la/les bonne(s)).
-   * Sinon : toutes les œuvres filtrées (filteredWorks).
-   */
   const displayWorks = useMemo(() => {
-    const wpr = worksPerRound ?? undefined;
     const isRandom = universeId === RANDOM_UNIVERSE_ID;
-    if (!isRandom || !wpr || filteredWorks.length === 0) {
+    const roundWorkCount = worksPerRound ?? 0;
+
+    if (!isRandom || roundWorkCount <= 0 || filteredWorks.length === 0) {
       return filteredWorks;
     }
 
     const songs =
-      isDoubleMode && currentRoundSongs && currentRoundSongs.length >= 2
+      isDoubleMode && currentRoundSongs.length >= 2
         ? currentRoundSongs
         : currentSong
           ? [currentSong]
           : [];
+
     if (songs.length === 0) {
       return filteredWorks;
     }
 
-    const correctIds = [...new Set(songs.map((s) => s.workId))];
-    const wrongWorks = filteredWorks.filter((w) => !correctIds.includes(w.id));
+    const correctIds = [...new Set(songs.map((song) => song.workId))];
+    const wrongWorks = filteredWorks.filter((work) => !correctIds.includes(work.id));
     const correctWorks = correctIds
-      .map((id) => filteredWorks.find((w) => w.id === id))
-      .filter((w): w is NonNullable<typeof w> => Boolean(w));
+      .map((id) => filteredWorks.find((work) => work.id === id))
+      .filter((work): work is NonNullable<typeof work> => Boolean(work));
+
     const count = Math.max(
       0,
-      Math.min(wpr - correctWorks.length, wrongWorks.length)
+      Math.min(roundWorkCount - correctWorks.length, wrongWorks.length)
     );
-    const seed = `${currentSongIndex}-${songs.map((s) => s.id).join("-")}`;
+    const seed = `${currentSongIndex}-${songs.map((song) => song.id).join("-")}`;
     const shuffledWrong = shuffleWithSeed([...wrongWorks], seed);
     const selectedWrong = shuffledWrong.slice(0, count);
     const pool = [...correctWorks, ...selectedWrong];
@@ -267,13 +165,6 @@ export const useMultiplayerGame = ({
     currentSongIndex,
   ]);
 
-  // ============================================================
-  // Effects
-  // ============================================================
-
-  /**
-   * Reset l'état local quand la chanson change
-   */
   useEffect(() => {
     setSelectedWork(null);
     setGameAnswer(null);
@@ -282,57 +173,104 @@ export const useMultiplayerGame = ({
     setDoubleSelections({});
   }, [currentSong?.id]);
 
-  /**
-   * Masquer l'animation des points apres 1s
-   */
   useEffect(() => {
     if (!lastGain) return;
     const timeoutId = setTimeout(() => setLastGain(null), 2000);
     return () => clearTimeout(timeoutId);
   }, [lastGain]);
 
-  /**
-   * Reset la sélection si l'œuvre n'est plus autorisée
-   */
   useEffect(() => {
-    if (selectedWork && allowedWorks && allowedWorks.length && !allowedWorks.includes(selectedWork)) {
+    if (
+      selectedWork &&
+      allowedWorks &&
+      allowedWorks.length > 0 &&
+      !allowedWorks.includes(selectedWork)
+    ) {
       setSelectedWork(null);
     }
   }, [allowedWorks, selectedWork]);
 
-  /**
-   * Précharger la prochaine chanson
-   */
   useEffect(() => {
-    if (currentSong && preloadNextTrack && room && room.songs[currentSongIndex + 1]) {
-      const nextSong = room.songs[currentSongIndex + 1];
-      setTimeout(() => preloadNextTrack(nextSong), 1000);
-    }
-  }, [currentSong, preloadNextTrack, room, currentSongIndex]);
+    if (!currentSong || !preloadNextTrack) return;
+    const nextSong = room?.songs?.[currentSongIndex + 1];
+    if (!nextSong) return;
 
-  // ============================================================
-  // Actions
-  // ============================================================
+    const timeoutId = setTimeout(() => preloadNextTrack(nextSong), PRELOAD_DELAY_MS);
+    return () => clearTimeout(timeoutId);
+  }, [currentSong, preloadNextTrack, room?.songs, currentSongIndex]);
 
-  /**
-   * Sélectionner une œuvre (réponse)
-   */
-  const handleAnswer = (workId: string) => {
-    if (showAnswer || isCurrentSongAnswered) return;
+  const handleAnswer = useCallback(
+    (workId: string) => {
+      if (showAnswer || isCurrentSongAnswered || isDoubleMode) return;
+      setSelectedWork(workId);
+    },
+    [showAnswer, isCurrentSongAnswered, isDoubleMode]
+  );
 
-    // En mode double, la sélection passe par un handler dédié
-    if (isDoubleMode) {
+  const validateAnswerDouble = useCallback(async () => {
+    if (!isDoubleMode || currentRoundSongs.length < 2) {
       return;
     }
 
-    setSelectedWork(workId);
-  };
+    if (state !== "playing") {
+      setSubmitError(GAME_NOT_STARTED_MESSAGE);
+      return;
+    }
 
-  /**
-   * Valider la réponse
-   */
-  const validateAnswer = async () => {
-    // Mode double : utiliser validateAnswerDouble
+    const songInfos = currentRoundSongs.map((song) => ({
+      songId: song.id,
+      song,
+      selectedId: doubleSelections[song.id] ?? null,
+    }));
+
+    if (songInfos.length < 2 || !songInfos.every((info) => info.selectedId)) {
+      setSubmitError(SELECT_TWO_WORKS_MESSAGE);
+      return;
+    }
+
+    try {
+      const remainingCorrectWorks = songInfos.map((info) => info.song.workId);
+      const answers: Array<{ songId: string; workId: string | null }> = [];
+
+      songInfos.forEach((info) => {
+        const selectedId = info.selectedId;
+        let matchedWorkId: string | null = null;
+
+        if (selectedId) {
+          const matchIndex = remainingCorrectWorks.indexOf(selectedId);
+          if (matchIndex !== -1) {
+            remainingCorrectWorks.splice(matchIndex, 1);
+            matchedWorkId = selectedId;
+          } else {
+            matchedWorkId = selectedId;
+          }
+        }
+
+        answers.push({ songId: info.songId, workId: matchedWorkId });
+      });
+
+      const result = await submitAnswer(null, false, answers);
+
+      if (result.success) {
+        const pointsEarned = result.data?.points ?? 0;
+        const timestamp = typeof performance !== "undefined" ? performance.now() : Date.now();
+
+        setLastGain({ points: pointsEarned, key: timestamp });
+        setSubmitError(null);
+        setShowAnswer(true);
+      } else {
+        console.error("[useMultiplayerGame] submit double answer error", result.error);
+        setSubmitError(result.error || "Impossible d'enregistrer les reponses");
+      }
+    } catch (error) {
+      console.error("[useMultiplayerGame] submit double answer exception", error);
+      setSubmitError(
+        error instanceof Error ? error.message : "Erreur inconnue lors de la validation"
+      );
+    }
+  }, [isDoubleMode, currentRoundSongs, doubleSelections, state, submitAnswer]);
+
+  const validateAnswer = useCallback(async () => {
     if (isDoubleMode) {
       return validateAnswerDouble();
     }
@@ -340,7 +278,7 @@ export const useMultiplayerGame = ({
     if (!currentSong || !selectedWork) return;
 
     if (state !== "playing") {
-      setSubmitError("La partie n'a pas démarré");
+      setSubmitError(GAME_NOT_STARTED_MESSAGE);
       return;
     }
 
@@ -365,96 +303,91 @@ export const useMultiplayerGame = ({
         setShowAnswer(true);
       } else {
         console.error("[useMultiplayerGame] submit answer error", result.error);
-        setSubmitError(result.error || "Impossible d'enregistrer la réponse");
+        setSubmitError(result.error || "Impossible d'enregistrer la reponse");
       }
     } catch (error) {
       console.error("[useMultiplayerGame] submit answer exception", error);
-      setSubmitError(error instanceof Error ? error.message : "Erreur inconnue lors de la validation");
+      setSubmitError(
+        error instanceof Error ? error.message : "Erreur inconnue lors de la validation"
+      );
     }
-  };
+  }, [isDoubleMode, validateAnswerDouble, currentSong, selectedWork, state, submitAnswer]);
 
-  /**
-   * Passer à la chanson suivante (host only)
-   */
-  const nextSong = async () => {
+  const nextSong = useCallback(async () => {
     if (!canGoNext) return;
     await goNextSong();
-  };
+  }, [canGoNext, goNextSong]);
 
-  /**
-   * Afficher les scores (host only)
-   */
-  const handleShowScores = async () => {
+  const handleShowScores = useCallback(async () => {
     if (!isHost) return;
     await showScores();
-  };
+  }, [isHost, showScores]);
 
-  /**
-   * Démarrer la partie (host only)
-   */
-  const handleStartGame = async () => {
+  const handleStartGame = useCallback(async () => {
     if (!isHost) return;
     await startGame();
-  };
+  }, [isHost, startGame]);
 
-  /**
-   * Configurer la room avec songs (host only)
-   */
-  const handleConfigureRoom = async (
-    songs: Song[],
-    universeIdParam: string,
-    allowedWorksParam?: string[],
-    optionsParam?: { noSeek: boolean },
-    mysteryEffectsConfig?: {
-      enabled: boolean;
-      frequency: number;
-      effects: ("double" | "reverse")[];
-    }
-  ) => {
-    if (!isHost) return;
-    await configureRoom(universeIdParam, songs, allowedWorksParam, optionsParam, mysteryEffectsConfig);
-  };
+  const handleConfigureRoom = useCallback(
+    async (
+      songs: Song[],
+      universeIdParam: string,
+      allowedWorksParam?: string[],
+      optionsParam?: { noSeek: boolean },
+      mysteryEffectsConfig?: {
+        enabled: boolean;
+        frequency: number;
+        effects: ("double" | "reverse")[];
+      }
+    ) => {
+      if (!isHost) return;
+      await configureRoom(
+        universeIdParam,
+        songs,
+        allowedWorksParam,
+        optionsParam,
+        mysteryEffectsConfig
+      );
+    },
+    [configureRoom, isHost]
+  );
 
-  /**
-   * Sélectionner une œuvre pour un slot en mode double
-   */
   const handleDoubleSelection = useCallback(
     (slotIndex: 0 | 1, workId: string) => {
-      if (showAnswer || isCurrentSongAnswered || !currentRound || currentRound.type !== "double") {
-        return;
-      }
+      if (showAnswer || isCurrentSongAnswered || !isDoubleMode) return;
+      if (currentRoundSongs.length < 2) return;
 
-      const songId = currentRound.songIds[slotIndex];
+      const songId = currentRoundSongs[slotIndex]?.id;
       if (!songId) return;
 
-      // Vérifier si une réponse est déjà enregistrée pour cette chanson (via responses)
       const hasAnswered = responses.some(
-        (r) => r.songId === songId && r.playerId === playerId
+        (response) => response.songId === songId && response.playerId === playerId
       );
-      if (hasAnswered) {
-        return;
-      }
+      if (hasAnswered) return;
 
       setDoubleSelections((prev) => ({
         ...prev,
         [songId]: workId,
       }));
     },
-    [showAnswer, isCurrentSongAnswered, currentRound, responses, playerId]
+    [
+      showAnswer,
+      isCurrentSongAnswered,
+      isDoubleMode,
+      currentRoundSongs,
+      responses,
+      playerId,
+    ]
   );
 
-  /**
-   * Retirer une sélection pour une œuvre en mode double (un slot à la fois)
-   */
   const clearDoubleSelectionForWork = useCallback(
     (workId: string) => {
-      if (!currentRound || currentRound.type !== "double" || showAnswer) return;
+      if (!isDoubleMode || showAnswer || currentRoundSongs.length === 0) return;
 
       setDoubleSelections((prev) => {
-        const songIds = currentRound.songIds;
+        const songIds = currentRoundSongs.map((song) => song.id);
         const newSelections = { ...prev };
 
-        // Trouver un songId du round actuel qui pointe sur cette œuvre
         const targetSongId = songIds.find((id) => newSelections[id] === workId);
         if (!targetSongId) {
           return prev;
@@ -464,120 +397,28 @@ export const useMultiplayerGame = ({
         return newSelections;
       });
     },
-    [currentRound, showAnswer]
+    [currentRoundSongs, isDoubleMode, showAnswer]
   );
 
-  /**
-   * Valider les réponses en mode double
-   * ⭐ Utilise un multi-set (ordre-indépendant) comme en solo pour corriger le mapping
-   */
-  const validateAnswerDouble = useCallback(async () => {
-    if (!currentRound || currentRound.type !== "double" || !currentRoundSongs || currentRoundSongs.length < 2) {
-      return;
-    }
-
-    if (state !== "playing") {
-      setSubmitError("La partie n'a pas démarré");
-      return;
-    }
-
-    // Préparer les infos chansons + sélections
-    const songInfos = currentRoundSongs
-      .map((song) => {
-        return {
-          songId: song.id,
-          song,
-          selectedId: doubleSelections[song.id] ?? null,
-        };
-      })
-      .filter((info) => Boolean(info.song));
-
-    if (songInfos.length < 2) {
-      setSubmitError("Veuillez sélectionner deux œuvres");
-      return;
-    }
-
-    // Vérifier que les 2 slots sont remplis
-    const allSelected = songInfos.every((info) => info.selectedId !== null);
-    if (!allSelected) {
-      setSubmitError("Veuillez sélectionner deux œuvres");
-      return;
-    }
-
-    try {
-      // Ensemble des œuvres correctes (ordre-indépendant, avec multiplicité)
-      const remainingCorrectWorks: string[] = songInfos.map((info) => info.song.workId);
-
-      // Construire le mapping explicite songId → workId avec multi-set
-      const answers: Array<{ songId: string; workId: string | null }> = [];
-
-      songInfos.forEach((info) => {
-        const selectedId = info.selectedId;
-        let matchedWorkId: string | null = null;
-
-        if (selectedId) {
-          const matchIndex = remainingCorrectWorks.indexOf(selectedId);
-          if (matchIndex !== -1) {
-            // On consomme une occurrence de cette œuvre correcte (multi-set)
-            remainingCorrectWorks.splice(matchIndex, 1);
-            matchedWorkId = selectedId;
-          } else {
-            // Sélection incorrecte, mais on l'envoie quand même
-            matchedWorkId = selectedId;
-          }
-        }
-
-        answers.push({
-          songId: info.songId,
-          workId: matchedWorkId,
-        });
-      });
-
-      const result = await submitAnswer(null, false, answers);
-
-      if (result.success) {
-        const pointsEarned = result.data?.points ?? 0;
-        const timestamp = typeof performance !== "undefined" ? performance.now() : Date.now();
-
-        setLastGain({ points: pointsEarned, key: timestamp });
-        setSubmitError(null);
-        setShowAnswer(true);
-      } else {
-        console.error("[useMultiplayerGame] submit double answer error", result.error);
-        setSubmitError(result.error || "Impossible d'enregistrer les réponses");
-      }
-    } catch (error) {
-      console.error("[useMultiplayerGame] submit double answer exception", error);
-      setSubmitError(error instanceof Error ? error.message : "Erreur inconnue lors de la validation");
-    }
-  }, [currentRound, currentRoundSongs, doubleSelections, state, submitAnswer]);
-
-  // Sélections actuelles pour les deux chansons du round double (slot 1 / slot 2)
   const doubleSelectedWorkSlot1: string | null = useMemo(() => {
-    if (!currentRound || currentRound.type !== "double" || !currentRoundSongs || currentRoundSongs.length < 1) {
+    if (!isDoubleMode || currentRoundSongs.length < 1) {
       return null;
     }
-    const [songId1] = currentRound.songIds;
-    return doubleSelections[songId1] ?? null;
-  }, [currentRound, currentRoundSongs, doubleSelections]);
+    const songId = currentRoundSongs[0]?.id;
+    return songId ? doubleSelections[songId] ?? null : null;
+  }, [isDoubleMode, currentRoundSongs, doubleSelections]);
 
   const doubleSelectedWorkSlot2: string | null = useMemo(() => {
-    if (!currentRound || currentRound.type !== "double" || !currentRoundSongs || currentRoundSongs.length < 2) {
+    if (!isDoubleMode || currentRoundSongs.length < 2) {
       return null;
     }
-    const [, songId2] = currentRound.songIds;
-    return songId2 ? doubleSelections[songId2] ?? null : null;
-  }, [currentRound, currentRoundSongs, doubleSelections]);
-
-  // ============================================================
-  // Return
-  // ============================================================
+    const songId = currentRoundSongs[1]?.id;
+    return songId ? doubleSelections[songId] ?? null : null;
+  }, [isDoubleMode, currentRoundSongs, doubleSelections]);
 
   return {
-    // Mode
     mode: "multiplayer" as const,
 
-    // Room state
     room,
     players,
     responses,
@@ -587,12 +428,10 @@ export const useMultiplayerGame = ({
     canGoNext,
     canGoPrev,
 
-    // Works
     works: displayWorks,
     isLoadingWorks,
     allowedWorks,
 
-    // Current song
     currentSong,
     currentSongIndex,
     totalSongs: room?.songs?.length ?? 0,
@@ -601,7 +440,6 @@ export const useMultiplayerGame = ({
     roundCount: room?.roundCount,
     currentRoundIndex: room?.currentRoundIndex,
 
-    // Answer state
     selectedWork,
     showAnswer,
     gameAnswer,
@@ -609,13 +447,10 @@ export const useMultiplayerGame = ({
     isCurrentSongAnswered,
     submitError,
 
-    // Score
     lastGain,
 
-    // Options
     options,
 
-    // Effets mystères (multi)
     currentRound,
     isReverseMode,
     isDoubleMode,
@@ -625,7 +460,6 @@ export const useMultiplayerGame = ({
     handleDoubleSelection,
     clearDoubleSelectionForWork,
 
-    // Actions
     handleAnswer,
     validateAnswer,
     nextSong,

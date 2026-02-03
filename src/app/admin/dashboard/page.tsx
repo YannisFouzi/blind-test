@@ -4,77 +4,60 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Song, Universe, Work } from "@/types";
-import { AdminLayout } from "../../../components/admin/AdminLayout";
-import { LoadingSpinner } from "../../../components/ui/LoadingSpinner";
-import { useAdmin } from "../../../hooks/useAdmin";
-import { useAuth } from "../../../hooks/useAuth";
+import { AdminLayout } from "@/features/admin/components/AdminLayout";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useAdmin } from "@/features/admin/hooks/useAdmin";
+import { useAuth } from "@/lib/auth/useAuth";
 
 const UniverseSection = dynamic(
-  () =>
-    import("@/components/admin/dashboard/UniverseSection").then(
-      (mod) => mod.UniverseSection
-    ),
-  {
-    loading: () => <LoadingSpinner size="large" />,
-  }
+  () => import("@/features/admin/components/UniverseSection").then((mod) => mod.UniverseSection),
+  { loading: () => <LoadingSpinner size="large" /> }
 );
 
 const WorksSection = dynamic(
-  () =>
-    import("@/components/admin/dashboard/WorksSection").then(
-      (mod) => mod.WorksSection
-    ),
-  {
-    loading: () => <LoadingSpinner size="large" />,
-  }
+  () => import("@/features/admin/components/WorksSection").then((mod) => mod.WorksSection),
+  { loading: () => <LoadingSpinner size="large" /> }
 );
 
 const SongsSection = dynamic(
-  () =>
-    import("@/components/admin/dashboard/SongsSection").then(
-      (mod) => mod.SongsSection
-    ),
-  {
-    loading: () => <LoadingSpinner size="large" />,
-  }
+  () => import("@/features/admin/components/SongsSection").then((mod) => mod.SongsSection),
+  { loading: () => <LoadingSpinner size="large" /> }
 );
 
 const CookieStatus = dynamic(
-  () => import("@/components/admin/CookieStatus").then((mod) => mod.CookieStatus),
-  {
-    loading: () => <LoadingSpinner size="large" />,
-  }
+  () => import("@/features/admin/components/CookieStatus").then((mod) => mod.CookieStatus),
+  { loading: () => <LoadingSpinner size="large" /> }
 );
 
 const UniverseForm = dynamic(
-  () => import("@/components/admin/UniverseForm").then((mod) => mod.UniverseForm),
-  {
-    loading: () => <LoadingSpinner size="large" />,
-  }
+  () => import("@/features/admin/components/UniverseForm").then((mod) => mod.UniverseForm),
+  { loading: () => <LoadingSpinner size="large" /> }
 );
 
 const WorkForm = dynamic(
-  () => import("@/components/admin/WorkForm").then((mod) => mod.WorkForm),
-  {
-    loading: () => <LoadingSpinner size="large" />,
-  }
+  () => import("@/features/admin/components/WorkForm").then((mod) => mod.WorkForm),
+  { loading: () => <LoadingSpinner size="large" /> }
 );
 
 const SongForm = dynamic(
-  () => import("@/components/admin/SongForm").then((mod) => mod.SongForm),
-  {
-    loading: () => <LoadingSpinner size="large" />,
-  }
+  () => import("@/features/admin/components/SongForm").then((mod) => mod.SongForm),
+  { loading: () => <LoadingSpinner size="large" /> }
 );
 
 const ConfirmModal = dynamic(
   () => import("@/components/ui/ConfirmModal").then((mod) => mod.ConfirmModal),
-  {
-    loading: () => null,
-  }
+  { loading: () => null }
 );
 
 type ModalType = "universe" | "work" | "song" | null;
+
+type ConfirmState = {
+  isOpen: boolean;
+  type: "universe" | "work" | "song" | null;
+  item: Universe | Work | Song | null;
+  title: string;
+  message: string;
+};
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -106,22 +89,12 @@ export default function AdminDashboard() {
     pendingImportJob,
   } = useAdmin(user);
 
-  // État local pour les modales et formulaires
   const [activeModal, setActiveModal] = useState<ModalType>(null);
-  const [editingItem, setEditingItem] = useState<Universe | Work | Song | null>(
-    null
-  );
+  const [editingItem, setEditingItem] = useState<Universe | Work | Song | null>(null);
   const [selectedUniverse, setSelectedUniverse] = useState<string | null>(null);
   const [selectedWork, setSelectedWork] = useState<string | null>(null);
 
-  // État pour les modales de confirmation
-  const [confirmModal, setConfirmModal] = useState<{
-    isOpen: boolean;
-    type: "universe" | "work" | "song" | null;
-    item: Universe | Work | Song | null;
-    title: string;
-    message: string;
-  }>({
+  const [confirmModal, setConfirmModal] = useState<ConfirmState>({
     isOpen: false,
     type: null,
     item: null,
@@ -129,22 +102,19 @@ export default function AdminDashboard() {
     message: "",
   });
 
-  // Redirection si non admin
   if (!isAdmin && user) {
     router.push("/");
     return null;
   }
 
-  // État de chargement initial
   if (!user) {
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center">
-        <LoadingSpinner message="Vérification des droits..." />
+        <LoadingSpinner message="Verification des droits..." />
       </div>
     );
   }
 
-  // Gestionnaires d'événements
   const handleLogout = async () => {
     await logout();
     router.push("/admin");
@@ -164,7 +134,6 @@ export default function AdminDashboard() {
     setEditingItem(null);
   };
 
-  // Gestionnaires de confirmation de suppression
   const handleConfirmDelete = (
     type: "universe" | "work" | "song",
     item: Universe | Work | Song
@@ -173,21 +142,24 @@ export default function AdminDashboard() {
     let message = "";
 
     switch (type) {
-      case "universe":
+      case "universe": {
         const universe = item as Universe;
         title = "Supprimer l'univers";
-        message = `Êtes-vous sûr de vouloir supprimer l'univers "${universe.name}" ? Cette action supprimera également toutes les œuvres et chansons associées. Cette action est irréversible.`;
+        message = `Etes-vous sur de vouloir supprimer l'univers "${universe.name}" ? Cette action supprimera egalement toutes les oeuvres et chansons associees. Cette action est irreversible.`;
         break;
-      case "work":
+      }
+      case "work": {
         const work = item as Work;
-        title = "Supprimer l'œuvre";
-        message = `Êtes-vous sûr de vouloir supprimer l'œuvre "${work.title}" ? Cette action supprimera également toutes les chansons associées. Cette action est irréversible.`;
+        title = "Supprimer l'oeuvre";
+        message = `Etes-vous sur de vouloir supprimer l'oeuvre "${work.title}" ? Cette action supprimera egalement toutes les chansons associees. Cette action est irreversible.`;
         break;
-      case "song":
+      }
+      case "song": {
         const song = item as Song;
         title = "Supprimer la chanson";
-        message = `Êtes-vous sûr de vouloir supprimer la chanson "${song.title}" ? Cette action est irréversible.`;
+        message = `Etes-vous sur de vouloir supprimer la chanson "${song.title}" ? Cette action est irreversible.`;
         break;
+      }
     }
 
     setConfirmModal({
@@ -229,9 +201,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleUniverseSubmit = async (
-    data: Omit<Universe, "id" | "createdAt">
-  ) => {
+  const handleUniverseSubmit = async (data: Omit<Universe, "id" | "createdAt">) => {
     if (editingItem) {
       await updateUniverse(editingItem.id, data);
     } else {
@@ -240,24 +210,17 @@ export default function AdminDashboard() {
     handleCloseModal();
   };
 
-  const handleWorkSubmit = async (
-    data: Omit<Work, "id" | "createdAt" | "order">
-  ) => {
-    // Calculer l'ordre selon le contexte
+  const handleWorkSubmit = async (data: Omit<Work, "id" | "createdAt" | "order">) => {
     let calculatedOrder = 0;
 
     if (!editingItem) {
-      // Pour les nouvelles œuvres, calculer l'ordre automatiquement
-      const currentWorks = works.filter(
-        (w) => w.universeId === data.universeId
-      );
+      const currentWorks = works.filter((w) => w.universeId === data.universeId);
       const maxOrder =
         currentWorks.length > 0
           ? Math.max(...currentWorks.map((w) => w.order || 0))
           : 0;
       calculatedOrder = maxOrder + 1;
     } else {
-      // Pour les modifications, garder l'ordre existant
       calculatedOrder = (editingItem as Work).order || 0;
     }
 
@@ -274,16 +237,14 @@ export default function AdminDashboard() {
       handleCloseModal();
     }
 
-    // Pour addWork : { success: true, data: { id: "xxx" } }
-    // Pour updateWork : { success: true }
     return {
       success: result.success,
       error: result.error,
       id: editingItem
-        ? editingItem.id  // Si modification, retourne l'ID de l'item édité
+        ? editingItem.id
         : result.success && "data" in result && result.data && "id" in result.data
-        ? result.data.id  // Si création, retourne result.data.id
-        : undefined,
+          ? result.data.id
+          : undefined,
     };
   };
 
@@ -298,12 +259,9 @@ export default function AdminDashboard() {
     return result;
   };
 
-  // Fonctions de réorganisation des œuvres
   const handleMoveWorkUp = async (work: Work) => {
     const currentWorks = works.filter((w) => w.universeId === work.universeId);
-    const sortedWorks = currentWorks.sort(
-      (a, b) => (a.order || 0) - (b.order || 0)
-    );
+    const sortedWorks = currentWorks.sort((a, b) => (a.order || 0) - (b.order || 0));
     const currentIndex = sortedWorks.findIndex((w) => w.id === work.id);
 
     if (currentIndex > 0) {
@@ -321,9 +279,7 @@ export default function AdminDashboard() {
 
   const handleMoveWorkDown = async (work: Work) => {
     const currentWorks = works.filter((w) => w.universeId === work.universeId);
-    const sortedWorks = currentWorks.sort(
-      (a, b) => (a.order || 0) - (b.order || 0)
-    );
+    const sortedWorks = currentWorks.sort((a, b) => (a.order || 0) - (b.order || 0));
     const currentIndex = sortedWorks.findIndex((w) => w.id === work.id);
 
     if (currentIndex < sortedWorks.length - 1) {
@@ -361,7 +317,6 @@ export default function AdminDashboard() {
       onNavigateHome={handleNavigateHome}
     >
       <div className="space-y-8">
-        {/* Statut des cookies YouTube */}
         <CookieStatus />
 
         <UniverseSection
@@ -412,12 +367,11 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* Modales de formulaires */}
       {activeModal === "universe" && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white border-[3px] border-[#1B1B1B] rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[6px_6px_0_#1B1B1B]">
             <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-4">
-              {editingItem ? "Modifier l'univers" : "Créer un nouvel univers"}
+              {editingItem ? "Modifier l'univers" : "Creer un nouvel univers"}
             </h3>
             <UniverseForm
               universe={editingItem as Universe}
@@ -433,14 +387,12 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white border-[3px] border-[#1B1B1B] rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[6px_6px_0_#1B1B1B]">
             <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-4">
-              {editingItem ? "Modifier l'œuvre" : "Créer une nouvelle œuvre"}
+              {editingItem ? "Modifier l'oeuvre" : "Creer une nouvelle oeuvre"}
             </h3>
             <WorkForm
               work={editingItem as Work}
               universes={universes}
-              defaultUniverseId={
-                !editingItem ? selectedUniverse || undefined : undefined
-              }
+              defaultUniverseId={!editingItem ? selectedUniverse || undefined : undefined}
               onSubmit={handleWorkSubmit}
               onCancel={handleCloseModal}
               loading={loading}
@@ -456,9 +408,7 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white border-[3px] border-[#1B1B1B] rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[6px_6px_0_#1B1B1B]">
             <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-4">
-              {editingItem
-                ? "Modifier la chanson"
-                : "Créer une nouvelle chanson"}
+              {editingItem ? "Modifier la chanson" : "Creer une nouvelle chanson"}
             </h3>
             <SongForm
               song={editingItem as Song}
@@ -471,7 +421,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modale de confirmation de suppression */}
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}
@@ -485,4 +434,3 @@ export default function AdminDashboard() {
     </AdminLayout>
   );
 }
-

@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo } from "react";
 import { Home as HomeIcon } from "lucide-react";
-import { SoloScoreDisplay } from "@/components/scores/SoloScoreDisplay";
+import { SoloScoreDisplay } from "@/features/scores/components/SoloScoreDisplay";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
@@ -25,7 +25,6 @@ function SoloScoresContent() {
     router.push("/");
   };
 
-  // Vérifier que les paramètres sont valides
   if (isNaN(correct) || isNaN(incorrect) || (correct === 0 && incorrect === 0)) {
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center p-4">
@@ -33,7 +32,7 @@ function SoloScoresContent() {
           <ErrorMessage message="Scores invalides" />
           <button onClick={handleGoHome} className="magic-button mt-6 px-6 py-3">
             <HomeIcon className="inline mr-2" />
-            Retour à l&apos;accueil
+            Retour a l&apos;accueil
           </button>
         </div>
       </div>
@@ -42,13 +41,11 @@ function SoloScoresContent() {
 
   return (
     <div className="min-h-screen bg-[var(--color-surface-base)] relative overflow-hidden">
-      {/* Background effects */}
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#FDE68A]/40 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#BFDBFE]/40 rounded-full blur-3xl" />
       </div>
 
-      {/* Header */}
       <div className="fixed top-3 left-2 sm:top-6 sm:left-6 z-50">
         <button
           onClick={handleGoHome}
@@ -59,15 +56,14 @@ function SoloScoresContent() {
         </button>
       </div>
 
-      {/* Content */}
       <div className="container mx-auto px-4 py-8 pb-24 relative z-10">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-extrabold text-[var(--color-text-primary)] mb-2">
-              Vos résultats
+              Vos resultats
             </h1>
             <p className="text-[var(--color-text-secondary)]">
-              Résultats de votre partie solo
+              Resultats de votre partie solo
             </p>
           </div>
 

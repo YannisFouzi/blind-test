@@ -1,4 +1,4 @@
-import {
+﻿import {
   addDoc,
   collection,
   deleteDoc,
@@ -39,6 +39,14 @@ const normalizeTimestamp = (value: unknown) => {
   return value;
 };
 
+const normalizeTimestampFields = (record: Record<string, unknown>, fields: string[]) => {
+  fields.forEach((field) => {
+    if (record[field]) {
+      record[field] = normalizeTimestamp(record[field]);
+    }
+  });
+};
+
 const parseSnapshot = <T>(
   snapshot: DocumentSnapshot<DocumentData>,
   schema?: z.ZodSchema<T>
@@ -48,13 +56,7 @@ const parseSnapshot = <T>(
     ...snapshot.data(),
   } as Record<string, unknown>;
 
-  if (raw.createdAt) {
-    raw.createdAt = normalizeTimestamp(raw.createdAt);
-  }
-
-  if (raw.answeredAt) {
-    raw.answeredAt = normalizeTimestamp(raw.answeredAt);
-  }
+  normalizeTimestampFields(raw, ["createdAt", "answeredAt"]);
 
   return schema ? schema.parse(raw) : (raw as T);
 };

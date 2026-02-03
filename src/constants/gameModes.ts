@@ -1,35 +1,23 @@
 import type { Universe } from "@/types";
 
-/** ID partagé pour le mode custom (solo + multi) */
 export const CUSTOM_UNIVERSE_ID = "__custom__";
-
-/** ID partagé pour le mode aléatoire (solo + multi) */
 export const RANDOM_UNIVERSE_ID = "__random__";
 
-/** Univers virtuel pour le mode aléatoire */
 export const RANDOM_UNIVERSE: Universe = {
   id: RANDOM_UNIVERSE_ID,
-  name: "Mode aléatoire",
-  description: "Sélectionnez des œuvres ; à chaque manche, un tirage aléatoire en affiche un nombre choisi.",
+  name: "Mode aleatoire",
+  description: "Selectionnez des oeuvres ; a chaque manche, un tirage aleatoire en affiche un nombre choisi.",
   color: "#10B981",
   icon: "shuffle",
   createdAt: new Date(),
 };
 
-/** Limite d'œuvres sélectionnables en mode custom (personnalisé) */
 export const MAX_WORKS_CUSTOM_MODE = 8;
 
-/** Nombre d'œuvres proposées par manche : min fixe, max = cap ou taille du pool */
 export const WORKS_PER_ROUND_MIN = 2;
 export const WORKS_PER_ROUND_MAX = 8;
 export const WORKS_PER_ROUND_DEFAULT = 5;
 
-/**
- * Mapping ID ou nom normalisé → chemin image de fond (public/image/).
- * Custom et aléatoire utilisent custom.avif (recherche par id).
- * Les univers Firebase ont des id auto-générés ; on fait aussi la recherche par nom normalisé.
- * Pas d'image pour The Last of Us et From Software → fallback couleur.
- */
 export const UNIVERSE_BACKGROUND_IMAGES: Record<string, string> = {
   [CUSTOM_UNIVERSE_ID]: "/image/custom.avif",
   [RANDOM_UNIVERSE_ID]: "/image/custom.avif",
@@ -41,23 +29,18 @@ export const UNIVERSE_BACKGROUND_IMAGES: Record<string, string> = {
   "from-software": "/image/from-software.webp",
 };
 
-/** Normalise le nom d'univers pour la recherche d'image (lowercase, espaces → tirets) */
 const normalizeUniverseName = (name: string): string =>
   name
     .toLowerCase()
     .trim()
     .replace(/\s+/g, "-")
-    .replace(/[àâä]/g, "a")
-    .replace(/[éèêë]/g, "e")
-    .replace(/[îï]/g, "i")
-    .replace(/[ôö]/g, "o")
-    .replace(/[ùûü]/g, "u")
-    .replace(/ç/g, "c");
+    .replace(/[\u00e0\u00e2\u00e4]/g, "a")
+    .replace(/[\u00e9\u00e8\u00ea\u00eb]/g, "e")
+    .replace(/[\u00ee\u00ef]/g, "i")
+    .replace(/[\u00f4\u00f6]/g, "o")
+    .replace(/[\u00f9\u00fb\u00fc]/g, "u")
+    .replace(/\u00e7/g, "c");
 
-/**
- * Retourne le chemin de l'image de fond pour un univers.
- * Cherche d'abord par id (pour __custom__, __random__), puis par nom normalisé (Firebase).
- */
 export const getUniverseBackgroundImage = (
   universeId: string,
   universeName?: string

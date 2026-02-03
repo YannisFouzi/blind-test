@@ -58,7 +58,7 @@ next-env.d.ts
 
 
 
-
+*.md
 *.jpg
 CLAUDE.md
 

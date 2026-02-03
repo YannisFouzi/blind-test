@@ -244,7 +244,7 @@ const downloadUploadAudio = async (
     await convertToMp3(downloadedPath, tmpOutput);
 
     // Générer la version reversed à partir du MP3 normal
-    await convertToReversedMp3(tmpOutput, tmpOutputReversed);
+    await convertToMp3(tmpOutput, tmpOutputReversed, { reverse: true });
 
     const key = buildObjectKey(workId, videoId, title);
     const reversedKey = key.replace(/\.mp3$/i, "_reversed.mp3");
@@ -319,27 +319,25 @@ const downloadAudioStream = async (videoId: string, outputBase: string) => {
   }
 };
 
-const convertToMp3 = (input: string, output: string) => {
+const convertToMp3 = (
+  input: string,
+  output: string,
+  options: { reverse?: boolean } = {}
+) => {
   return new Promise<void>((resolve, reject) => {
-    ffmpeg(input)
-      .audioBitrate(128)
-      .format("mp3")
-      .outputOptions(["-metadata", "comment=BlindTest"])
+    const command = ffmpeg(input).audioBitrate(128).format("mp3");
+    if (options.reverse) {
+      command.audioFilters("areverse");
+    }
+
+    command
+      .outputOptions([
+        "-metadata",
+        options.reverse ? "comment=BlindTest-Reverse" : "comment=BlindTest",
+      ])
       .on("end", () => resolve())
       .on("error", reject)
       .save(output);
   });
 };
 
-const convertToReversedMp3 = (input: string, output: string) => {
-  return new Promise<void>((resolve, reject) => {
-    ffmpeg(input)
-      .audioBitrate(128)
-      .format("mp3")
-      .audioFilters("areverse")
-      .outputOptions(["-metadata", "comment=BlindTest-Reverse"])
-      .on("end", () => resolve())
-      .on("error", reject)
-      .save(output);
-  });
-};

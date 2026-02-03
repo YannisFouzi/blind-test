@@ -1,11 +1,12 @@
 import type * as Party from "partykit/server";
 import { z } from "zod";
+import type { Song as SharedSong, RoomPlayer as SharedRoomPlayer } from "@shared-types";
 import {
   calculateGameRounds,
   getCurrentRound,
   type GameRound,
   type MysteryEffectsConfig,
-} from "../src/utils/mysteryEffects";
+} from "@shared-utils/mysteryEffects";
 
 // ============================================================================
 // SECURITY CONSTANTS & HELPERS
@@ -96,24 +97,10 @@ const generateToken = () => {
   return toBase64(bytes);
 };
 
-/**
- * SERVEUR PARTYKIT - BLIND TEST MULTIPLAYER
- * Ã‰tape 1.2 - ImplÃ©mentation complÃ¨te
- *
- * ResponsabilitÃ©s :
- * - GÃ©rer les connexions WebSocket des joueurs
- * - Router les messages (join, configure, start, answer, next)
- * - Calculer les rangs et points de maniÃ¨re autoritaire
- * - Broadcaster l'Ã©tat aux clients
- * - GÃ©rer le lifecycle de la room
- */
-
-// ============================================================================
-// TYPES & SCHEMAS
-// ============================================================================
+// Types & schemas
 
 /**
- * Types de messages client â†’ serveur
+ * Client -> server message types
  */
 const MessageSchema = z.discriminatedUnion("type", [
   z.object({
@@ -160,7 +147,7 @@ const MessageSchema = z.discriminatedUnion("type", [
     // Mode normal/reverse : format simple
     songId: z.string().min(1).optional(),
     workId: z.string().optional().nullable(),
-    // Mode double : mapping explicite songId → workId
+    // Mode double : mapping explicite songId ? workId
     answers: z
       .array(
         z.object({
@@ -217,25 +204,13 @@ const MessageSchema = z.discriminatedUnion("type", [
 
 type Message = z.infer<typeof MessageSchema>;
 
-/**
- * Structure d'un joueur dans la room
- */
-interface Player {
-  id: string;
-  displayName: string;
-  score: number; // Points totaux (pour le classement)
-  correct: number; // Nombre de bonnes réponses (1 par bonne réponse)
-  incorrect: number;
+// Player stored in the room
+type Player = Omit<SharedRoomPlayer, "lastSeen" | "hasAnsweredCurrentSong" | "isHost"> & {
+  connectionId: string;
   isHost: boolean;
-  connected: boolean;
-  connectionId: string; // ID de connexion WebSocket
-  /** Phase "starting" (Ready Check) : true quand le joueur a envoyé player_ready */
-  ready?: boolean;
-}
+};
 
-/**
- * Structure d'une rÃ©ponse
- */
+// Player response
 interface Response {
   songId: string;
   playerId: string;
@@ -246,19 +221,8 @@ interface Response {
   timestamp: number;
 }
 
-/**
- * Structure d'un morceau (simplifiÃ©)
- */
-interface Song {
-  id: string;
-  title: string;
-  artist: string;
-  workId: string;
-  youtubeId: string;
-  audioUrl?: string;
-  audioUrlReversed?: string;
-  duration: number;
-}
+// Song payload
+type Song = Omit<SharedSong, "createdAt">;
 
 interface AuthTokenRecord {
   playerId: string;
@@ -277,9 +241,7 @@ interface FailedAttempt {
   lockUntil?: number;
 }
 
-/**
- * Ã‰tat complet de la room
- */
+// Full room state
 interface RoomState {
   roomId: string;
   hostId: string;
@@ -296,14 +258,14 @@ interface RoomState {
   passwordHash?: string;
   authTokens: Map<string, AuthTokenRecord>;
   failedAttempts: Map<string, FailedAttempt>;
-  // Effets mystères (modèle "rounds")
+  // Mystery effects (round model)
   rounds?: GameRound[];
   currentRoundIndex?: number;
   mysteryEffectsConfig?: MysteryEffectsConfig;
 }
 
 // ============================================================================
-// SERVEUR PARTYKIT
+// PartyKit server
 // ============================================================================
 
 export default class BlindTestRoom implements Party.Server {
@@ -312,11 +274,11 @@ export default class BlindTestRoom implements Party.Server {
   private authenticatedConnections = new Set<string>();
   private connectionIps = new Map<string, string | null>();
   private globalCooldownUntil = 0;
-  /** Timer pour le countdown Ready Check (phase "starting") → game_started après startIn ms */
+  /** Timer pour le countdown Ready Check (phase "starting") ? game_started apr�s startIn ms */
   private startingCountdownTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(public room: Party.Room) {
-    // Initialiser l'Ã©tat de la room
+    // Initialiser l'état de la room
     this.state = {
       roomId: room.id,
       hostId: "",
@@ -340,7 +302,7 @@ export default class BlindTestRoom implements Party.Server {
    */
   async onConnect(conn: Party.Connection, ctx: Party.ConnectionContext) {
     await this.ensureSecurityState();
-    // Si une alarme de cleanup Ã©tait programmÃ©e, l'annuler car quelqu'un revient
+    // Si une alarme de cleanup était programmée, l'annuler car quelqu'un revient
     const existingAlarm = await this.room.storage.getAlarm();
     if (existingAlarm) {
       await this.room.storage.deleteAlarm();
@@ -363,7 +325,7 @@ export default class BlindTestRoom implements Party.Server {
   }
 
   /**
-   * RÃ©ception d'un message
+   * Réception d'un message
    */
   async onMessage(message: string, sender: Party.Connection) {
     try {
@@ -429,7 +391,7 @@ export default class BlindTestRoom implements Party.Server {
   }
 
   /**
-   * DÃ©connexion d'un joueur
+   * Déconnexion d'un joueur
    */
   async onClose(conn: Party.Connection) {
     console.log(`[${this.room.id}] Disconnection: ${conn.id}`);
@@ -439,10 +401,8 @@ export default class BlindTestRoom implements Party.Server {
     this.authenticatedConnections.delete(conn.id);
     this.connectionIps.delete(conn.id);
 
-    // Trouver le joueur associÃ© Ã  cette connexion
-    const disconnectedPlayer = Array.from(this.state.players.values()).find(
-      (p) => p.connectionId === conn.id
-    );
+    // Trouver le joueur associé à cette connexion
+    const disconnectedPlayer = this.getPlayerByConnectionId(conn.id);
 
     if (!disconnectedPlayer) {
       await this.maybeScheduleCleanup();
@@ -452,7 +412,7 @@ export default class BlindTestRoom implements Party.Server {
     const disconnectedPlayerId = disconnectedPlayer.id;
     const wasHost = disconnectedPlayer.id === this.state.hostId;
     console.log(
-      `[HOST-DEBUG] onClose joueur trouvé: disconnectedPlayerId=${disconnectedPlayerId} wasHost=${wasHost}`
+      `[HOST-DEBUG] onClose joueur trouv�: disconnectedPlayerId=${disconnectedPlayerId} wasHost=${wasHost}`
     );
 
     this.state.players.delete(disconnectedPlayerId);
@@ -468,7 +428,7 @@ export default class BlindTestRoom implements Party.Server {
       newHost.isHost = true;
       this.state.hostId = newHost.id;
       console.log(
-        `[HOST-DEBUG] Transfert d'hôte: ${disconnectedPlayerId} -> ${newHost.id} (${newHost.displayName})`
+        `[HOST-DEBUG] Transfert d'h�te: ${disconnectedPlayerId} -> ${newHost.id} (${newHost.displayName})`
       );
       console.log(`[${this.room.id}] Host left; new host: ${newHost.id} (${newHost.displayName})`);
     } else if (wasHost) {
@@ -485,7 +445,7 @@ export default class BlindTestRoom implements Party.Server {
     await this.maybeScheduleCleanup();
   }
 
-  /** Programme une alarme de cleanup si la room est vide (survit à l'hibernation). */
+  /** Programme une alarme de cleanup si la room est vide (survit � l'hibernation). */
   private async maybeScheduleCleanup() {
     if (this.state.players.size > 0) return;
     const existingAlarm = await this.room.storage.getAlarm();
@@ -500,12 +460,12 @@ export default class BlindTestRoom implements Party.Server {
   }
 
   /**
-   * Alarme de cleanup - appelÃ©e automatiquement par PartyKit aprÃ¨s le dÃ©lai
-   * Survit Ã  l'hibernation du serveur
+   * Alarme de cleanup - appelée automatiquement par PartyKit après le délai
+   * Survit à l'hibernation du serveur
    * Note: this.room.id n'est pas accessible ici (limitation PartyKit)
    */
   async onAlarm() {
-    // RÃ©cupÃ©rer le roomId depuis le storage (sauvegardÃ© avant l'alarme)
+    // Récupérer le roomId depuis le storage (sauvegardé avant l'alarme)
     const roomId = await this.room.storage.get<string>("roomIdForCleanup");
     if (!roomId) {
       console.log("[onAlarm] No roomId found in storage, skipping cleanup");
@@ -529,9 +489,8 @@ export default class BlindTestRoom implements Party.Server {
     } catch (error) {
       console.error(`[${roomId}] Failed to notify lobby:`, error);
     }
-
-    // âœ… SUPPRIMER COMPLÃˆTEMENT L'Ã‰TAT DU DURABLE OBJECT
-    // Cela supprime le fichier SQLite physique et libÃ¨re les ressources
+    // Delete durable object state to release storage
+    // Cela supprime le fichier SQLite physique et libère les ressources
     await this.room.storage.deleteAll();
     console.log(`[${roomId}] Room state deleted completely (SQLite file removed)`);
   }
@@ -724,14 +683,14 @@ export default class BlindTestRoom implements Party.Server {
       sessionToken = await this.issueSessionToken(playerId);
     }
 
-    // Vérifier si le joueur existe déjà (reconnexion)
+    // V�rifier si le joueur existe d�j� (reconnexion)
     const existingPlayer = this.state.players.get(playerId);
 
     if (existingPlayer) {
       if (existingPlayer.connectionId && existingPlayer.connectionId !== sender.id) {
         this.authenticatedConnections.delete(existingPlayer.connectionId);
       }
-      // Reconnexion : mettre à jour la connexion
+      // Reconnexion : mettre � jour la connexion
       existingPlayer.connected = true;
       existingPlayer.connectionId = sender.id;
       existingPlayer.displayName = displayName;
@@ -759,7 +718,7 @@ export default class BlindTestRoom implements Party.Server {
         this.state.hostId = playerId;
         console.log(`[${this.room.id}] Player ${playerId} is now host`);
 
-        // Phase 7: Notifier le Lobby qu'une nouvelle room est créée
+        // Phase 7: Notifier le Lobby qu'une nouvelle room est cr��e
         void this.notifyLobby("room_created", {
           hostName: displayName,
           playersCount: 1,
@@ -784,7 +743,7 @@ export default class BlindTestRoom implements Party.Server {
       })
     );
 
-    // Envoyer l'état complet au joueur (important pour les reconnexions)
+    // Envoyer l'�tat complet au joueur (important pour les reconnexions)
     sender.send(
       JSON.stringify({
         type: "state_sync",
@@ -792,7 +751,7 @@ export default class BlindTestRoom implements Party.Server {
       })
     );
 
-    // Broadcaster la liste des joueurs à tous
+    // Broadcaster la liste des joueurs � tous
     this.broadcast({
       type: "players_update",
       players: this.getPlayersArray(),
@@ -812,7 +771,7 @@ export default class BlindTestRoom implements Party.Server {
       hostId: hostIdFromClient,
       mysteryEffectsConfig,
     } = msg;
-    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+    const senderPlayer = this.getPlayerByConnectionId(sender.id);
     const senderId = senderPlayer?.id ?? hostIdFromClient;
 
     // Validation: seul l'host peut configurer
@@ -829,8 +788,7 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // VÃ©rifier que c'est le host qui configure (optionnel, on peut laisser n'importe qui)
-    // Pour l'instant, on autorise tout le monde pour simplifier
+    // Vérifier que c'est le host qui configure (optionnel, on peut laisser n'importe qui)
 
     this.state.universeId = universeId;
     this.state.songs = songs;
@@ -838,7 +796,7 @@ export default class BlindTestRoom implements Party.Server {
     this.state.worksPerRound = worksPerRound;
     this.state.options = options;
 
-    // Effets mystères : calculer les rounds si configurés
+    // Effets myst�res : calculer les rounds si configur�s
     const hasEffects =
       mysteryEffectsConfig?.enabled && mysteryEffectsConfig.effects && mysteryEffectsConfig.effects.length > 0;
 
@@ -889,11 +847,11 @@ export default class BlindTestRoom implements Party.Server {
   }
 
   /**
-   * Handler: START - DÃ©marrage de la partie
+   * Handler: START - Démarrage de la partie
    */
   private handleStart(msg: Extract<Message, { type: "start" }>, sender: Party.Connection) {
     const { hostId } = msg;
-    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+    const senderPlayer = this.getPlayerByConnectionId(sender.id);
 
     // Validation: est-ce bien le host ?
     if (hostId !== this.state.hostId) {
@@ -906,7 +864,7 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // Validation: Ã©tat de la room (doit Ãªtre "idle" ou "configured")
+    // Validation: état de la room (doit être "idle" ou "configured")
     if (this.state.state !== "idle" && this.state.state !== "configured") {
       sender.send(
         JSON.stringify({
@@ -917,7 +875,7 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // Validation: au moins une chanson configurÃ©e
+    // Validation: au moins une chanson configurée
     if (this.state.songs.length === 0) {
       sender.send(
         JSON.stringify({
@@ -928,9 +886,9 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // Déterminer l'index du premier morceau si les rounds sont configurés
+    // D�terminer l'index du premier morceau si les rounds sont configur�s
     if (this.state.rounds && this.state.rounds.length > 0) {
-      // S'assurer que currentRoundIndex est initialisé à 0 si les rounds existent
+      // S'assurer que currentRoundIndex est initialis� � 0 si les rounds existent
       if (this.state.currentRoundIndex === undefined) {
         this.state.currentRoundIndex = 0;
       }
@@ -952,7 +910,7 @@ export default class BlindTestRoom implements Party.Server {
       this.startingCountdownTimer = null;
     }
 
-    // Phase 7: Notifier le Lobby que la room a commencÃ© Ã  jouer
+    // Phase 7: Notifier le Lobby que la room a commencé à jouer
     void this.notifyLobby("room_state_changed", { state: "starting", playersCount: this.state.players.size, universeId: this.state.universeId, hasPassword: Boolean(this.state.passwordHash), });
 
     this.broadcast({
@@ -979,7 +937,7 @@ export default class BlindTestRoom implements Party.Server {
       sender.send(JSON.stringify({ type: "error", message: "Not in starting phase" }));
       return;
     }
-    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+    const senderPlayer = this.getPlayerByConnectionId(sender.id);
     if (!senderPlayer) {
       sender.send(JSON.stringify({ type: "error", message: "Player not found" }));
       return;
@@ -1039,12 +997,12 @@ export default class BlindTestRoom implements Party.Server {
   }
 
   /**
-   * Handler: ANSWER - Soumission d'une rÃ©ponse
+   * Handler: ANSWER - Soumission d'une réponse
    */
   private handleAnswer(msg: Extract<Message, { type: "answer" }>, sender: Party.Connection) {
     const { playerId } = msg;
 
-    // Validation: le jeu doit être en mode "playing"
+    // Validation: le jeu doit �tre en mode "playing"
     if (this.state.state !== "playing") {
       sender.send(
         JSON.stringify({
@@ -1055,7 +1013,7 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // VÃ©rifier que le joueur existe
+    // Vérifier que le joueur existe
     const player = this.state.players.get(playerId);
     if (!player) {
       sender.send(
@@ -1067,7 +1025,7 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // VÃ©rifier que le joueur est connectÃ©
+    // Vérifier que le joueur est connecté
     if (!player.connected) {
       sender.send(
         JSON.stringify({
@@ -1078,10 +1036,10 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // ⭐ NOUVEAU : Détecter le mode double
+    // ? NOUVEAU : D�tecter le mode double
     const currentRound = this.getCurrentRound();
     if (currentRound?.type === "double") {
-      // Mode double : traiter les 2 réponses avec mapping explicite
+      // Mode double : traiter les 2 r�ponses avec mapping explicite
       return this.handleAnswerDouble(msg, sender, player, currentRound);
     }
 
@@ -1097,9 +1055,9 @@ export default class BlindTestRoom implements Party.Server {
     }
 
     const songId = msg.songId;
-    const workId = msg.workId ?? null; // Normaliser undefined â†’ null
+    const workId = msg.workId ?? null;
 
-    // DÃ©duplication: a-t-il dÃ©jÃ  rÃ©pondu ?
+    // Déduplication: a-t-il déjà répondu ?
     const responseKey = `${songId}-${playerId}`;
     if (this.state.responses.has(responseKey)) {
       const existing = this.state.responses.get(responseKey)!;
@@ -1115,7 +1073,7 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // Trouver la bonne rÃ©ponse
+    // Trouver la bonne réponse
     const song = this.state.songs.find((s) => s.id === songId);
     if (!song) {
       sender.send(
@@ -1129,7 +1087,7 @@ export default class BlindTestRoom implements Party.Server {
 
     const isCorrect = workId === song.workId;
 
-    // Calculer le rang (nombre de bonnes rÃ©ponses dÃ©jÃ  enregistrÃ©es + 1)
+    // Calculer le rang (nombre de bonnes réponses déjà enregistrées + 1)
     let rank = 1;
     for (const response of this.state.responses.values()) {
       if (response.songId === songId && response.isCorrect) {
@@ -1138,11 +1096,11 @@ export default class BlindTestRoom implements Party.Server {
     }
 
     // Calculer les points (formule: max(1, nbJoueurs - rang + 1))
-    const connectedPlayers = Array.from(this.state.players.values()).filter((p) => p.connected);
+    const connectedPlayers = this.getConnectedPlayers();
     const activePlayers = connectedPlayers.length;
     const points = isCorrect ? Math.max(1, activePlayers - rank + 1) : 0;
 
-    // Enregistrer la rÃ©ponse
+    // Enregistrer la réponse
     const response: Response = {
       songId,
       playerId,
@@ -1155,16 +1113,16 @@ export default class BlindTestRoom implements Party.Server {
 
     this.state.responses.set(responseKey, response);
 
-    // Mettre Ã  jour le score du joueur
+    // Mettre à jour le score du joueur
     if (isCorrect) {
       player.score += points; // Points totaux selon le rang
-      player.correct += 1; // Nombre de bonnes réponses (1 par bonne réponse)
+            player.correct += 1; // Correct answers count
     } else {
       player.incorrect += 1;
     }
 
     console.log(
-      `[${this.room.id}] Answer: ${playerId} â†’ ${isCorrect ? "âœ“" : "âœ—"} (rank ${rank}, ${points} pts)`
+      `[${this.room.id}] Answer: ${playerId} → ${isCorrect ? "✓" : "✗"} (rank ${rank}, ${points} pts)`
     );
 
     // Notifier le joueur
@@ -1178,22 +1136,22 @@ export default class BlindTestRoom implements Party.Server {
       })
     );
 
-    // Broadcaster qu'un joueur a rÃ©pondu (sans rÃ©vÃ©ler si correct)
+    // Broadcaster qu'un joueur a répondu (sans révéler si correct)
     this.broadcast({
       type: "player_answered",
       playerId,
       songId,
     });
 
-    // Broadcaster la mise Ã  jour des scores et statuts
+    // Broadcaster la mise à jour des scores et statuts
     this.broadcast({
       type: "players_update",
       players: this.getPlayersArray(),
     });
 
-    // VÃ©rifier si tous les joueurs ont rÃ©pondu
-    // ⭐ FIX: Utiliser le songId du round actuel au lieu de celui du message
-    // pour être cohérent avec le mode double et éviter les problèmes de synchronisation
+    // Vérifier si tous les joueurs ont répondu
+    // ? FIX: Utiliser le songId du round actuel au lieu de celui du message
+    // pour �tre coh�rent avec le mode double et �viter les probl�mes de synchronisation
     const roundSongId = currentRound?.songIds[0] ?? songId;
     const currentSongResponses = Array.from(this.state.responses.values()).filter(
       (r) => r.songId === roundSongId
@@ -1206,7 +1164,7 @@ export default class BlindTestRoom implements Party.Server {
   }
 
   /**
-   * Handler pour mode double : traiter 2 réponses avec mapping explicite
+   * Handler pour mode double : traiter 2 r�ponses avec mapping explicite
    */
   private handleAnswerDouble(
     msg: Extract<Message, { type: "answer" }>,
@@ -1216,7 +1174,7 @@ export default class BlindTestRoom implements Party.Server {
   ) {
     const { playerId } = msg;
 
-    // Vérifier que le message contient 2 réponses
+    // V�rifier que le message contient 2 r�ponses
     if (!msg.answers || msg.answers.length !== 2) {
       sender.send(
         JSON.stringify({
@@ -1227,7 +1185,7 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // Vérifier que les songIds correspondent au round
+    // V�rifier que les songIds correspondent au round
     const expectedSongIds = currentRound.songIds;
     const receivedSongIds = msg.answers.map((a) => a.songId);
 
@@ -1244,14 +1202,14 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // Traiter en multiset : l'ordre des sélections ne compte pas
-    const connectedPlayers = Array.from(this.state.players.values()).filter((p) => p.connected);
+    // Traiter en multiset : l'ordre des s�lections ne compte pas
+    const connectedPlayers = this.getConnectedPlayers();
     const activePlayers = connectedPlayers.length;
     let totalPoints = 0;
     let totalCorrect = 0;
     let totalIncorrect = 0;
 
-    // Multiset des œuvres correctes pour ce round (avec multiplicité)
+    // Multiset des �uvres correctes pour ce round (avec multiplicit�)
     const correctWorkIds = currentRound.songIds
       .map((sid) => this.state.songs.find((s) => s.id === sid)?.workId)
       .filter((w): w is string => Boolean(w));
@@ -1264,25 +1222,25 @@ export default class BlindTestRoom implements Party.Server {
         continue;
       }
 
-      // Vérifier déduplication pour cette combinaison songId + playerId
+      // V�rifier d�duplication pour cette combinaison songId + playerId
       const responseKey = `${answer.songId}-${playerId}`;
       if (this.state.responses.has(responseKey)) {
         console.log(`[${this.room.id}] Player ${playerId} already answered for song ${answer.songId}, skipping`);
         continue;
       }
 
-      // Multiset : la sélection est correcte si cette œuvre fait partie des correctes restantes
+      // Multiset : la s�lection est correcte si cette �uvre fait partie des correctes restantes
       const idx = remainingCorrect.indexOf(answer.workId ?? "");
       const isCorrect = idx !== -1;
       if (isCorrect) remainingCorrect.splice(idx, 1);
 
-      // Rang pour cette bonne réponse : combien ont déjà répondu correctement pour ce songId spécifique
-      // ⭐ FIX: Calculer le rank par songId (comme en mode normal) pour que chaque musique ait son propre rank
-      // même si elles partagent le même workId
+      // Rang pour cette bonne r�ponse : combien ont d�j� r�pondu correctement pour ce songId sp�cifique
+      // ? FIX: Calculer le rank par songId (comme en mode normal) pour que chaque musique ait son propre rank
+      // m�me si elles partagent le m�me workId
       let rank = 1;
       if (isCorrect) {
         for (const response of this.state.responses.values()) {
-          // Compter les réponses précédentes pour ce songId spécifique (pas par workId)
+          // Compter les r�ponses pr�c�dentes pour ce songId sp�cifique (pas par workId)
           if (response.songId === answer.songId && response.isCorrect) {
             rank++;
           }
@@ -1298,7 +1256,7 @@ export default class BlindTestRoom implements Party.Server {
         totalIncorrect += 1;
       }
 
-      // Enregistrer la réponse
+      // Enregistrer la r�ponse
       const response: Response = {
         songId: answer.songId,
         playerId,
@@ -1312,7 +1270,7 @@ export default class BlindTestRoom implements Party.Server {
       this.state.responses.set(responseKey, response);
 
       console.log(
-        `[${this.room.id}] Double Answer: ${playerId} → song ${answer.songId} → ${isCorrect ? "✓" : "✗"} (rank ${rank}, ${points} pts)`
+        `[${this.room.id}] Double Answer: ${playerId} ? song ${answer.songId} ? ${isCorrect ? "?" : "?"} (rank ${rank}, ${points} pts)`
       );
 
       this.broadcast({
@@ -1322,33 +1280,33 @@ export default class BlindTestRoom implements Party.Server {
       });
     }
 
-    // Mettre à jour le score du joueur (somme des points)
+    // Mettre � jour le score du joueur (somme des points)
     player.score += totalPoints;
     player.correct += totalCorrect;
     player.incorrect += totalIncorrect;
 
     console.log(
-      `[${this.room.id}] Double Answer Total: ${playerId} → ${totalCorrect} correct, ${totalIncorrect} incorrect, ${totalPoints} pts`
+      `[${this.room.id}] Double Answer Total: ${playerId} ? ${totalCorrect} correct, ${totalIncorrect} incorrect, ${totalPoints} pts`
     );
 
     // Notifier le joueur (points totaux)
     sender.send(
       JSON.stringify({
         type: "answer_recorded",
-        rank: totalCorrect > 0 ? 1 : 0, // Rank global (simplifié, car on a 2 réponses)
+                rank: totalCorrect > 0 ? 1 : 0,
         points: totalPoints,
         isCorrect: totalCorrect > 0,
         duplicate: false,
       })
     );
 
-    // Broadcaster la mise à jour des scores et statuts
+    // Broadcaster la mise � jour des scores et statuts
     this.broadcast({
       type: "players_update",
       players: this.getPlayersArray(),
     });
 
-    // Vérifier si tous les joueurs ont répondu aux 2 songs du round
+    // V�rifier si tous les joueurs ont r�pondu aux 2 songs du round
     const roundSongIds = currentRound.songIds;
     const allPlayersAnsweredRound = roundSongIds.every((songId) => {
       const songResponses = Array.from(this.state.responses.values()).filter(
@@ -1368,7 +1326,7 @@ export default class BlindTestRoom implements Party.Server {
    */
   private handleNext(msg: Extract<Message, { type: "next" }>, sender: Party.Connection) {
     const { hostId } = msg;
-    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+    const senderPlayer = this.getPlayerByConnectionId(sender.id);
 
     // Validation: est-ce bien le host ?
     if (hostId !== this.state.hostId) {
@@ -1392,9 +1350,9 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // Si des rounds sont définis, on navigue par round, sinon fallback historique par songIndex
+    // Si des rounds sont d�finis, on navigue par round, sinon fallback historique par songIndex
     if (this.state.rounds && this.state.rounds.length > 0) {
-      // S'assurer que currentRoundIndex est défini (utiliser 0 par défaut si undefined)
+      // S'assurer que currentRoundIndex est d�fini (utiliser 0 par d�faut si undefined)
       const currentRoundIndex = this.state.currentRoundIndex ?? 0;
       const nextRoundIndex = currentRoundIndex + 1;
 
@@ -1444,7 +1402,7 @@ export default class BlindTestRoom implements Party.Server {
         currentSong: nextSong,
       });
     } else {
-      // Comportement historique : navigation séquentielle par songIndex
+      // Comportement historique : navigation s�quentielle par songIndex
       if (this.state.currentSongIndex >= this.state.songs.length - 1) {
         // Fin de partie
         this.state.state = "results";
@@ -1481,7 +1439,7 @@ export default class BlindTestRoom implements Party.Server {
       });
     }
 
-    // FIX: Envoyer players_update pour rÃ©initialiser hasAnsweredCurrentSong
+    // FIX: Envoyer players_update pour réinitialiser hasAnsweredCurrentSong
     this.broadcast({
       type: "players_update",
       players: this.getPlayersArray(),
@@ -1493,7 +1451,7 @@ export default class BlindTestRoom implements Party.Server {
    */
   private handleShowScores(msg: Extract<Message, { type: "show_scores" }>, sender: Party.Connection) {
     const { hostId } = msg;
-    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+    const senderPlayer = this.getPlayerByConnectionId(sender.id);
 
     // Validation: est-ce bien le host ?
     if (hostId !== this.state.hostId) {
@@ -1506,7 +1464,7 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // Validation: on doit être en mode playing ou results
+    // Validation: on doit �tre en mode playing ou results
     if (this.state.state !== "playing" && this.state.state !== "results") {
       sender.send(
         JSON.stringify({
@@ -1517,9 +1475,9 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // Si on est encore en mode "playing", vérifier si on peut terminer la partie.
-    // Utiliser la même logique que le client (displayedSongIndex >= displayedTotalSongs)
-    // pour rester aligné avec l’UI (rounds / double rounds).
+    // Si on est encore en mode "playing", v�rifier si on peut terminer la partie.
+    // Utiliser la m�me logique que le client (displayedSongIndex >= displayedTotalSongs)
+    // pour rester align� avec l�UI (rounds / double rounds).
     if (this.state.state === "playing") {
       let atEnd: boolean;
       if (this.state.rounds && this.state.rounds.length > 0) {
@@ -1541,7 +1499,7 @@ export default class BlindTestRoom implements Party.Server {
         return;
       }
 
-      // Vérifier si tous les joueurs ont répondu au(x) morceau(x) de la manche courante
+      // V�rifier si tous les joueurs ont r�pondu au(x) morceau(x) de la manche courante
       const currentRound = this.getCurrentRound();
       const songIdsToCheck: string[] = currentRound
         ? currentRound.songIds
@@ -1557,7 +1515,7 @@ export default class BlindTestRoom implements Party.Server {
         return;
       }
 
-      const connectedPlayers = Array.from(this.state.players.values()).filter((p) => p.connected);
+      const connectedPlayers = this.getConnectedPlayers();
       for (const songId of songIdsToCheck) {
         const responsesForSong = Array.from(this.state.responses.values()).filter(
           (r) => r.songId === songId
@@ -1573,7 +1531,7 @@ export default class BlindTestRoom implements Party.Server {
         }
       }
 
-      // Tous les joueurs ont répondu au dernier morceau : terminer la partie automatiquement
+      // Tous les joueurs ont r�pondu au dernier morceau : terminer la partie automatiquement
       console.log(`[${this.room.id}] All players answered last song, ending game automatically`);
       this.state.state = "results";
 
@@ -1587,7 +1545,7 @@ export default class BlindTestRoom implements Party.Server {
 
     console.log(`[${this.room.id}] Host requested to show scores`);
 
-    // Broadcaster le message à tous les joueurs pour qu'ils redirigent
+    // Broadcaster le message � tous les joueurs pour qu'ils redirigent
     this.broadcast({
       type: "show_scores",
       roomId: this.state.roomId,
@@ -1596,16 +1554,16 @@ export default class BlindTestRoom implements Party.Server {
   }
 
   /**
-   * Handler: RESET_TO_WAITING - Réinitialiser la room et retourner au lobby
+   * Handler: RESET_TO_WAITING - R�initialiser la room et retourner au lobby
    * 
-   * Réinitialise complètement l'état de la room (scores, réponses, config, etc.)
+   * R�initialise compl�tement l'�tat de la room (scores, r�ponses, config, etc.)
    * et redirige tous les joueurs vers la waiting room pour reconfigurer.
    * 
    * Host-only action.
    */
   private handleResetToWaiting(msg: Extract<Message, { type: "reset_to_waiting" }>, sender: Party.Connection) {
     const { hostId } = msg;
-    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+    const senderPlayer = this.getPlayerByConnectionId(sender.id);
     const senderId = senderPlayer?.id ?? hostId;
 
     // Validation: est-ce bien le host ?
@@ -1622,8 +1580,8 @@ export default class BlindTestRoom implements Party.Server {
       return;
     }
 
-    // ⭐ RESET COMPLET DE L'ÉTAT DE LA ROOM
-    // Réinitialiser tous les champs de configuration et de jeu
+    // ? RESET COMPLET DE L'�TAT DE LA ROOM
+    // R�initialiser tous les champs de configuration et de jeu
     this.state.universeId = "";
     this.state.songs = [];
     this.state.currentSongIndex = 0;
@@ -1641,8 +1599,8 @@ export default class BlindTestRoom implements Party.Server {
       this.startingCountdownTimer = null;
     }
 
-    // ⭐ RESET DES SCORES DE TOUS LES JOUEURS
-    // Réinitialiser score, correct, incorrect pour chaque joueur
+    // ? RESET DES SCORES DE TOUS LES JOUEURS
+    // R�initialiser score, correct, incorrect pour chaque joueur
     for (const player of this.state.players.values()) {
       player.score = 0;
       player.correct = 0;
@@ -1662,7 +1620,7 @@ export default class BlindTestRoom implements Party.Server {
       })),
     });
 
-    // ⭐ NOTIFIER LE LOBBY que la room est revenue en état idle
+    // ? NOTIFIER LE LOBBY que la room est revenue en �tat idle
     void this.notifyLobby("room_state_changed", {
       state: "idle",
       playersCount: this.state.players.size,
@@ -1670,20 +1628,20 @@ export default class BlindTestRoom implements Party.Server {
       hasPassword: Boolean(this.state.passwordHash),
     });
 
-    // ⭐ BROADCAST players_update pour mettre à jour les scores à zéro côté client
+    // ? BROADCAST players_update pour mettre � jour les scores � z�ro c�t� client
     this.broadcast({
       type: "players_update",
       players: this.getPlayersArray(),
     });
 
-    // ⭐ BROADCAST state_sync pour forcer tous les clients à synchroniser l'état reset
-    // (obligatoire pour éviter les ghost states)
+    // ? BROADCAST state_sync pour forcer tous les clients � synchroniser l'�tat reset
+    // (obligatoire pour �viter les ghost states)
     this.broadcast({
       type: "state_sync",
       state: this.serializeState(),
     });
 
-    // ⭐ BROADCAST redirect_to_waiting_room pour rediriger tous les joueurs
+    // ? BROADCAST redirect_to_waiting_room pour rediriger tous les joueurs
     // Chaque client construira son URL avec son playerId et displayName depuis le serveur
     this.broadcast({
       type: "redirect_to_waiting_room",
@@ -1699,17 +1657,17 @@ export default class BlindTestRoom implements Party.Server {
   }
 
   // ==========================================================================
-  // MÃ‰THODES UTILITAIRES
+  // MÉTHODES UTILITAIRES
   // ==========================================================================
 
   /**
-   * Broadcaster un message Ã  tous les clients connectÃ©s
+   * Broadcaster un message à tous les clients connectés
    */
   private handleHostPreviewStart(
     msg: Extract<Message, { type: "host_preview_start" }>,
     sender: Party.Connection
   ) {
-    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+    const senderPlayer = this.getPlayerByConnectionId(sender.id);
     if (!senderPlayer || senderPlayer.id !== this.state.hostId) return;
     this.broadcast({
       type: "host_preview_start",
@@ -1722,7 +1680,7 @@ export default class BlindTestRoom implements Party.Server {
     msg: Extract<Message, { type: "host_preview_options" }>,
     sender: Party.Connection
   ) {
-    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+    const senderPlayer = this.getPlayerByConnectionId(sender.id);
     if (!senderPlayer || senderPlayer.id !== this.state.hostId) return;
     this.broadcast({
       type: "host_preview_options",
@@ -1737,7 +1695,7 @@ export default class BlindTestRoom implements Party.Server {
   }
 
   private handleHostPreviewClear(sender: Party.Connection) {
-    const senderPlayer = Array.from(this.state.players.values()).find((p) => p.connectionId === sender.id);
+    const senderPlayer = this.getPlayerByConnectionId(sender.id);
     if (!senderPlayer || senderPlayer.id !== this.state.hostId) return;
     this.broadcast({ type: "host_preview_clear" });
   }
@@ -1755,20 +1713,28 @@ export default class BlindTestRoom implements Party.Server {
     }
   }
 
+  private getPlayerByConnectionId(connectionId: string) {
+    return Array.from(this.state.players.values()).find((player) => player.connectionId === connectionId);
+  }
+
+  private getConnectedPlayers() {
+    return Array.from(this.state.players.values()).filter((player) => player.connected);
+  }
+
   /**
-   * Obtenir le round actuel (helper pour éviter la répétition)
+   * Obtenir le round actuel (helper pour �viter la r�p�tition)
    */
   private getCurrentRound(): GameRound | undefined {
     if (!this.state.rounds || this.state.rounds.length === 0) {
       return undefined;
     }
-    // Si currentRoundIndex n'est pas défini mais que rounds existe, utiliser 0 par défaut
+    // Si currentRoundIndex n'est pas d�fini mais que rounds existe, utiliser 0 par d�faut
     const roundIndex = this.state.currentRoundIndex ?? 0;
     return getCurrentRound(this.state.rounds, roundIndex);
   }
 
   /**
-   * Calculer le total de "songs consommés" basé sur les rounds (comme en solo)
+   * Calculer le total de "songs consomm�s" bas� sur les rounds (comme en solo)
    */
   private getDisplayedTotalSongs(): number {
     if (this.state.rounds && this.state.rounds.length > 0) {
@@ -1780,27 +1746,27 @@ export default class BlindTestRoom implements Party.Server {
   }
 
   /**
-   * Calculer l'index affiché du morceau actuel basé sur les rounds (comme en solo)
+   * Calculer l'index affich� du morceau actuel bas� sur les rounds (comme en solo)
    */
   private getDisplayedSongIndex(): number {
     if (this.state.rounds && this.state.rounds.length > 0) {
-      // Si currentRoundIndex n'est pas défini mais que rounds existe, utiliser 0 par défaut
+      // Si currentRoundIndex n'est pas d�fini mais que rounds existe, utiliser 0 par d�faut
       const roundIndex = this.state.currentRoundIndex ?? 0;
-      // Somme des morceaux "consommés" par tous les rounds précédents
+      // Somme des morceaux "consomm�s" par tous les rounds pr�c�dents
       let consumed = 0;
       for (let i = 0; i < roundIndex; i++) {
         const round = this.state.rounds[i];
         consumed += round.type === "double" ? 2 : 1;
       }
-      // L'index affiché commence à 1
+      // L'index affich� commence � 1
       return consumed + 1;
     }
-    // Fallback historique : index basé sur currentSongIndex
+    // Fallback historique : index bas� sur currentSongIndex
     return (this.state.currentSongIndex ?? 0) + 1;
   }
 
   /**
-   * SÃ©rialiser l'Ã©tat pour l'envoyer au client
+   * Sérialiser l'état pour l'envoyer au client
    */
   private serializeState() {
     const currentRound = this.getCurrentRound();
@@ -1825,13 +1791,13 @@ export default class BlindTestRoom implements Party.Server {
 
   /**
    * Convertir Map<string, Player> en tableau
-   * Inclut hasAnsweredCurrentSong pour le tableau de score temps rÃ©el
+   * Inclut hasAnsweredCurrentSong pour le tableau de score temps réel
    */
   private getPlayersArray() {
     const currentSongId = this.state.songs[this.state.currentSongIndex]?.id;
     
     return Array.from(this.state.players.values()).map((p) => {
-      // VÃ©rifier si ce joueur a rÃ©pondu au morceau actuel
+      // Vérifier si ce joueur a répondu au morceau actuel
       const hasAnsweredCurrentSong = currentSongId
         ? this.state.responses.has(`${currentSongId}-${p.id}`)
         : false;
@@ -1851,7 +1817,7 @@ export default class BlindTestRoom implements Party.Server {
   }
 
   /**
-   * Calculer les scores finaux triÃ©s
+   * Calculer les scores finaux triés
    */
   private getFinalScores() {
     const players = this.getPlayersArray();
@@ -1863,22 +1829,10 @@ export default class BlindTestRoom implements Party.Server {
       }));
   }
 
-  // ============================================================================
-  // PHASE 7 : INTÃ‰GRATION LOBBY PARTY
-  // ============================================================================
-
-  /**
-   * Notifier le Lobby Party d'un Ã©vÃ©nement
-   *
-   * Le Lobby Party track toutes les rooms actives pour afficher
-   * la liste aux clients qui cherchent une partie.
-   *
-   * @param type - Type d'Ã©vÃ©nement (room_created, room_state_changed, room_deleted)
-   * @param data - DonnÃ©es supplÃ©mentaires
-   */
+  // Lobby integration
   private async notifyLobby(type: string, data: Record<string, any> = {}) {
     try {
-      // URL du Lobby Party singleton
+      // LobbyParty singleton endpoint
       const lobbyUrl = `${this.room.env.PARTYKIT_HOST}/parties/lobby/main`;
 
       await fetch(lobbyUrl, {
@@ -1894,17 +1848,7 @@ export default class BlindTestRoom implements Party.Server {
       console.log(`[${this.room.id}] Notified lobby: ${type}`);
     } catch (error) {
       console.error(`[${this.room.id}] Failed to notify lobby:`, error);
-      // Ne pas throw : le jeu continue mÃªme si le lobby n'est pas notifiÃ©
+      // Do not throw; game continues if lobby is unavailable.
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

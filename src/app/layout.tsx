@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Baloo_2, JetBrains_Mono, Nunito } from "next/font/google";
 import "./globals.css";
 import { ProvidersWithAuth } from "./providers";
@@ -29,7 +29,7 @@ const monoFont = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Blind Test Musical",
   description:
-    "Testez vos connaissances musicales à travers différents univers",
+    "Testez vos connaissances musicales a travers differents univers",
 };
 
 export default function RootLayout({

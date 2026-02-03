@@ -3,9 +3,9 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo } from "react";
 import { Home as HomeIcon } from "lucide-react";
-import { usePartyKitRoom } from "@/hooks/usePartyKitRoom";
-import { useIdentity } from "@/hooks/useIdentity";
-import { Leaderboard } from "@/components/scores/Leaderboard";
+import { usePartyKitRoom } from "@/features/multiplayer-game/hooks/usePartyKitRoom";
+import { useIdentity } from "@/features/game-ui/hooks/useIdentity";
+import { Leaderboard } from "@/features/scores/components/Leaderboard";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { QuitRoomButton } from "@/components/ui/QuitRoomButton";
@@ -47,8 +47,6 @@ export default function MultiScoresPage() {
     [queryPlayerId, playerId]
   );
 
-  // Scores stockés à la réception de show_scores (avant navigation) : la page monte
-  // une nouvelle machine et ne reçoit pas game_ended, donc on lit le stockage.
   const storedScores = useMemo(() => {
     if (typeof window === "undefined" || !roomId || state !== "results") return null;
     try {
@@ -97,7 +95,7 @@ export default function MultiScoresPage() {
         <div className="w-full max-w-sm magic-card p-6 space-y-4">
           <div className="text-center">
             <p className="text-lg font-bold text-[var(--color-text-primary)]">
-              Room protégée
+              Room protegee
             </p>
             <p className="text-sm text-[var(--color-text-secondary)] mt-2">
               Entrez le mot de passe pour voir les scores.
@@ -116,12 +114,11 @@ export default function MultiScoresPage() {
     );
   }
 
-  // Vérifier que la partie est terminée
   if (state !== "results") {
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center p-4">
         <div className="text-center">
-          <ErrorMessage message="La partie n'est pas encore terminée" />
+          <ErrorMessage message="La partie n'est pas encore terminee" />
           <QuitRoomButton
             onConfirm={handleLeaveRoom}
             title="Quitter la partie ?"
@@ -134,19 +131,17 @@ export default function MultiScoresPage() {
 
   return (
     <div className="min-h-screen bg-[var(--color-surface-base)] relative overflow-hidden">
-      {/* Background effects */}
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#FDE68A]/40 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#BFDBFE]/40 rounded-full blur-3xl" />
       </div>
 
-      {/* Même boutons qu'en jeu : Accueil (hôte) + Quitter, au même endroit (fixed top-3 left-2 …) */}
       <div className="fixed top-3 left-2 sm:top-6 sm:left-6 z-50 flex flex-col items-start gap-2">
         {isHost && (
           <ConfirmActionButton
             buttonLabel="Accueil"
-            title="Retour à la salle d'attente ?"
-            message="Vous allez revenir à la salle d'attente. La partie restera configurée."
+            title="Retour a la salle d'attente ?"
+            message="Vous allez revenir a la salle d'attente. La partie restera configuree."
             confirmText="Oui, retour"
             cancelText="Annuler"
             onConfirm={() => void resetToWaiting?.()}
@@ -157,13 +152,9 @@ export default function MultiScoresPage() {
             <span className="hidden sm:inline">Accueil</span>
           </ConfirmActionButton>
         )}
-        <QuitRoomButton
-          onConfirm={handleLeaveRoom}
-          title="Quitter la partie ?"
-        />
+        <QuitRoomButton onConfirm={handleLeaveRoom} title="Quitter la partie ?" />
       </div>
 
-      {/* Content */}
       <div className="container mx-auto px-4 py-8 pb-24 relative z-10">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-8">

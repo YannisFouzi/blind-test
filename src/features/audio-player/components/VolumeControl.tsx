@@ -1,41 +1,21 @@
+﻿import { memo, useCallback, type HTMLAttributes } from "react";
+import { Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { pressable } from "@/styles/ui";
-import { Volume2, VolumeX } from "lucide-react";
-import { memo, useCallback, type HTMLAttributes } from "react";
 
-/**
- * VolumeControl Component
- *
- * Contrôle de volume avec slider et bouton mute.
- *
- * @example
- * ```tsx
- * <VolumeControl
- *   volume={70}
- *   isMuted={false}
- *   onVolumeChange={(vol) => setVolume(vol)}
- *   onToggleMute={() => toggleMute()}
- * />
- * ```
- */
+const MIN_VOLUME = 0;
+const MAX_VOLUME = 100;
 
 export interface VolumeControlProps
   extends Omit<HTMLAttributes<HTMLDivElement>, "onVolumeChange"> {
-  /** Volume actuel (0-100) */
   volume: number;
-
-  /** Est muet */
   isMuted: boolean;
-
-  /** Callback changement de volume */
   onVolumeChange: (volume: number) => void;
-
-  /** Callback toggle mute */
   onToggleMute: () => void;
-
-  /** Classes CSS additionnelles */
   className?: string;
 }
+
+const clampVolume = (value: number) => Math.max(MIN_VOLUME, Math.min(MAX_VOLUME, value));
 
 const VolumeControlComponent = ({
   volume,
@@ -45,16 +25,18 @@ const VolumeControlComponent = ({
   className,
   ...props
 }: VolumeControlProps) => {
-  const handleSliderChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = Number(event.target.value);
-    onVolumeChange(newVolume);
-  }, [onVolumeChange]);
+  const handleSliderChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const newVolume = clampVolume(Number(event.target.value));
+      onVolumeChange(newVolume);
+    },
+    [onVolumeChange]
+  );
 
   const displayVolume = isMuted ? 0 : volume;
 
   return (
     <div className={cn("flex items-center gap-2", className)} {...props}>
-      {/* Bouton Mute/Unmute */}
       <button
         onClick={onToggleMute}
         className={cn(
@@ -70,12 +52,11 @@ const VolumeControlComponent = ({
         )}
       </button>
 
-      {/* Slider */}
       <div className="relative flex-1 h-2 max-w-[100px]">
         <input
           type="range"
-          min="0"
-          max="100"
+          min={MIN_VOLUME}
+          max={MAX_VOLUME}
           value={displayVolume}
           onChange={handleSliderChange}
           className={cn(
@@ -98,14 +79,12 @@ const VolumeControlComponent = ({
           aria-label="Volume"
         />
 
-        {/* Visual fill */}
         <div
           className="absolute inset-y-0 left-0 bg-gradient-to-r from-yellow-400 to-yellow-300 rounded-full pointer-events-none"
           style={{ width: `${displayVolume}%` }}
         />
       </div>
 
-      {/* Volume percentage */}
       <span className="text-sm text-[var(--color-text-secondary)] w-8 text-right">
         {Math.round(displayVolume)}
       </span>

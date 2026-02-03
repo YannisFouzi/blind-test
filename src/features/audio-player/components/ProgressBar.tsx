@@ -1,46 +1,8 @@
+﻿import { memo, useCallback, type HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
-import { memo, useCallback, type HTMLAttributes } from "react";
 
-/**
- * ProgressBar Component
- *
- * Barre de progression pour le lecteur audio.
- *
- * @example
- * ```tsx
- * <ProgressBar
- *   progress={45}
- *   duration={180}
- *   currentTime={81}
- *   onSeek={(position) => seek(position)}
- *   disabled={noSeek}
- * />
- * ```
- */
+const clampPercentage = (value: number) => Math.max(0, Math.min(100, value));
 
-export interface ProgressBarProps extends Omit<HTMLAttributes<HTMLDivElement>, "onSeek"> {
-  /** Progression (0-100) */
-  progress: number;
-
-  /** Durée totale en secondes */
-  duration: number;
-
-  /** Temps actuel en secondes */
-  currentTime: number;
-
-  /** Callback quand l'utilisateur clique sur la barre */
-  onSeek?: (position: number) => void;
-
-  /** Désactivé (no-seek mode) */
-  disabled?: boolean;
-
-  /** Classes CSS additionnelles */
-  className?: string;
-}
-
-/**
- * Formate le temps en MM:SS
- */
 const formatTime = (seconds: number): string => {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
 
@@ -48,6 +10,15 @@ const formatTime = (seconds: number): string => {
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
+
+export interface ProgressBarProps extends Omit<HTMLAttributes<HTMLDivElement>, "onSeek"> {
+  progress: number;
+  duration: number;
+  currentTime: number;
+  onSeek?: (position: number) => void;
+  disabled?: boolean;
+  className?: string;
+}
 
 const ProgressBarComponent = ({
   progress,
@@ -58,18 +29,22 @@ const ProgressBarComponent = ({
   className,
   ...props
 }: ProgressBarProps) => {
-  const handleClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    if (disabled || !onSeek) return;
+  const handleClick = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (disabled || !onSeek) return;
 
-    const rect = event.currentTarget.getBoundingClientRect();
-    const clickX = event.clientX - rect.left;
-    const percentage = (clickX / rect.width) * 100;
-    onSeek(Math.max(0, Math.min(100, percentage)));
-  }, [disabled, onSeek]);
+      const rect = event.currentTarget.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const percentage = (clickX / rect.width) * 100;
+      onSeek(clampPercentage(percentage));
+    },
+    [disabled, onSeek]
+  );
+
+  const clampedProgress = clampPercentage(progress);
 
   return (
     <div className={cn("space-y-2", className)} {...props}>
-      {/* Barre de progression */}
       <div
         className={cn(
           "relative h-2 rounded-full bg-white border-2 border-black shadow-[2px_2px_0_#1B1B1B] overflow-hidden",
@@ -77,22 +52,19 @@ const ProgressBarComponent = ({
         )}
         onClick={handleClick}
       >
-        {/* Fill */}
         <div
           className="absolute inset-y-0 left-0 bg-gradient-to-r from-yellow-400 to-yellow-300 rounded-full transition-all"
-          style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
+          style={{ width: `${clampedProgress}%` }}
         />
 
-        {/* Glow effect */}
-        {progress > 0 && (
+        {clampedProgress > 0 && (
           <div
             className="absolute inset-y-0 right-0 w-2 bg-black/20 rounded-full"
-            style={{ transform: `translateX(-${100 - progress}%)` }}
+            style={{ transform: `translateX(-${100 - clampedProgress}%)` }}
           />
         )}
       </div>
 
-      {/* Time display */}
       <div className="flex justify-between text-sm text-[var(--color-text-secondary)]">
         <span>{formatTime(currentTime)}</span>
         <span>{formatTime(duration)}</span>

@@ -1,11 +1,7 @@
-import { GameClient } from "@/components/game/GameClient";
-
-type GamePageParams = {
-  universeId: string;
-};
+import { GameClient } from "@/features/game-ui/components/GameClient";
 
 type GamePageProps = {
-  params: Promise<GamePageParams>;
+  params: Promise<{ universeId: string }>;
 };
 
 export default async function GamePage({ params }: GamePageProps) {

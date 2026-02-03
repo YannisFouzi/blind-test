@@ -1,73 +1,38 @@
 "use client";
 
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
-  Song,
-  Work,
-  GameSession,
   GameAnswer,
   GameRound,
+  GameSession,
   MysteryEffectsConfig,
+  Song,
+  Work,
 } from "@/types";
 import { getSongsByWork, getWorksByUniverse, getWorksByIds } from "@/services/firebase";
 import { RANDOM_UNIVERSE_ID } from "@/constants/gameModes";
 import { generateId, shuffleArray, shuffleWithSeed } from "@/utils/formatters";
 import { calculateGameRounds, getCurrentRound } from "@/utils/mysteryEffects";
 
-/**
- * ID spécial pour le mode custom
- */
 export const CUSTOM_UNIVERSE_ID = "__custom__";
 
-/**
- * Options du hook useSoloGame
- */
+const PRELOAD_DELAY_MS = 1000;
+const LAST_GAIN_RESET_MS = 2000;
+
+const getActiveRound = (session: GameSession | null) => {
+  if (!session?.rounds || session.currentRoundIndex === undefined) return undefined;
+  return getCurrentRound(session.rounds, session.currentRoundIndex);
+};
+
 export interface UseSoloGameOptions {
-  /** ID de l'univers (ex: "disney", "90s") ou "__custom__" pour mode custom */
   universeId: string;
-
-  /** Callback pour précharger la prochaine chanson */
   preloadNextTrack?: (song: Song) => void;
-
-  /** Liste des œuvres autorisées (pour filtrage custom) */
   allowedWorks?: string[];
-
-  /** Nombre maximum de chansons */
   maxSongs?: number;
-  /** Mode aléatoire solo : nombre d'œuvres affichées par manche (2–8), depuis URL ?wpr= */
   worksPerRound?: number;
-  /**
-   * Configuration des effets mystères (optionnelle).
-   * Si non fournie ou disabled, le jeu reste en mode "normal".
-   */
   mysteryEffectsConfig?: MysteryEffectsConfig;
 }
 
-/**
- * Hook useSoloGame
- *
- * Gère toute la logique du mode solo :
- * - Chargement des works et songs
- * - Gestion des réponses
- * - Navigation (next/prev)
- * - Calcul du score
- *
- * @example
- * ```tsx
- * const game = useSoloGame({
- *   universeId: "disney",
- *   preloadNextTrack: (song) => console.log("Preload", song.audioUrl),
- *   maxSongs: 10
- * });
- *
- * return (
- *   <div>
- *     <button onClick={() => game.handleAnswer(workId)}>Répondre</button>
- *     <button onClick={game.nextSong}>Suivant</button>
- *   </div>
- * );
- * ```
- */
 export const useSoloGame = ({
   universeId,
   preloadNextTrack,
@@ -76,7 +41,6 @@ export const useSoloGame = ({
   worksPerRound,
   mysteryEffectsConfig,
 }: UseSoloGameOptions) => {
-  // État principal
   const [gameSession, setGameSession] = useState<GameSession | null>(null);
   const [works, setWorks] = useState<Work[]>([]);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
@@ -87,12 +51,30 @@ export const useSoloGame = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [, setRounds] = useState<GameRound[]>([]);
-  // Sélections en mode double : songId -> selectedWorkId
   const [doubleSelections, setDoubleSelections] = useState<Record<string, string | null>>({});
 
-  /**
-   * Initialiser le jeu : charger works + songs + créer session
-   */
+  const currentRound = getActiveRound(gameSession);
+  const isDoubleMode = currentRound?.type === "double";
+  const isReverseMode = currentRound?.type === "reverse";
+
+  const currentRoundSongs = useMemo<Song[]>(() => {
+    if (!gameSession || !currentRound) {
+      return currentSong ? [currentSong] : [];
+    }
+
+    const songsForRound = currentRound.songIds
+      .map((id) => gameSession.songs.find((song) => song.id === id))
+      .filter((song): song is Song => Boolean(song));
+
+    if (!songsForRound.length && currentSong) {
+      return [currentSong];
+    }
+
+    return songsForRound;
+  }, [gameSession, currentRound, currentSong]);
+
+  const currentSongIndex = gameSession?.currentSongIndex ?? 0;
+
   const initializeGame = useCallback(async () => {
     try {
       setLoading(true);
@@ -106,7 +88,6 @@ export const useSoloGame = ({
         allowedWorks &&
         allowedWorks.length > 0;
 
-      // Mode Custom ou Mode aléatoire : charger les works par leurs IDs (URL ?works=...)
       if (isCustomOrRandom) {
         if (process.env.NODE_ENV === "development") {
           console.info("[SOLO-GAME] Chargement works par IDs (custom/random)", {
@@ -119,14 +100,13 @@ export const useSoloGame = ({
         fetchedWorks = worksResult.success && worksResult.data ? worksResult.data : [];
         filteredWorks = fetchedWorks;
         if (process.env.NODE_ENV === "development") {
-          console.info("[SOLO-GAME] getWorksByIds résultat", {
+          console.info("[SOLO-GAME] getWorksByIds resultat", {
             success: worksResult.success,
             fetchedCount: fetchedWorks.length,
             error: (worksResult as { error?: string }).error,
           });
         }
       } else {
-        // Mode normal : charger les works de l'univers
         if (process.env.NODE_ENV === "development") {
           console.info("[SOLO-GAME] Chargement works par univers", { universeId });
         }
@@ -134,16 +114,20 @@ export const useSoloGame = ({
         fetchedWorks = worksResult.success && worksResult.data ? worksResult.data : [];
         filteredWorks =
           allowedWorks && allowedWorks.length
-            ? fetchedWorks.filter((w) => allowedWorks.includes(w.id))
+            ? fetchedWorks.filter((work) => allowedWorks.includes(work.id))
             : fetchedWorks;
       }
 
       if (!fetchedWorks.length) {
         const msg = isCustomOrRandom
-          ? `Aucune œuvre trouvée pour les IDs sélectionnés (${universeId}). Vérifiez que ?works=... contient des IDs valides.`
-          : `Aucune œuvre trouvée pour l'univers "${universeId}"`;
+          ? `Aucune oeuvre trouvee pour les IDs selectionnes (${universeId}). Verifiez que ?works=... contient des IDs valides.`
+          : `Aucune oeuvre trouvee pour l'univers "${universeId}"`;
         if (process.env.NODE_ENV === "development") {
-          console.error("[SOLO-GAME] Aucune œuvre", { universeId, isCustomOrRandom, allowedWorksCount: allowedWorks?.length });
+          console.error("[SOLO-GAME] Aucune oeuvre", {
+            universeId,
+            isCustomOrRandom,
+            allowedWorksCount: allowedWorks?.length,
+          });
         }
         setError(msg);
         setLoading(false);
@@ -154,7 +138,6 @@ export const useSoloGame = ({
 
       const songsSource = filteredWorks.length ? filteredWorks : fetchedWorks;
 
-      // Charger toutes les chansons de toutes les œuvres
       const songs = songsSource.length
         ? (
             await Promise.all(
@@ -167,21 +150,21 @@ export const useSoloGame = ({
         : [];
 
       if (!songs.length) {
-        setError(`Aucune chanson trouvée pour l'univers "${universeId}"`);
+        setError(`Aucune chanson trouvee pour l'univers "${universeId}"`);
         setLoading(false);
         return;
       }
 
-      // Mélanger et limiter
       const shuffledSongs = shuffleArray(songs);
       const limitedSongs =
         maxSongs && maxSongs > 0 && maxSongs < shuffledSongs.length
           ? shuffledSongs.slice(0, maxSongs)
           : shuffledSongs;
 
-      // Calculer les rounds en fonction de la config d'effets mystères
       let calculatedRounds: GameRound[];
-      const hasEffects = mysteryEffectsConfig?.enabled && mysteryEffectsConfig.effects.length > 0;
+      const hasEffects =
+        mysteryEffectsConfig?.enabled &&
+        mysteryEffectsConfig.effects.length > 0;
 
       if (hasEffects) {
         calculatedRounds = calculateGameRounds(limitedSongs, mysteryEffectsConfig);
@@ -194,7 +177,6 @@ export const useSoloGame = ({
 
       setRounds(calculatedRounds);
 
-      // Créer la session
       const newGameSession: GameSession = {
         id: generateId(),
         universeId,
@@ -208,10 +190,10 @@ export const useSoloGame = ({
       };
 
       setGameSession(newGameSession);
-      // Déterminer le premier morceau à partir du premier round
+
       const firstRound = calculatedRounds[0];
       const firstSongId = firstRound?.songIds[0];
-      const firstSong = limitedSongs.find((s) => s.id === firstSongId) ?? limitedSongs[0];
+      const firstSong = limitedSongs.find((song) => song.id === firstSongId) ?? limitedSongs[0];
 
       setCurrentSong(firstSong);
       setLoading(false);
@@ -222,28 +204,13 @@ export const useSoloGame = ({
     }
   }, [universeId, allowedWorks, maxSongs, mysteryEffectsConfig]);
 
-  /**
-   * Sélectionner une œuvre (réponse)
-   */
   const handleAnswer = useCallback(
     (workId: string) => {
       if (showAnswer || !gameSession || !currentSong) return;
+      if (currentRound?.type === "double") return;
 
-      // En mode double, la sélection passe par un handler dédié
-      const currentRoundForAnswer =
-        gameSession.rounds && gameSession.currentRoundIndex !== undefined
-          ? getCurrentRound(gameSession.rounds, gameSession.currentRoundIndex)
-          : undefined;
-
-      if (currentRoundForAnswer?.type === "double") {
-        return;
-      }
-
-      // Vérifier si déjà répondu
       const existingAnswer = gameSession.answers.find((answer) => answer.songId === currentSong.id);
-      if (existingAnswer) {
-        return;
-      }
+      if (existingAnswer) return;
 
       const isCorrect = workId === currentSong.workId;
 
@@ -256,28 +223,18 @@ export const useSoloGame = ({
         answeredAt: new Date(),
       });
     },
-    [showAnswer, gameSession, currentSong]
+    [showAnswer, gameSession, currentSong, currentRound]
   );
 
-  /**
-   * Valider la réponse
-   */
   const validateAnswer = useCallback(() => {
     if (!gameSession) return;
 
-    const currentRoundForValidation =
-      gameSession.rounds && gameSession.currentRoundIndex !== undefined
-        ? getCurrentRound(gameSession.rounds, gameSession.currentRoundIndex)
-        : undefined;
+    if (currentRound?.type === "double") {
+      const songIds = currentRound.songIds;
 
-    // Mode double : valider les deux chansons du round
-    if (currentRoundForValidation?.type === "double") {
-      const songIds = currentRoundForValidation.songIds;
-
-      // Préparer les infos chansons + sélections
       const songInfos = songIds
         .map((songId) => {
-          const song = gameSession.songs.find((s) => s.id === songId);
+          const song = gameSession.songs.find((candidate) => candidate.id === songId);
           if (!song) return null;
           return {
             songId,
@@ -289,11 +246,8 @@ export const useSoloGame = ({
           Boolean(info)
         );
 
-      if (!songInfos.length) {
-        return;
-      }
+      if (!songInfos.length) return;
 
-      // Ensemble des œuvres correctes (ordre-indépendant, avec multiplicité)
       const remainingCorrectWorks: string[] = songInfos.map((info) => info.song.workId);
 
       const newAnswers: GameAnswer[] = [];
@@ -301,7 +255,6 @@ export const useSoloGame = ({
       let addedIncorrect = 0;
 
       songInfos.forEach((info) => {
-        // Ne pas recréer une réponse si déjà présente
         if (gameSession.answers.some((answer) => answer.songId === info.songId)) {
           return;
         }
@@ -312,7 +265,6 @@ export const useSoloGame = ({
         if (selectedId) {
           const matchIndex = remainingCorrectWorks.indexOf(selectedId);
           if (matchIndex !== -1) {
-            // On consomme une occurrence de cette œuvre correcte (multi-set)
             remainingCorrectWorks.splice(matchIndex, 1);
             isCorrect = true;
           }
@@ -330,14 +282,11 @@ export const useSoloGame = ({
         if (isCorrect) {
           addedCorrect += 1;
         } else if (selectedId) {
-          // On ne compte incorrect que si l'utilisateur a vraiment sélectionné quelque chose
           addedIncorrect += 1;
         }
       });
 
-      if (!newAnswers.length) {
-        return;
-      }
+      if (!newAnswers.length) return;
 
       const updatedSession: GameSession = {
         ...gameSession,
@@ -349,21 +298,18 @@ export const useSoloGame = ({
       };
 
       const timestamp = typeof performance !== "undefined" ? performance.now() : Date.now();
-      setLastGain({ points: newAnswers.filter((a) => a.isCorrect).length, key: timestamp });
+      setLastGain({ points: newAnswers.filter((answer) => answer.isCorrect).length, key: timestamp });
       setGameSession(updatedSession);
       setShowAnswer(true);
       return;
     }
 
-    // Mode normal / reverse (une seule chanson)
     if (!currentSong || !gameAnswer) return;
 
-    // Vérifier si déjà répondu
     if (gameSession.answers.some((answer) => answer.songId === currentSong.id)) {
       return;
     }
 
-    // Mettre à jour la session
     const updatedSession: GameSession = {
       ...gameSession,
       answers: [...gameSession.answers, gameAnswer],
@@ -373,34 +319,24 @@ export const useSoloGame = ({
       },
     };
 
-    // Animation de points
     const timestamp = typeof performance !== "undefined" ? performance.now() : Date.now();
     setLastGain({ points: gameAnswer.isCorrect ? 1 : 0, key: timestamp });
 
     setGameSession(updatedSession);
     setShowAnswer(true);
-  }, [gameSession, currentSong, gameAnswer, doubleSelections]);
+  }, [gameSession, currentRound, currentSong, gameAnswer, doubleSelections]);
 
-  /**
-   * Réinitialiser l'état pour la chanson actuelle
-   */
   const resetGameState = useCallback(() => {
     if (!gameSession || !currentSong) {
       setSelectedWork(null);
       setGameAnswer(null);
       setShowAnswer(false);
-       setDoubleSelections({});
+      setDoubleSelections({});
       return;
     }
 
-    const currentRoundForReset =
-      gameSession.rounds && gameSession.currentRoundIndex !== undefined
-        ? getCurrentRound(gameSession.rounds, gameSession.currentRoundIndex)
-        : undefined;
-
-    // Mode double : reconstruire les sélections à partir des réponses existantes
-    if (currentRoundForReset?.type === "double") {
-      const songIds = currentRoundForReset.songIds;
+    if (currentRound?.type === "double") {
+      const songIds = currentRound.songIds;
       const newSelections: Record<string, string | null> = {};
 
       songIds.forEach((songId) => {
@@ -411,13 +347,14 @@ export const useSoloGame = ({
       setDoubleSelections(newSelections);
       setSelectedWork(null);
       setGameAnswer(null);
-      setShowAnswer(songIds.every((songId) =>
-        gameSession.answers.some((answer) => answer.songId === songId)
-      ));
+      setShowAnswer(
+        songIds.every((songId) =>
+          gameSession.answers.some((answer) => answer.songId === songId)
+        )
+      );
       return;
     }
 
-    // Mode normal / reverse (un seul morceau)
     const existingAnswer = gameSession.answers.find((answer) => answer.songId === currentSong.id);
 
     if (existingAnswer) {
@@ -431,15 +368,11 @@ export const useSoloGame = ({
     }
 
     setDoubleSelections({});
-  }, [gameSession, currentSong]);
+  }, [gameSession, currentSong, currentRound]);
 
-  /**
-   * Passer à la chanson suivante
-   */
   const nextSong = useCallback(() => {
     if (!gameSession) return;
 
-    // Si aucun round n'est défini, fallback sur le comportement historique
     if (!gameSession.rounds || gameSession.currentRoundIndex === undefined) {
       const nextIndex = gameSession.currentSongIndex + 1;
 
@@ -461,22 +394,19 @@ export const useSoloGame = ({
 
     const nextRound = gameSession.rounds[nextRoundIndex];
     const nextSongId = nextRound.songIds[0];
-    const nextSong = gameSession.songs.find((s) => s.id === nextSongId);
+    const nextSong = gameSession.songs.find((song) => song.id === nextSongId);
 
     if (!nextSong) return;
 
     setGameSession({
       ...gameSession,
       currentRoundIndex: nextRoundIndex,
-      currentSongIndex: gameSession.songs.findIndex((s) => s.id === nextSong.id),
+      currentSongIndex: gameSession.songs.findIndex((song) => song.id === nextSong.id),
     });
     setCurrentSong(nextSong);
     resetGameState();
   }, [gameSession, resetGameState]);
 
-  /**
-   * Revenir à la chanson précédente
-   */
   const prevSong = useCallback(() => {
     if (!gameSession) return;
 
@@ -492,97 +422,66 @@ export const useSoloGame = ({
     }
   }, [gameSession, resetGameState]);
 
-  /**
-   * Recommencer le jeu
-   */
   const restartGame = useCallback(() => {
     initializeGame();
   }, [initializeGame]);
 
-  // ========================================
-  // EFFECTS
-  // ========================================
-
-  /**
-   * Initialiser le jeu au montage
-   */
   useEffect(() => {
     initializeGame();
   }, [initializeGame]);
 
-  /**
-   * Réinitialiser l'état quand la chanson change
-   */
   useEffect(() => {
     if (gameSession && currentSong) {
       resetGameState();
     }
   }, [gameSession, currentSong, resetGameState]);
 
-  /**
-   * Reset lastGain quand chanson change
-   */
   useEffect(() => {
     setLastGain(null);
   }, [currentSong?.id]);
 
-  /**
-   * Masquer l'animation des points apres 1s
-   */
   useEffect(() => {
     if (!lastGain) return;
-    const timeoutId = setTimeout(() => setLastGain(null), 2000);
+    const timeoutId = setTimeout(() => setLastGain(null), LAST_GAIN_RESET_MS);
     return () => clearTimeout(timeoutId);
   }, [lastGain]);
 
-  /**
-   * Précharger la prochaine chanson
-   */
   useEffect(() => {
-    if (gameSession && currentSong && preloadNextTrack) {
-      const nextIndex = gameSession.currentSongIndex + 1;
-      if (nextIndex < gameSession.songs.length) {
-        const nextSong = gameSession.songs[nextIndex];
-        setTimeout(() => {
-          preloadNextTrack(nextSong);
-        }, 1000);
-      }
-    }
+    if (!gameSession || !currentSong || !preloadNextTrack) return;
+
+    const nextIndex = gameSession.currentSongIndex + 1;
+    if (nextIndex >= gameSession.songs.length) return;
+
+    const nextSongItem = gameSession.songs[nextIndex];
+    const timeoutId = setTimeout(() => {
+      preloadNextTrack(nextSongItem);
+    }, PRELOAD_DELAY_MS);
+    return () => clearTimeout(timeoutId);
   }, [gameSession, currentSong, preloadNextTrack]);
 
-  // ========================================
-  // COMPUTED VALUES
-  // ========================================
-
   const correctWork = works.find((work) => work.id === currentSong?.workId);
+
   const canGoNext = gameSession
-    ? (gameSession.rounds && gameSession.currentRoundIndex !== undefined
-        ? gameSession.currentRoundIndex < gameSession.rounds.length - 1
-        : gameSession.currentSongIndex < gameSession.songs.length - 1)
+    ? gameSession.rounds && gameSession.currentRoundIndex !== undefined
+      ? gameSession.currentRoundIndex < gameSession.rounds.length - 1
+      : gameSession.currentSongIndex < gameSession.songs.length - 1
     : false;
+
   const canGoPrev = gameSession ? gameSession.currentSongIndex > 0 : false;
 
   const isCurrentSongAnswered = useMemo(() => {
     if (!gameSession) return false;
 
-    const currentRoundForStatus =
-      gameSession.rounds && gameSession.currentRoundIndex !== undefined
-        ? getCurrentRound(gameSession.rounds, gameSession.currentRoundIndex)
-        : undefined;
-
-    // Mode double : considérer la manche comme "répondue" si les deux chansons ont une réponse
-    if (currentRoundForStatus?.type === "double") {
-      return currentRoundForStatus.songIds.every((songId) =>
+    if (currentRound?.type === "double") {
+      return currentRound.songIds.every((songId) =>
         gameSession.answers.some((answer) => answer.songId === songId)
       );
     }
 
     return Boolean(
-      gameSession &&
-        currentSong &&
-        gameSession.answers.some((answer) => answer.songId === currentSong.id)
+      currentSong && gameSession.answers.some((answer) => answer.songId === currentSong.id)
     );
-  }, [gameSession, currentSong]);
+  }, [gameSession, currentSong, currentRound]);
 
   const currentSongAnswer =
     gameSession && currentSong
@@ -592,37 +491,11 @@ export const useSoloGame = ({
   const gameState: "idle" | "playing" | "finished" = !gameSession
     ? "idle"
     : canGoNext
-    ? "playing"
-    : isCurrentSongAnswered
-    ? "finished"
-    : "playing";
+      ? "playing"
+      : isCurrentSongAnswered
+        ? "finished"
+        : "playing";
 
-  // Round courant + flags d'effets
-  const currentRound = useMemo(() => {
-    if (!gameSession?.rounds || gameSession.currentRoundIndex === undefined) return undefined;
-    return getCurrentRound(gameSession.rounds, gameSession.currentRoundIndex);
-  }, [gameSession?.rounds, gameSession?.currentRoundIndex]);
-
-  const isDoubleMode = currentRound?.type === "double";
-  const isReverseMode = currentRound?.type === "reverse";
-
-  const currentRoundSongs: Song[] = useMemo(() => {
-    if (!gameSession || !currentRound) {
-      return currentSong ? [currentSong] : [];
-    }
-
-    const songsForRound = currentRound.songIds
-      .map((id) => gameSession.songs.find((s) => s.id === id))
-      .filter((s): s is Song => Boolean(s));
-
-    if (!songsForRound.length && currentSong) {
-      return [currentSong];
-    }
-
-    return songsForRound;
-  }, [gameSession, currentRound, currentSong]);
-
-  // Sélections actuelles pour les deux chansons du round double (slot 1 / slot 2)
   const doubleSelectedWorkSlot1: string | null = useMemo(() => {
     if (!currentRound || currentRound.type !== "double") return null;
     const [songId1] = currentRound.songIds;
@@ -635,12 +508,6 @@ export const useSoloGame = ({
     return songId2 ? doubleSelections[songId2] ?? null : null;
   }, [currentRound, doubleSelections]);
 
-  /**
-   * Index "affiché" du morceau (1-based) et total,
-   * calculés en fonction des rounds pour que :
-   * - normal / reverse : 1, 2, 3, ...
-   * - double : chaque round consomme 2 "morceaux" dans le total.
-   */
   const displayedTotalSongs = useMemo(() => {
     if (gameSession?.rounds && gameSession.rounds.length > 0) {
       return gameSession.rounds.reduce((acc, round) => {
@@ -652,37 +519,25 @@ export const useSoloGame = ({
 
   const displayedSongIndex = useMemo(() => {
     if (gameSession?.rounds && gameSession.currentRoundIndex !== undefined) {
-      // Somme des morceaux "consommés" par tous les rounds précédents
       let consumed = 0;
-      for (let i = 0; i < gameSession.currentRoundIndex; i++) {
+      for (let i = 0; i < gameSession.currentRoundIndex; i += 1) {
         const round = gameSession.rounds[i];
         consumed += round.type === "double" ? 2 : 1;
       }
-      // L'index affiché commence à 1
       return consumed + 1;
     }
 
-    // Fallback historique : index basé sur currentSongIndex
     return (gameSession?.currentSongIndex ?? 0) + 1;
   }, [gameSession]);
 
   const handleDoubleSelection = useCallback(
     (slotIndex: 0 | 1, workId: string) => {
       if (showAnswer || !gameSession) return;
+      if (!currentRound || currentRound.type !== "double") return;
 
-      const currentRoundForSelection =
-        gameSession.rounds && gameSession.currentRoundIndex !== undefined
-          ? getCurrentRound(gameSession.rounds, gameSession.currentRoundIndex)
-          : undefined;
-
-      if (!currentRoundForSelection || currentRoundForSelection.type !== "double") {
-        return;
-      }
-
-      const songId = currentRoundForSelection.songIds[slotIndex];
+      const songId = currentRound.songIds[slotIndex];
       if (!songId) return;
 
-      // Ne pas modifier si une réponse est déjà enregistrée pour cette chanson
       if (gameSession.answers.some((answer) => answer.songId === songId)) {
         return;
       }
@@ -692,30 +547,18 @@ export const useSoloGame = ({
         [songId]: workId,
       }));
     },
-    [gameSession, showAnswer]
+    [gameSession, showAnswer, currentRound]
   );
 
-  /**
-   * Retirer une sélection pour une œuvre en mode double (un slot à la fois)
-   */
   const clearDoubleSelectionForWork = useCallback(
     (workId: string) => {
       if (!gameSession || showAnswer) return;
-
-      const currentRoundForSelection =
-        gameSession.rounds && gameSession.currentRoundIndex !== undefined
-          ? getCurrentRound(gameSession.rounds, gameSession.currentRoundIndex)
-          : undefined;
-
-      if (!currentRoundForSelection || currentRoundForSelection.type !== "double") {
-        return;
-      }
+      if (!currentRound || currentRound.type !== "double") return;
 
       setDoubleSelections((prev) => {
-        const songIds = currentRoundForSelection.songIds;
+        const songIds = currentRound.songIds;
         const newSelections = { ...prev };
 
-        // Trouver un songId du round actuel qui pointe sur cette œuvre
         const targetSongId = songIds.find((id) => newSelections[id] === workId);
         if (!targetSongId) {
           return prev;
@@ -725,39 +568,49 @@ export const useSoloGame = ({
         return newSelections;
       });
     },
-    [gameSession, showAnswer]
+    [gameSession, showAnswer, currentRound]
   );
 
-  // Mode aléatoire solo : X œuvres par manche (dont la bonne), ordre déterministe par chanson
-  const currentSongIndex = gameSession?.currentSongIndex ?? 0;
   const displayWorks = useMemo(() => {
     if (!worksPerRound || !currentSong || works.length === 0) {
-      if (process.env.NODE_ENV === "development" && universeId === RANDOM_UNIVERSE_ID && works.length > 0 && !worksPerRound) {
-        console.warn("[SOLO-GAME] worksPerRound non passé en mode aléatoire → affichage des", works.length, "œuvres (pas d'échantillonnage)");
+      if (
+        process.env.NODE_ENV === "development" &&
+        universeId === RANDOM_UNIVERSE_ID &&
+        works.length > 0 &&
+        !worksPerRound
+      ) {
+        console.warn(
+          "[SOLO-GAME] worksPerRound non passe en mode aleatoire -> affichage des",
+          works.length,
+          "oeuvres (pas d'echantillonnage)"
+        );
       }
       return works;
     }
+
     const correctId = currentSong.workId;
-    const wrongWorks = works.filter((w) => w.id !== correctId);
+    const wrongWorks = works.filter((work) => work.id !== correctId);
     const count = Math.min(worksPerRound - 1, wrongWorks.length);
     const seed = `${currentSongIndex}-${currentSong.id}`;
     const shuffledWrong = shuffleWithSeed([...wrongWorks], seed);
     const selectedWrong = shuffledWrong.slice(0, count);
-    const correctWork = works.find((w) => w.id === correctId);
-    const pool = correctWork ? [correctWork, ...selectedWrong] : selectedWrong;
+    const correctWorkForRound = works.find((work) => work.id === correctId);
+    const pool = correctWorkForRound ? [correctWorkForRound, ...selectedWrong] : selectedWrong;
     const result = shuffleWithSeed(pool, `${seed}-final`);
+
     if (process.env.NODE_ENV === "development") {
-      console.info("[SOLO-GAME] worksPerRound actif", { worksPerRound, currentSongIndex, displayCount: result.length, totalWorks: works.length });
+      console.info("[SOLO-GAME] worksPerRound actif", {
+        worksPerRound,
+        currentSongIndex,
+        displayCount: result.length,
+        totalWorks: works.length,
+      });
     }
+
     return result;
   }, [works, worksPerRound, currentSong, currentSongIndex, universeId]);
 
-  // ========================================
-  // RETURN
-  // ========================================
-
   return {
-    // État
     gameSession,
     works: displayWorks,
     currentSong,
@@ -769,7 +622,6 @@ export const useSoloGame = ({
     error,
     gameState,
 
-    // Computed
     correctWork,
     canGoNext,
     canGoPrev,
@@ -781,7 +633,6 @@ export const useSoloGame = ({
     displayedTotalSongs,
     score: gameSession?.score ?? { correct: 0, incorrect: 0 },
 
-    // Effets mystères (solo)
     currentRound,
     isDoubleMode,
     isReverseMode,
@@ -789,7 +640,6 @@ export const useSoloGame = ({
     doubleSelectedWorkSlot1,
     doubleSelectedWorkSlot2,
 
-    // Actions
     handleAnswer,
     handleDoubleSelection,
     clearDoubleSelectionForWork,

@@ -1,17 +1,7 @@
-/**
- * Zustand Middleware Configuration
- *
- * Provides reusable middleware for Zustand stores:
- * - Persistence with localStorage
- * - Development tools integration
- */
+﻿import type { StateCreator } from 'zustand';
+import { createJSONStorage } from 'zustand/middleware';
+import type { PersistOptions } from 'zustand/middleware';
 
-import { StateCreator } from 'zustand';
-import { createJSONStorage, PersistOptions } from 'zustand/middleware';
-
-/**
- * Type helper for stores with persistence
- */
 export type PersistedStore<T> = StateCreator<
   T,
   [['zustand/persist', unknown]],
@@ -19,49 +9,24 @@ export type PersistedStore<T> = StateCreator<
   T
 >;
 
-/**
- * Create a persistence configuration for a store
- *
- * @param name - Storage key name
- * @param options - Additional persist options
- *
- * @example
- * ```ts
- * export const useThemeStore = create<ThemeStore>()(
- *   persist(
- *     (set) => ({ theme: 'magic' }),
- *     createPersistConfig('theme-storage')
- *   )
- * );
- * ```
- */
-export function createPersistConfig<T>(
+export const createPersistConfig = <T>(
   name: string,
   options?: Partial<PersistOptions<T>>
-): PersistOptions<T> {
-  return {
-    name,
-    storage: createJSONStorage(() => localStorage),
-    ...options,
-  } as PersistOptions<T>;
-}
+): PersistOptions<T> => ({
+  name,
+  storage: createJSONStorage(() => localStorage),
+  ...options,
+});
 
-/**
- * Development helper: Log state changes
- * Only active in development mode
- */
-export const devtools = <T>(
-  config: StateCreator<T>
-): StateCreator<T> => {
-  return (set, get, api) =>
+export const devtools = <T>(config: StateCreator<T>): StateCreator<T> =>
+  (set, get, api) =>
     config(
       (args) => {
         if (process.env.NODE_ENV === 'development') {
-          console.log('  applying', args);
+          console.log('applying', args);
         }
         set(args);
       },
       get,
       api
     );
-};

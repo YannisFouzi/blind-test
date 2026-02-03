@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 
 interface YouTubeVideo {
@@ -13,19 +13,11 @@ interface YouTubeVideo {
   };
 }
 
-/**
- * Extrait l'ID de playlist depuis une URL YouTube ou retourne l'ID tel quel
- * Supporte les formats :
- * - URL complète : https://www.youtube.com/playlist?list=PLxxxxx
- * - URL courte : youtube.com/playlist?list=PLxxxxx
- * - ID pur : PLxxxxx
- */
 const extractPlaylistId = (input: string): string => {
   if (!input) return "";
 
   const trimmed = input.trim();
 
-  // Patterns pour extraire l'ID depuis une URL
   const urlPatterns = [
     /[?&]list=([a-zA-Z0-9_-]+)/,
     /youtube\.com\/playlist\?list=([a-zA-Z0-9_-]+)/,
@@ -36,14 +28,9 @@ const extractPlaylistId = (input: string): string => {
     if (match) return match[1];
   }
 
-  // Si ce n'est pas une URL, on retourne l'input (probablement déjà un ID)
   return trimmed;
 };
 
-/**
- * Schema Zod pour valider et transformer une playlist ID
- * Accepte à la fois les URLs complètes et les IDs purs
- */
 const playlistIdField = (message: string) =>
   z
     .string()
@@ -78,7 +65,7 @@ const parseDuration = (duration: string): number => {
 const fetchFromYouTube = async (endpoint: string) => {
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) {
-    throw new Error("Clé API YouTube manquante");
+    throw new Error("Cle API YouTube manquante");
   }
 
   const url = new URL(endpoint);
@@ -107,9 +94,7 @@ const getPlaylistVideos = async (playlistId: string): Promise<YouTubeVideo[]> =>
   }
 
   const videosData = await fetchFromYouTube(
-    `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoIds.join(
-      ","
-    )}`
+    `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoIds.join(",")}`
   );
 
   return videosData.items.map(
@@ -163,7 +148,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("[YouTube playlist] GET error:", error);
     return NextResponse.json(
-      { error: "Erreur lors de la récupération de la playlist" },
+      { error: "Erreur lors de la recuperation de la playlist" },
       { status: 500 }
     );
   }
@@ -180,7 +165,6 @@ export async function POST(request: Request) {
     );
   }
 
-  // L'ID est déjà extrait et validé par le schema Zod
   const { playlistId } = parseResult.data;
 
   try {

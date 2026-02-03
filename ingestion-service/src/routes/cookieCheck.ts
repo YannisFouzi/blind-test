@@ -8,6 +8,17 @@ const router = Router();
 
 const TEST_VIDEO_ID = "dQw4w9WgXcQ"; // Rick Astley - Never Gonna Give You Up (toujours disponible)
 const COOKIES_PATH = "/app/cookies/cookies.txt";
+const YT_DLP_TIMEOUT_MS = 30_000;
+const COOKIE_ERROR_REGEX = /Sign in|confirm|bot|cookies/i;
+
+const getErrorMessage = (error: unknown) => {
+  if (!error) return "";
+  const stderr = (error as { stderr?: string }).stderr;
+  if (typeof stderr === "string" && stderr.length > 0) return stderr;
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return "";
+};
 
 /**
  * GET /api/cookie-check
@@ -29,7 +40,7 @@ router.get("/", async (_req, res) => {
     // Tester yt-dlp avec les cookies
     const { stdout } = await execAsync(
       `yt-dlp --cookies "${COOKIES_PATH}" --skip-download --print title "https://www.youtube.com/watch?v=${TEST_VIDEO_ID}"`,
-      { timeout: 30000 }
+      { timeout: YT_DLP_TIMEOUT_MS }
     );
 
     const title = stdout.trim();
@@ -44,9 +55,9 @@ router.get("/", async (_req, res) => {
     }
 
     throw new Error("Aucun titre récupéré");
-  } catch (error: any) {
-    const msg = error.stderr || error.message || "";
-    const isCookieError = /Sign in|confirm|bot|cookies/i.test(msg);
+  } catch (error: unknown) {
+    const msg = getErrorMessage(error);
+    const isCookieError = COOKIE_ERROR_REGEX.test(msg);
 
     console.error("[CookieCheck] ❌ Erreur:", msg);
 

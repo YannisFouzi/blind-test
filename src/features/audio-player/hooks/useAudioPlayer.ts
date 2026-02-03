@@ -1,26 +1,13 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { UseAudioPlayerOptions, UseAudioPlayerReturn } from "../types";
 
-/**
- * useAudioPlayer Hook
- *
- * Hook réutilisable pour gérer la lecture audio.
- * Utilisé par solo-game et multiplayer-game.
- *
- * @example
- * ```tsx
- * const audio = useAudioPlayer({
- *   initialAudioUrl: "/song.mp3",
- *   autoPlay: true,
- *   noSeek: false,
- *   onEnded: () => console.log("Finished"),
- * });
- *
- * return <AudioControls {...audio} />;
- * ```
- */
+const DEFAULT_VOLUME = 70;
+const MIN_VOLUME = 0;
+const MAX_VOLUME = 100;
+
+const clampVolume = (value: number) => Math.max(MIN_VOLUME, Math.min(MAX_VOLUME, value));
 
 const createAudioElement = () => {
   const audio = new Audio();
@@ -34,20 +21,18 @@ export const useAudioPlayer = (options: UseAudioPlayerOptions = {}): UseAudioPla
     initialAudioUrl,
     startTime = 0,
     autoPlay = false,
-    initialVolume = 70,
+    initialVolume = DEFAULT_VOLUME,
     noSeek = false,
     onEnded,
     onError,
     onReady,
   } = options;
 
-  // Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const preloadRef = useRef<HTMLAudioElement | null>(null);
   const preloadedSrcRef = useRef<string | null>(null);
   const previousVolumeRef = useRef(initialVolume);
 
-  // State
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(initialAudioUrl || null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolumeState] = useState(initialVolume);
@@ -63,13 +48,11 @@ export const useAudioPlayer = (options: UseAudioPlayerOptions = {}): UseAudioPla
     "name" in err &&
     (err as { name?: string }).name === "NotAllowedError";
 
-  // Initialize audio element
   useEffect(() => {
     const audio = createAudioElement();
-    audio.volume = initialVolume / 100;
+    audio.volume = clampVolume(initialVolume) / MAX_VOLUME;
     audioRef.current = audio;
 
-    // Event handlers
     const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
     };
@@ -106,7 +89,6 @@ export const useAudioPlayer = (options: UseAudioPlayerOptions = {}): UseAudioPla
       setIsLoading(true);
     };
 
-    // Add event listeners
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
     audio.addEventListener("play", handlePlay);
@@ -115,7 +97,6 @@ export const useAudioPlayer = (options: UseAudioPlayerOptions = {}): UseAudioPla
     audio.addEventListener("error", handleError);
     audio.addEventListener("loadstart", handleLoadStart);
 
-    // Cleanup
     return () => {
       audio.pause();
       audio.src = "";
@@ -129,20 +110,18 @@ export const useAudioPlayer = (options: UseAudioPlayerOptions = {}): UseAudioPla
     };
   }, [initialVolume, onEnded, onError, onReady]);
 
-  // Sync volume with audio element
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = volume / 100;
+      audioRef.current.volume = clampVolume(volume) / MAX_VOLUME;
     }
   }, [volume]);
 
-  // Load initial track
   useEffect(() => {
     if (initialAudioUrl) {
       void loadTrack(initialAudioUrl, startTime);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only on mount
+  }, []);
 
   const playInternal = useCallback(
     async (mode: "user" | "auto") => {
@@ -162,7 +141,7 @@ export const useAudioPlayer = (options: UseAudioPlayerOptions = {}): UseAudioPla
           return false;
         }
 
-        const errorMsg = "Impossible de démarrer la lecture audio.";
+        const errorMsg = "Impossible de demarrer la lecture audio.";
         setError(errorMsg);
         onError?.(errorMsg);
         if (process.env.NODE_ENV === "development") {
@@ -174,64 +153,55 @@ export const useAudioPlayer = (options: UseAudioPlayerOptions = {}): UseAudioPla
     [onError]
   );
 
-  /**
-   * Charger une nouvelle piste
-   */
-  const loadTrack = useCallback(async (audioUrl: string, seekTo: number = 0): Promise<void> => {
-    const audio = audioRef.current;
-    if (!audio || !audioUrl) return;
+  const loadTrack = useCallback(
+    async (audioUrl: string, seekTo: number = 0): Promise<void> => {
+      const audio = audioRef.current;
+      if (!audio || !audioUrl) return;
 
-    setError(null);
-    setIsLoading(true);
+      setError(null);
+      setIsLoading(true);
 
-    const shouldReload = !audio.src || currentAudioUrl !== audioUrl;
+      const shouldReload = !audio.src || currentAudioUrl !== audioUrl;
 
-    if (shouldReload) {
-      audio.pause();
-      setIsPlaying(false);
-      setCurrentAudioUrl(audioUrl);
-      setCurrentTime(0);
-      setDuration(0);
-      audio.src = audioUrl;
-      audio.load();
+      if (shouldReload) {
+        audio.pause();
+        setIsPlaying(false);
+        setCurrentAudioUrl(audioUrl);
+        setCurrentTime(0);
+        setDuration(0);
+        audio.src = audioUrl;
+        audio.load();
 
-      // Wait for metadata to be loaded
-      await new Promise<void>((resolve) => {
-        const handleCanPlay = () => {
-          audio.removeEventListener("canplay", handleCanPlay);
-          resolve();
-        };
-        audio.addEventListener("canplay", handleCanPlay);
-      });
+        await new Promise<void>((resolve) => {
+          const handleCanPlay = () => {
+            audio.removeEventListener("canplay", handleCanPlay);
+            resolve();
+          };
+          audio.addEventListener("canplay", handleCanPlay);
+        });
 
-      // Seek to start time
-      if (seekTo > 0 && Number.isFinite(seekTo)) {
-        audio.currentTime = seekTo;
+        if (seekTo > 0 && Number.isFinite(seekTo)) {
+          audio.currentTime = seekTo;
+        }
       }
-    }
 
-    setIsLoading(false);
+      setIsLoading(false);
 
-    if (autoPlay) {
-      void playInternal("auto");
-    }
+      if (autoPlay) {
+        void playInternal("auto");
+      }
 
-    // Clear preload cache if this was preloaded
-    if (preloadedSrcRef.current === audioUrl) {
-      preloadedSrcRef.current = null;
-    }
-  }, [autoPlay, currentAudioUrl, playInternal]);
+      if (preloadedSrcRef.current === audioUrl) {
+        preloadedSrcRef.current = null;
+      }
+    },
+    [autoPlay, currentAudioUrl, playInternal]
+  );
 
-  /**
-   * Play
-   */
   const play = useCallback(() => {
     void playInternal("user");
   }, [playInternal]);
 
-  /**
-   * Pause
-   */
   const pause = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -240,9 +210,6 @@ export const useAudioPlayer = (options: UseAudioPlayerOptions = {}): UseAudioPla
     setIsPlaying(false);
   }, []);
 
-  /**
-   * Toggle play/pause
-   */
   const togglePlay = useCallback(() => {
     if (isPlaying) {
       pause();
@@ -251,11 +218,8 @@ export const useAudioPlayer = (options: UseAudioPlayerOptions = {}): UseAudioPla
     }
   }, [isPlaying, pause, play]);
 
-  /**
-   * Changer le volume (0-100)
-   */
   const setVolume = useCallback((newVolume: number) => {
-    const clamped = Math.max(0, Math.min(100, newVolume));
+    const clamped = clampVolume(newVolume);
     setVolumeState(clamped);
 
     if (clamped === 0) {
@@ -266,38 +230,32 @@ export const useAudioPlayer = (options: UseAudioPlayerOptions = {}): UseAudioPla
     }
 
     if (audioRef.current) {
-      audioRef.current.volume = clamped / 100;
+      audioRef.current.volume = clamped / MAX_VOLUME;
     }
   }, []);
 
-  /**
-   * Toggle mute
-   */
   const toggleMute = useCallback(() => {
     if (isMuted) {
-      setVolume(previousVolumeRef.current || 70);
+      setVolume(previousVolumeRef.current || DEFAULT_VOLUME);
     } else {
-      previousVolumeRef.current = volume || 70;
+      previousVolumeRef.current = volume || DEFAULT_VOLUME;
       setVolume(0);
     }
   }, [isMuted, volume, setVolume]);
 
-  /**
-   * Seek à une position (0-100%)
-   */
-  const seek = useCallback((position: number) => {
-    if (noSeek || !audioRef.current || !Number.isFinite(duration)) return;
+  const seek = useCallback(
+    (position: number) => {
+      if (noSeek || !audioRef.current || !Number.isFinite(duration)) return;
 
-    const clampedPosition = Math.max(0, Math.min(100, position));
-    const seconds = (clampedPosition / 100) * duration;
+      const clampedPosition = clampVolume(position);
+      const seconds = (clampedPosition / 100) * duration;
 
-    audioRef.current.currentTime = seconds;
-    setCurrentTime(seconds);
-  }, [duration, noSeek]);
+      audioRef.current.currentTime = seconds;
+      setCurrentTime(seconds);
+    },
+    [duration, noSeek]
+  );
 
-  /**
-   * Précharger une piste (pour réduire le temps de chargement)
-   */
   const preloadTrack = useCallback((audioUrl: string) => {
     if (!audioUrl || preloadedSrcRef.current === audioUrl) {
       return;
@@ -314,9 +272,6 @@ export const useAudioPlayer = (options: UseAudioPlayerOptions = {}): UseAudioPla
     preloadedSrcRef.current = audioUrl;
   }, []);
 
-  /**
-   * Reset le player
-   */
   const reset = useCallback(() => {
     const audio = audioRef.current;
     if (audio) {
@@ -333,7 +288,6 @@ export const useAudioPlayer = (options: UseAudioPlayerOptions = {}): UseAudioPla
     setIsLoading(false);
   }, []);
 
-  // Cleanup preload on unmount
   useEffect(() => {
     return () => {
       if (preloadRef.current) {
@@ -343,11 +297,9 @@ export const useAudioPlayer = (options: UseAudioPlayerOptions = {}): UseAudioPla
     };
   }, []);
 
-  // Calculate progress (0-100)
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return {
-    // State
     audioRef,
     isPlaying,
     volume,
@@ -359,8 +311,6 @@ export const useAudioPlayer = (options: UseAudioPlayerOptions = {}): UseAudioPla
     error,
     currentAudioUrl,
     noSeek,
-
-    // Actions
     play,
     pause,
     togglePlay,

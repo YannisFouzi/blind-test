@@ -1,4 +1,5 @@
 import admin from "firebase-admin";
+import type { Song as SharedSong } from "@shared-types";
 
 // Initialisation Firebase Admin (une seule fois)
 let initialized = false;
@@ -42,15 +43,9 @@ const getFirestore = () => {
   return admin.firestore();
 };
 
-export interface SongData {
-  title: string;
-  artist: string;
-  youtubeId: string;
+export type SongData = Omit<SharedSong, "id" | "createdAt" | "audioUrl"> & {
   audioUrl: string;
-  audioUrlReversed?: string;
-  duration: number;
-  workId: string;
-}
+};
 
 /**
  * Vérifie si une chanson existe déjà dans Firestore (par youtubeId + workId)

@@ -1,25 +1,18 @@
-import type React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { RefObject } from "react";
 
 interface UseDoubleAudioPlayerOptions {
-  /** Lecture automatique (au chargement des pistes) */
   autoPlay?: boolean;
-  /** Mode no-seek (désactive le contrôle de la timeline) */
   noSeek?: boolean;
-  /** Volume initial (0-100) */
   initialVolume?: number;
-  /** Callback quand les deux pistes sont terminées */
   onEnded?: () => void;
-  /** Callback quand une erreur survient sur au moins une des pistes */
   onError?: (error: string) => void;
 }
 
 export interface UseDoubleAudioPlayerReturn {
-  // Refs
-  primaryRef: React.RefObject<HTMLAudioElement | null>;
-  secondaryRef: React.RefObject<HTMLAudioElement | null>;
+  primaryRef: RefObject<HTMLAudioElement | null>;
+  secondaryRef: RefObject<HTMLAudioElement | null>;
 
-  // State
   isPlaying: boolean;
   isMuted: boolean;
   volume: number;
@@ -30,7 +23,6 @@ export interface UseDoubleAudioPlayerReturn {
   error: string | null;
   noSeek: boolean;
 
-  // Actions
   play: () => void;
   pause: () => void;
   togglePlay: () => void;
@@ -41,6 +33,12 @@ export interface UseDoubleAudioPlayerReturn {
   reset: () => void;
 }
 
+const DEFAULT_VOLUME = 70;
+const MIN_VOLUME = 0;
+const MAX_VOLUME = 100;
+
+const clampVolume = (value: number) => Math.max(MIN_VOLUME, Math.min(MAX_VOLUME, value));
+
 const createAudioElement = () => {
   const audio = new Audio();
   audio.preload = "auto";
@@ -48,10 +46,22 @@ const createAudioElement = () => {
   return audio;
 };
 
+const isAutoplayBlockedError = (err: unknown) =>
+  typeof err === "object" &&
+  err !== null &&
+  "name" in err &&
+  (err as { name?: string }).name === "NotAllowedError";
+
 export const useDoubleAudioPlayer = (
   options: UseDoubleAudioPlayerOptions = {}
 ): UseDoubleAudioPlayerReturn => {
-  const { autoPlay = false, noSeek = false, initialVolume = 70, onEnded, onError } = options;
+  const {
+    autoPlay = false,
+    noSeek = false,
+    initialVolume = DEFAULT_VOLUME,
+    onEnded,
+    onError,
+  } = options;
 
   const primaryRef = useRef<HTMLAudioElement | null>(null);
   const secondaryRef = useRef<HTMLAudioElement | null>(null);
@@ -65,19 +75,13 @@ export const useDoubleAudioPlayer = (
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isAutoplayBlockedError = (err: unknown) =>
-    typeof err === "object" &&
-    err !== null &&
-    "name" in err &&
-    (err as { name?: string }).name === "NotAllowedError";
-
-  // Initialise les deux éléments audio
   useEffect(() => {
     const primary = createAudioElement();
     const secondary = createAudioElement();
 
-    primary.volume = initialVolume / 100;
-    secondary.volume = initialVolume / 100;
+    const normalizedVolume = clampVolume(initialVolume) / MAX_VOLUME;
+    primary.volume = normalizedVolume;
+    secondary.volume = normalizedVolume;
 
     primaryRef.current = primary;
     secondaryRef.current = secondary;
@@ -169,15 +173,14 @@ export const useDoubleAudioPlayer = (
     };
   }, [initialVolume, onEnded, onError]);
 
-  // Sync volume
   useEffect(() => {
-    if (primaryRef.current) primaryRef.current.volume = volume / 100;
-    if (secondaryRef.current) secondaryRef.current.volume = volume / 100;
+    const normalizedVolume = clampVolume(volume) / MAX_VOLUME;
+    if (primaryRef.current) primaryRef.current.volume = normalizedVolume;
+    if (secondaryRef.current) secondaryRef.current.volume = normalizedVolume;
   }, [volume]);
 
   const playInternal = useCallback(
     async (mode: "user" | "auto") => {
-      console.log("[AUDIO-DEBUG] useDoubleAudioPlayer playInternal called", { mode });
       const primary = primaryRef.current;
       const secondary = secondaryRef.current;
       if (!primary || !secondary) return false;
@@ -205,7 +208,6 @@ export const useDoubleAudioPlayer = (
           return false;
         }
 
-        // Lancer les pistes en parallèle (limite les décalages)
         await Promise.all(playPromises);
 
         setIsPlaying(true);
@@ -219,7 +221,7 @@ export const useDoubleAudioPlayer = (
           return false;
         }
 
-        const errorMsg = "Impossible de démarrer la lecture audio.";
+        const errorMsg = "Impossible de demarrer la lecture audio.";
         setError(errorMsg);
         onError?.(errorMsg);
         if (process.env.NODE_ENV === "development") {
@@ -237,7 +239,6 @@ export const useDoubleAudioPlayer = (
       const secondary = secondaryRef.current;
       if (!primary || !secondary) return;
 
-      // Si les URLs n'ont pas changé, ne pas recharger ni remettre la timeline à zéro
       const currentPrimarySrc = primary.currentSrc || primary.src;
       const currentSecondarySrc = secondary.currentSrc || secondary.src;
       const normalizedPrimary = primaryUrl || "";
@@ -247,7 +248,8 @@ export const useDoubleAudioPlayer = (
         currentPrimarySrc &&
         currentSecondarySrc &&
         (currentPrimarySrc.endsWith(normalizedPrimary) || currentPrimarySrc === normalizedPrimary) &&
-        (currentSecondarySrc.endsWith(normalizedSecondary) || currentSecondarySrc === normalizedSecondary)
+        (currentSecondarySrc.endsWith(normalizedSecondary) ||
+          currentSecondarySrc === normalizedSecondary)
       ) {
         return;
       }
@@ -267,7 +269,6 @@ export const useDoubleAudioPlayer = (
         secondary.load();
       }
 
-      // Attendre que au moins une piste soit lisible
       await new Promise<void>((resolve) => {
         let readyCount = 0;
         const tryResolve = () => {
@@ -284,13 +285,7 @@ export const useDoubleAudioPlayer = (
 
       setIsLoading(false);
 
-      const willCallPlay = Boolean(autoPlay && (primaryUrl || secondaryUrl));
-      console.log("[AUDIO-DEBUG] useDoubleAudioPlayer loadTracks resolved", {
-        autoPlay,
-        hasUrls: !!(primaryUrl || secondaryUrl),
-        willCallPlay,
-      });
-      if (willCallPlay) {
+      if (autoPlay && (primaryUrl || secondaryUrl)) {
         void playInternal("auto");
       }
     },
@@ -319,17 +314,14 @@ export const useDoubleAudioPlayer = (
   }, [isPlaying, pause, play]);
 
   const setVolume = useCallback((newVolume: number) => {
-    const clamped = Math.max(0, Math.min(100, newVolume));
+    const clamped = clampVolume(newVolume);
     setVolumeState(clamped);
     setIsMuted(clamped === 0);
   }, []);
 
   const toggleMute = useCallback(() => {
     setIsMuted((prev) => !prev);
-    setVolumeState((prev) => {
-      if (prev === 0) return 70;
-      return 0;
-    });
+    setVolumeState((prev) => (prev === 0 ? DEFAULT_VOLUME : 0));
   }, []);
 
   const seek = useCallback(
@@ -339,16 +331,13 @@ export const useDoubleAudioPlayer = (
       const secondary = secondaryRef.current;
       if (!primary || !secondary) return;
 
-      const clampedPosition = Math.max(0, Math.min(100, position));
+      const clampedPosition = clampVolume(position);
       const seconds = (clampedPosition / 100) * duration;
 
       primary.currentTime = seconds;
       secondary.currentTime = seconds;
       setCurrentTime(seconds);
 
-      // Si on est en cours de lecture, s'assurer que les pistes encore valides
-      // rejouent à partir de cette position (utile après avoir dépassé la fin
-      // de la piste courte puis être revenu en arrière).
       if (isPlaying) {
         void playInternal("user");
       }
@@ -403,4 +392,3 @@ export const useDoubleAudioPlayer = (
     reset,
   };
 };
-

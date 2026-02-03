@@ -1,8 +1,9 @@
 import type * as Party from "partykit/server";
 
-/**
- * Métadonnées d'une room de jeu
- */
+const ROOM_KEY_PREFIX = "room:";
+const ROOM_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+// Room metadata stored in the lobby
 interface RoomMetadata {
   id: string;
   hostName: string;
@@ -15,23 +16,7 @@ interface RoomMetadata {
 }
 
 /**
- * Lobby Party - Track toutes les rooms actives
- *
- * Architecture Multi-Party :
- * - Singleton : 1 seule instance pour toute l'app
- * - URL : /parties/lobby/main
- * - Rôle : Centraliser la liste des rooms disponibles
- *
- * Communication :
- * - Game Parties envoient des événements HTTP POST
- * - Clients WebSocket reçoivent la liste en temps réel
- *
- * @example
- * // Game Party notifie le lobby
- * await fetch('/parties/lobby/main', {
- *   method: 'POST',
- *   body: JSON.stringify({ type: 'room_created', roomId, hostName })
- * });
+ * LobbyParty tracks active rooms and broadcasts updates to clients.
  */
 export default class LobbyParty implements Party.Server {
   constructor(public room: Party.Room) {}
@@ -40,24 +25,12 @@ export default class LobbyParty implements Party.Server {
     console.log("[Lobby] Started");
   }
 
-  /**
-   * Nouveau client se connecte pour voir la liste des rooms
-   */
   async onConnect(conn: Party.Connection) {
     console.log("[Lobby] Client connected:", conn.id);
 
-    // Envoyer la liste actuelle des rooms
     await this.sendRoomsList(conn);
   }
 
-  /**
-   * Messages HTTP des Game Parties
-   *
-   * Les Game Parties notifient le Lobby via HTTP POST :
-   * - room_created : Nouvelle room créée
-   * - room_state_changed : État de la room changé (ex: idle → playing)
-   * - room_deleted : Room supprimée
-   */
   async onRequest(req: Party.Request) {
     // CORS preflight
     if (req.method === "OPTIONS") {
@@ -67,7 +40,6 @@ export default class LobbyParty implements Party.Server {
       });
     }
 
-    // DELETE : Vider toutes les rooms (admin)
     if (req.method === "DELETE") {
       return this.handleClearAllRooms();
     }
@@ -107,12 +79,9 @@ export default class LobbyParty implements Party.Server {
     }
   }
 
-  /**
-   * Admin : Supprimer toutes les rooms du lobby
-   */
   private async handleClearAllRooms() {
     const map = await this.room.storage.list();
-    const roomKeys = Array.from(map.keys()).filter((key) => key.startsWith("room:"));
+    const roomKeys = Array.from(map.keys()).filter((key) => key.startsWith(ROOM_KEY_PREFIX));
 
     for (const key of roomKeys) {
       await this.room.storage.delete(key);
@@ -120,7 +89,6 @@ export default class LobbyParty implements Party.Server {
 
     console.log(`[Lobby] Cleared ${roomKeys.length} rooms`);
 
-    // Broadcaster la liste vide à tous les clients
     await this.broadcastRoomsList();
 
     return new Response(JSON.stringify({ deleted: roomKeys.length }), {
@@ -129,9 +97,6 @@ export default class LobbyParty implements Party.Server {
     });
   }
 
-  /**
-   * Game Party notifie : nouvelle room créée
-   */
   private async handleRoomCreated(roomId: string, data: Record<string, any>) {
     const metadata: RoomMetadata = {
       id: roomId,
@@ -144,19 +109,15 @@ export default class LobbyParty implements Party.Server {
       hasPassword: Boolean(data.hasPassword),
     };
 
-    await this.room.storage.put(`room:${roomId}`, metadata);
+    await this.room.storage.put(`${ROOM_KEY_PREFIX}${roomId}`, metadata);
 
     console.log(`[Lobby] Room created: ${roomId} by ${metadata.hostName}`);
 
-    // Broadcaster la nouvelle liste à tous les clients
     await this.broadcastRoomsList();
   }
 
-  /**
-   * Game Party notifie : état de la room changé
-   */
   private async handleRoomStateChanged(roomId: string, data: Record<string, any>) {
-    const key = `room:${roomId}`;
+    const key = `${ROOM_KEY_PREFIX}${roomId}`;
     const metadata = await this.room.storage.get<RoomMetadata>(key);
 
     if (!metadata) {
@@ -178,39 +139,27 @@ export default class LobbyParty implements Party.Server {
 
     console.log(`[Lobby] Room state changed: ${roomId} → ${metadata.state}`);
 
-    // Broadcaster la liste mise à jour
     await this.broadcastRoomsList();
   }
 
-  /**
-   * Game Party notifie : room supprimée
-   */
   private async handleRoomDeleted(roomId: string) {
-    await this.room.storage.delete(`room:${roomId}`);
+    await this.room.storage.delete(`${ROOM_KEY_PREFIX}${roomId}`);
 
     console.log(`[Lobby] Room deleted: ${roomId}`);
 
-    // Broadcaster la liste mise à jour
     await this.broadcastRoomsList();
   }
 
-  /**
-   * Récupérer toutes les rooms depuis storage
-   * Supprime automatiquement les rooms expirées (TTL de 2 heures)
-   */
   private async getRooms(): Promise<RoomMetadata[]> {
     const rooms: RoomMetadata[] = [];
     const map = await this.room.storage.list<RoomMetadata>();
     const now = Date.now();
-    const TTL_MS = 15 * 60 * 1000; // 15 minutes en millisecondes
 
     for (const [key, value] of map.entries()) {
-      if (key.startsWith("room:")) {
-        // Vérifier si la room est expirée (pas de mise à jour depuis 2h)
-        const isExpired = now - value.updatedAt > TTL_MS;
+      if (key.startsWith(ROOM_KEY_PREFIX)) {
+        const isExpired = now - value.updatedAt > ROOM_TTL_MS;
 
         if (isExpired) {
-          // Supprimer la room expirée
           await this.room.storage.delete(key);
           console.log(`[Lobby] Room expired and deleted: ${value.id} (last update: ${new Date(value.updatedAt).toISOString()})`);
         } else {
@@ -222,9 +171,6 @@ export default class LobbyParty implements Party.Server {
     return rooms;
   }
 
-  /**
-   * Broadcaster la liste des rooms à tous les clients connectés
-   */
   private async broadcastRoomsList() {
     const rooms = await this.getRooms();
 
@@ -236,9 +182,6 @@ export default class LobbyParty implements Party.Server {
     );
   }
 
-  /**
-   * Envoyer la liste à un client spécifique
-   */
   private async sendRoomsList(conn: Party.Connection) {
     const rooms = await this.getRooms();
 
@@ -250,9 +193,6 @@ export default class LobbyParty implements Party.Server {
     );
   }
 
-  /**
-   * Headers CORS pour les requêtes HTTP (création room depuis le front)
-   */
   private corsHeaders() {
     return {
       "Access-Control-Allow-Origin": "*",

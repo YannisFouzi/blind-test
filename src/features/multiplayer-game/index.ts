@@ -1,32 +1,6 @@
 /**
- * Multiplayer Game Feature
- *
- * Mode multijoueur avec PartyKit WebSocket
- *
- * @example
- * ```tsx
- * import { MultiGameClient, useMultiplayerGame } from "@/features/multiplayer-game";
- *
- * // Utilisation du client complet
- * <MultiGameClient
- *   universeId="disney"
- *   roomId="abc123"
- *   playerId="player-1"
- *   displayName="Alice"
- * />
- *
- * // Ou utilisation du hook seul
- * const game = useMultiplayerGame({
- *   universeId: "disney",
- *   roomId: "abc123",
- *   playerId: "player-1",
- *   displayName: "Alice"
- * });
- * ```
+ * Multiplayer game feature exports.
  */
-
-// Types
-export * from "./types";
 
 // Hooks
 export { useMultiplayerGame } from "./hooks/useMultiplayerGame";
