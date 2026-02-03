@@ -1,39 +1,45 @@
-# 🎵 Blind Test - Application de Quiz Musical
+﻿# 🎵 Blind Test - Application de Quiz Musical
 
-Application web complète pour créer et jouer à des blind tests musicaux avec import automatique depuis YouTube et mode multijoueur en temps réel.
+Application web complete pour creer et jouer a des blind tests musicaux avec import automatique depuis YouTube et mode multijoueur en temps reel.
 
-## 📋 Table des matières
+## 📋 Table des matieres
 
 - [Vue d'ensemble](#-vue-densemble)
 - [Stack technique](#-stack-technique)
 - [Architecture](#-architecture)
-- [Fonctionnalités](#-fonctionnalités)
+- [Fonctionnalites](#-fonctionnalites)
 - [Installation](#-installation)
 - [Configuration](#-configuration)
-- [Déploiement](#-déploiement)
+- [Deploiement](#-deploiement)
 - [Utilisation](#-utilisation)
 - [Maintenance](#-maintenance)
-- [Dépannage](#-dépannage)
+- [Depannage](#-depannage)
+- [Couts estimes](#-couts-estimes-production)
+- [Contribution](#-contribution)
+- [Licence](#-licence)
+- [Remerciements](#-remerciements)
+- [Contact](#-contact)
 
 ---
 
 ## 🎯 Vue d'ensemble
 
 Cette application permet de :
-- ✅ Créer des univers et œuvres thématiques (Harry Potter, Star Wars, etc.)
-- ✅ Importer automatiquement des playlists YouTube complètes
-- ✅ Télécharger et convertir les audios en MP3 (128kbps)
-- ✅ Jouer à des blind tests solo ou **multijoueur en temps réel**
-- ✅ Gérer un dashboard administrateur complet
-- ✅ Authentification utilisateur avec Firebase
+- ✅ Creer des univers et oeuvres thematiques (Harry Potter, Star Wars, etc.)
+- ✅ Importer automatiquement des playlists YouTube completes
+- ✅ Telecharger et convertir les audios en MP3 (128kbps)
+- ✅ Jouer a des blind tests solo ou multijoueur en temps reel
+- ✅ Gerer un dashboard administrateur complet
+- ✅ Authentification utilisateur avec Firebase (Google Sign-In)
 
 **Architecture microservices :**
-- **Frontend** : Next.js 15 hébergé sur Vercel
-- **Backend Ingestion** : Service Express.js sur TrueNAS (IP résidentielle) via Cloudflare Tunnel
-- **Multiplayer** : PartyKit Cloud (WebSocket temps réel)
-- **Base de données** : Firestore (NoSQL temps réel)
+- **Frontend** : Next.js 15 heberge sur Vercel
+- **Backend Ingestion** : Service Express.js sur TrueNAS (NAS perso) via Cloudflare Tunnel
+- **Multiplayer** : PartyKit Cloud (WebSocket temps reel)
+- **Base de donnees** : Firestore (NoSQL temps reel)
 - **Stockage audio** : Cloudflare R2 (S3-compatible)
 - **Monitoring** : UptimeRobot
+- **Packages partages** : shared-types + shared-utils (web / party / ingestion)
 
 ---
 
@@ -44,16 +50,17 @@ Cette application permet de :
 | Technologie | Version | Usage |
 |-------------|---------|-------|
 | **Next.js** | 15.x | Framework React (App Router) |
-| **React** | 19.x | Bibliothèque UI |
+| **React** | 19.x | Bibliotheque UI |
 | **TypeScript** | 5.x | Typage statique |
 | **Tailwind CSS** | 4.x | Styling |
-| **shadcn/ui** | - | Composants UI (Radix UI) |
+| **Radix UI** | - | Composants UI (Dialog, etc.) |
 | **Firebase SDK** | 11.x | Authentication + Firestore |
-| **TanStack Query** | 5.x | Gestion du cache et requêtes |
+| **TanStack Query** | 5.x | Cache et requetes |
 | **Framer Motion** | 12.x | Animations |
-| **Zod** | 4.x | Validation de schémas |
+| **Zod** | 4.x | Validation de schemas |
 | **React Hook Form** | 7.x | Gestion de formulaires |
 | **PartySocket** | 1.x | Client WebSocket PartyKit |
+| **Zustand** | 5.x | State management |
 
 ### Backend Ingestion (TrueNAS + Docker)
 
@@ -62,10 +69,12 @@ Cette application permet de :
 | **Node.js** | 20.x | Runtime JavaScript |
 | **Express.js** | 4.x | Serveur HTTP |
 | **TypeScript** | 5.x | Typage statique |
-| **yt-dlp** | Latest | Téléchargement YouTube |
+| **BullMQ** | 5.x | Queue d'import |
+| **Redis** | - | Backend de queue |
+| **yt-dlp** | Latest | Telechargement YouTube |
 | **FFmpeg** | Latest | Conversion audio |
 | **@aws-sdk/client-s3** | 3.x | Upload Cloudflare R2 |
-| **Docker** | Latest | Conteneurisation |
+| **Firebase Admin** | 13.x | Ecriture Firestore |
 
 ### Multiplayer (PartyKit Cloud)
 
@@ -73,18 +82,19 @@ Cette application permet de :
 |-------------|---------|-------|
 | **PartyKit** | 0.0.115 | Serveur WebSocket |
 | **XState** | 5.x | State machine (game logic) |
+| **Zod** | 4.x | Validation |
 
 ### Services Cloud
 
 | Service | Usage | Plan |
 |---------|-------|------|
-| **Vercel** | Hébergement frontend | Hobby (gratuit) |
+| **Vercel** | Hebergement frontend | Hobby (gratuit) |
 | **PartyKit Cloud** | WebSocket multiplayer | Gratuit |
-| **TrueNAS** | Service d'ingestion (Docker) | Self-hosted (0€) |
-| **Cloudflare Tunnel** | Exposition sécurisée du NAS | Gratuit |
-| **Firebase/Firestore** | Base de données NoSQL + Auth | Spark (gratuit) |
-| **Cloudflare R2** | Stockage MP3 | Pay-as-you-go (~$0.015/GB) |
-| **YouTube Data API v3** | Métadonnées playlists | Gratuit (10,000 unités/jour) |
+| **TrueNAS** | Service d'ingestion (Docker) | Self-hosted |
+| **Cloudflare Tunnel** | Exposition securisee du NAS | Gratuit |
+| **Firebase/Firestore** | Base de donnees + Auth | Spark (gratuit) |
+| **Cloudflare R2** | Stockage MP3 | Pay-as-you-go |
+| **YouTube Data API v3** | Metadonnees playlists | Gratuit (quota) |
 | **UptimeRobot** | Monitoring uptime | Gratuit |
 
 ---
@@ -92,159 +102,144 @@ Cette application permet de :
 ## 🏗 Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         UTILISATEUR                             │
-│                    (Navigateur Web)                             │
-└──────────┬─────────────────────┬────────────────────────────────┘
-           │                     │
-           │ HTTP/WS             │ WebSocket
-           ↓                     ↓
-┌─────────────────────┐  ┌─────────────────────────────────────────┐
-│   VERCEL (Frontend) │  │        PARTYKIT CLOUD (Multiplayer)     │
-│  blind-test-brown   │  │  blind-test-party.yannisfouzi.partykit  │
-│    .vercel.app      │  │                .dev                     │
-├─────────────────────┤  ├─────────────────────────────────────────┤
-│ Next.js 15 App      │  │ WebSocket Server                        │
-│ - Pages             │  │ - Game rooms (real-time sync)           │
-│ - API Routes        │  │ - Lobby management                      │
-│ - React Components  │  │ - Player state                          │
-└────────┬────────────┘  └─────────────────────────────────────────┘
-         │
-         │ Proxy API
-         ↓
-┌─────────────────────────────────────────────────────────────────┐
-│              CLOUDFLARE TUNNEL (ingestion.fouzi-dev.fr)         │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    TRUENAS (Self-hosted)                        │
-│                    IP Résidentielle                             │
-├─────────────────────────────────────────────────────────────────┤
-│  Docker: blind-test-ingestion                                   │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ Express.js API (:4000)                                   │   │
-│  │                                                          │   │
-│  │ yt-dlp ──→ FFmpeg ──→ R2 SDK                            │   │
-│  │ (Download)  (Convert)  (Upload)                          │   │
-│  │                                                          │   │
-│  │ /app/cookies/cookies.txt (YouTube auth backup)           │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-         │                      │                  │
-         │                      │ Auth             │ Storage
-         ↓                      ↓                  ↓
-┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│ YOUTUBE API      │  │ FIREBASE         │  │ CLOUDFLARE R2    │
-│ (Metadata)       │  │ (Auth+Firestore) │  │ (Audio Storage)  │
-├──────────────────┤  ├──────────────────┤  ├──────────────────┤
-│ Playlist info    │  │ Authentication   │  │ MP3 Files        │
-│ Video metadata   │  │ Firestore DB:    │  │ Public URLs      │
-│                  │  │ - universes      │  │ CORS Enabled     │
-│                  │  │ - works          │  │                  │
-│                  │  │ - songs          │  │ Organized by:    │
-│                  │  │ - users          │  │ /workId/videoId  │
-└──────────────────┘  └──────────────────┘  └──────────────────┘
++---------------------------+           +-----------------------------------+
+|        UTILISATEUR        |           |   PARTYKIT CLOUD (Multiplayer)    |
+|       (Navigateur)        |           |   WebSocket rooms + lobby         |
++-------------+-------------+           +-----------------------------------+
+              | HTTP/WS
+              v
++---------------------------+
+|        VERCEL (Web)       |
+|  Next.js App + API routes |
++-------------+-------------+
+              |
+              | Proxy API
+              v
++---------------------------+
+|  CLOUDFLARE TUNNEL         |
+|  ingestion.votre-domaine  |
++-------------+-------------+
+              |
+              v
++---------------------------+
+|     TRUENAS (Self-hosted) |
+|  Express + BullMQ worker  |
+|  yt-dlp -> ffmpeg -> R2   |
++-------------+-------------+
+      |            |
+      v            v
++-----------+  +------------------+
+| YouTube   |  | Cloudflare R2     |
+| API       |  | Audio storage     |
++-----------+  +------------------+
+      |
+      v
++---------------------------+
+| Firebase (Auth + Firestore)|
++---------------------------+
+```
+
+### Structure du repo
+```
+blind-test/
+  src/                         # Next.js app (App Router)
+  party/                       # PartyKit server
+  ingestion-service/           # Express ingestion service
+  packages/
+    shared-types/              # Zod schemas + TS types
+    shared-utils/              # Shared helpers (game rounds, etc.)
+```
+
+### Architecture front (feature-first)
+```
+src/features/
+  admin/
+  audio-player/
+  game-ui/
+  home/
+  multiplayer-game/
+  scores/
+  solo-game/
+src/components/ui/             # UI generiques re-utilisables
 ```
 
 ### Flux d'import de playlist
 
 ```
 1. Admin colle URL YouTube playlist
-   ↓
-2. Frontend valide via YouTube API (métadonnées)
-   ↓
-3. Admin clique "Créer et importer"
-   ↓
-4. Frontend crée Work dans Firestore
-   ↓
-5. Frontend appelle TrueNAS via Cloudflare Tunnel
-   (/api/audio/import-playlist → ingestion.fouzi-dev.fr)
-   ↓
-6. TrueNAS récupère liste vidéos (YouTube API)
-   ↓
-7. Pour chaque vidéo (concurrency configurable):
-   - yt-dlp télécharge audio (WebM/M4A)
-   - FFmpeg convertit → MP3 128kbps
-   - Upload vers Cloudflare R2
-   ↓
-8. TrueNAS retourne songs[] avec audioUrl
-   ↓
-9. Frontend sauvegarde songs dans Firestore
-   ↓
-10. UI affiche les chansons + Ready to play!
+   -> frontend valide via YouTube API
+2. Frontend appelle /api/audio/import-playlist
+   -> ingestion ajoute un job (BullMQ) et retourne jobId
+3. Frontend poll /api/audio/import-playlist/status
+   -> ingestion telecharge + convertit (yt-dlp + ffmpeg)
+   -> upload vers Cloudflare R2
+4. Frontend enregistre les songs dans Firestore
+5. UI affiche les chansons et l'import est pret
 ```
 
 ### Flux multijoueur
 
 ```
-1. Host crée une room via PartyKit
-   ↓
+1. Host cree une room via PartyKit
 2. Joueurs rejoignent avec code room
-   ↓
-3. PartyKit synchronise l'état en temps réel:
-   - Liste des joueurs
-   - État du jeu (waiting, playing, finished)
-   - Scores
-   - Chanson actuelle
-   ↓
-4. Tous les clients reçoivent les updates instantanément
+3. Etat synchronise en temps reel (players, scores, song, state)
 ```
 
 ---
 
-## ✨ Fonctionnalités
+## ✨ Fonctionnalites
 
 ### 🎮 Mode Jeu Solo
-- Lecture aléatoire des chansons d'une œuvre
-- Système de points (rapide = plus de points)
+- Lecture aleatoire des chansons d'une oeuvre
+- Systeme de points (rapide = plus de points)
 - Timer par chanson
-- Révélation progressive des réponses
+- Revelation progressive des reponses
 - Score final
 
 ### 👥 Mode Multijoueur
-- Création de rooms avec code unique
-- Synchronisation temps réel (WebSocket)
+- Creation de rooms avec code unique
+- Synchronisation temps reel (WebSocket)
 - Lobby avec liste des joueurs
 - Scores en direct
 - Host controls (start, skip, etc.)
 
 ### 👨‍💼 Dashboard Admin
-- Gestion des univers (créer, modifier, supprimer)
-- Gestion des œuvres par univers
+- Gestion des univers (creer, modifier, supprimer)
+- Gestion des oeuvres par univers
 - Import automatique de playlists YouTube
-- Gestion des chansons (édition, suppression)
-- Prévisualisation audio avant suppression
-- Drag & drop pour réordonner
+- Gestion des chansons (edition, suppression)
+- Previsualisation audio avant suppression
+- Drag & drop pour reordonner
 
 ### 🔐 Authentification
-- Login/Register avec Firebase Auth
+- Google Sign-In (Firebase Auth)
 - Protection des routes admin
-- Gestion des sessions utilisateur
+- Acces admin filtre via NEXT_PUBLIC_ADMIN_EMAIL
 
 ### 🎵 Import YouTube
 - Support des playlists publiques YouTube
 - Validation automatique de la playlist
-- Téléchargement parallèle (configurable)
-- Conversion MP3 de qualité (128kbps)
+- Telechargement parallele (configurable)
+- Conversion MP3 de qualite (128kbps)
 - Stockage cloud avec CDN
-- Rate limiting intégré (évite les blocages)
+- Rate limiting integre (evite les blocages)
 - Support cookies YouTube (backup anti-bot)
 
 ---
 
 ## 🚀 Installation
 
-### Prérequis
+### Prerequis
 
-- **Node.js** ≥ 20.x ([Télécharger](https://nodejs.org/))
-- **npm** ou **pnpm** (gestionnaire de paquets)
+- **Node.js** >= 20.x
+- **npm** ou **pnpm**
 - **Git** pour cloner le projet
-- **Compte Firebase** ([Créer](https://console.firebase.google.com/))
-- **Compte Cloudflare** ([Créer](https://dash.cloudflare.com/))
-- **Compte PartyKit** ([Créer](https://partykit.io/))
-- **Clé YouTube API** ([Obtenir](https://console.cloud.google.com/))
+- **Compte Firebase** (console.firebase.google.com)
+- **Compte Cloudflare** (dash.cloudflare.com)
+- **Compte PartyKit** (partykit.io)
+- **Cle YouTube API** (console.cloud.google.com)
 - **TrueNAS ou serveur Docker** (pour l'ingestion)
+- **Redis** (queue ingestion)
 
 ### 1. Clone du projet
 
@@ -256,7 +251,7 @@ cd blind-test
 ### 2. Installation Frontend
 
 ```bash
-# Installer les dépendances
+# Installer les dependances
 npm install
 # ou
 pnpm install
@@ -277,39 +272,36 @@ pnpm install
 
 ### Variables d'environnement Frontend (Vercel)
 
-Créez `.env.local` à la racine ou configurez dans Vercel Dashboard :
+Creez `.env.local` a la racine ou configurez dans Vercel Dashboard :
 
 ```env
-# Firebase Configuration (obligatoire)
-NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSy...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=blindtest-xxxxx.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=blindtest-xxxxx
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=blindtest-xxxxx.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
-NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:xxxxx
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
+# Firebase (obligatoire)
+NEXT_PUBLIC_FIREBASE_API_KEY=...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+NEXT_PUBLIC_FIREBASE_APP_ID=...
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=...
 
-# YouTube API (obligatoire - côté serveur uniquement)
-YOUTUBE_API_KEY=AIzaSyBDLfbqqp8iQNw4...
-
-# Admin Configuration
-ADMIN_EMAIL=votre-email@example.com
+# Admin (allowlist email)
 NEXT_PUBLIC_ADMIN_EMAIL=votre-email@example.com
 
-# Ingestion Service (TrueNAS via Cloudflare Tunnel)
-INGESTION_SERVICE_URL=https://ingestion.fouzi-dev.fr
-COOKIE_UPLOAD_TOKEN=votre-token-securise  # Optionnel, pour upload cookies
+# YouTube API (utilise cote serveur via routes Next)
+YOUTUBE_API_KEY=...
 
-# PartyKit (Multiplayer)
-NEXT_PUBLIC_PARTYKIT_HOST=blind-test-party.yannisfouzi.partykit.dev
+# Ingestion (self-hosted)
+INGESTION_SERVICE_URL=https://ingestion.votre-domaine.fr
+INGESTION_SERVICE_TOKEN=token-optionnel
+NEXT_PUBLIC_INGESTION_TIMEOUT_MINUTES=5
 
-# App URL
-APP_BASE_URL=https://blind-test-brown.vercel.app
+# PartyKit (multiplayer)
+NEXT_PUBLIC_PARTYKIT_HOST=blind-test-party.votre-user.partykit.dev
 ```
 
 ### Variables d'environnement Backend Ingestion (TrueNAS)
 
-Créez `.env.production` dans le dossier `ingestion-service/` sur le NAS :
+Creez `.env.production` dans le dossier `ingestion-service/` sur le NAS :
 
 ```env
 # Server
@@ -317,36 +309,48 @@ NODE_ENV=production
 PORT=4000
 
 # YouTube API
-YOUTUBE_API_KEY=AIzaSyBDLfbqqp8iQNw4...
+YOUTUBE_API_KEY=...
 
 # Cloudflare R2 (obligatoire)
-R2_ACCOUNT_ID=your-cloudflare-account-id
-R2_ACCESS_KEY_ID=your-r2-access-key-id
-R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
+R2_ACCOUNT_ID=...
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
 R2_BUCKET_NAME=blind-test-audio
 R2_PUBLIC_BASE_URL=https://pub-xxxxx.r2.dev
 
-# Performance
-INGESTION_CONCURRENCY=1  # Recommandé: 1-2 pour éviter rate limiting
+# Firebase Admin (ecriture Firestore)
+FIREBASE_PROJECT_ID=...
+FIREBASE_CLIENT_EMAIL=...
+FIREBASE_PRIVATE_KEY=...
 
-# Security (optionnel)
-COOKIE_UPLOAD_TOKEN=votre-token-securise
+# Redis (queue)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+# Performance
+INGESTION_CONCURRENCY=2  # Recommande: 1-2 pour eviter rate limiting
+
+# yt-dlp (optionnel)
+YT_DLP_PATH=
+YT_DLP_PLAYER_CLIENTS=
+YT_DLP_PO_TOKEN=
 ```
+
+Notes:
+- `INGESTION_SERVICE_TOKEN` est transmis par le web. Si tu veux le verifier, ajoute un middleware cote ingestion.
+- `NEXT_PUBLIC_PARTYKIT_HOST` est optionnel en local (par defaut 127.0.0.1:1999).
 
 ### Configuration Cloudflare R2
 
-1. **Créer un bucket R2**
-   ```
-   Dashboard → R2 → Create bucket
-   Nom: blind-test-audio
-   ```
+1. **Creer un bucket R2**
+   - Dashboard -> R2 -> Create bucket
+   - Nom: blind-test-audio
 
-2. **Générer les clés API**
-   ```
-   R2 → Manage R2 API Tokens → Create API Token
-   Permissions: Object Read & Write
-   Copiez: Access Key ID + Secret Access Key
-   ```
+2. **Generer les cles API**
+   - R2 -> Manage R2 API Tokens -> Create API Token
+   - Permissions: Object Read & Write
+   - Copiez: Access Key ID + Secret Access Key
 
 3. **Configurer CORS**
    ```json
@@ -360,26 +364,20 @@ COOKIE_UPLOAD_TOKEN=votre-token-securise
    ]
    ```
 
-4. **Activer l'accès public**
-   ```
-   Bucket Settings → Public Access → Allow
-   Copiez l'URL publique: https://pub-xxxxx.r2.dev
-   ```
+4. **Activer l'acces public**
+   - Bucket Settings -> Public Access -> Allow
+   - Copiez l'URL publique: https://pub-xxxxx.r2.dev
 
 ### Configuration Firebase
 
-1. **Créer un projet Firebase**
-   - Allez sur [Firebase Console](https://console.firebase.google.com/)
-   - Cliquez sur "Ajouter un projet"
+1. **Creer un projet Firebase**
+   - Firebase Console -> Ajouter un projet
 
 2. **Activer Firestore**
-   ```
-   Console Firebase → Build → Firestore Database → Create database
-   Mode: Production
-   Region: europe-west
-   ```
+   - Build -> Firestore Database -> Create database
+   - Mode: Production
 
-3. **Règles de sécurité Firestore**
+3. **Regles Firestore (exemple simple)**
    ```javascript
    rules_version = '2';
    service cloud.firestore {
@@ -393,208 +391,166 @@ COOKIE_UPLOAD_TOKEN=votre-token-securise
    ```
 
 4. **Activer Authentication**
-   ```
-   Console Firebase → Build → Authentication → Get started
-   Activez: Email/Password
-   ```
+   - Build -> Authentication -> Get started
+   - Activez **Google** (provider)
 
 ### Configuration YouTube API
 
-1. **Créer un projet Google Cloud**
-   - [Google Cloud Console](https://console.cloud.google.com/)
-   - Nouveau projet → "Blind Test App"
+1. **Creer un projet Google Cloud**
+   - console.cloud.google.com -> Nouveau projet
 
 2. **Activer YouTube Data API v3**
-   ```
-   APIs & Services → Enable APIs and Services
-   Recherchez "YouTube Data API v3" → Enable
-   ```
+   - APIs & Services -> Enable APIs and Services
 
-3. **Créer une clé API**
-   ```
-   APIs & Services → Credentials → Create Credentials → API Key
-   ```
+3. **Creer une cle API**
+   - Credentials -> Create Credentials -> API Key
 
 4. **Limites de quota**
-   - Quota gratuit : **10,000 unités/jour**
-   - Import playlist (20 vidéos) ≈ **51 unités**
-   - Capacité : ~**200 imports/jour** gratuits
+   - Quota gratuit: 10,000 unites/jour
+   - Import playlist (20 videos) ≈ 51 unites
 
 ### Configuration PartyKit
 
-1. **Créer un compte PartyKit**
-   - Allez sur [partykit.io](https://partykit.io/)
-   - Connectez-vous avec GitHub
+1. **Creer un compte PartyKit**
+   - partykit.io
 
-2. **Déployer**
+2. **Deployer**
    ```bash
    npx partykit deploy
    ```
 
-3. **Récupérer l'URL**
+3. **Recuperer l'URL**
    ```bash
    npx partykit list
-   # → https://blind-test-party.votre-user.partykit.dev
    ```
 
 ---
 
-## 🚀 Déploiement
+## 🚀 Deploiement
 
 ### Frontend sur Vercel
 
-1. **Push sur GitHub**
-   ```bash
-   git add .
-   git commit -m "Initial commit"
-   git push origin main
-   ```
-
-2. **Déployer sur Vercel**
-   - Allez sur [Vercel](https://vercel.com/)
-   - New Project → Import from GitHub
-   - Sélectionnez le repo `blind-test`
-
-3. **Configurer les variables d'environnement**
-   ```
-   Settings → Environment Variables
-   Ajoutez TOUTES les variables listées ci-dessus
-   ```
+1. Push sur GitHub
+2. Deploy sur Vercel (import du repo)
+3. Configurer les env vars frontend
 
 ### PartyKit sur PartyKit Cloud
 
 ```bash
-# Déploiement automatique
-npx partykit deploy
-
-# Le déploiement se fait aussi automatiquement avec Vercel si configuré
+npm run deploy:partykit
 ```
 
 ### Backend Ingestion sur TrueNAS
 
-#### 1. Préparer le NAS
+1. **Preparer le NAS**
+   ```bash
+   ssh root@votre-truenas-ip
+   mkdir -p /mnt/votre-pool/appdata/blind-test-ingestion
+   cd /mnt/votre-pool/appdata/blind-test-ingestion
+   ```
 
-```bash
-ssh root@votre-truenas-ip
+2. **Copier les fichiers**
+   ```bash
+   scp -r ingestion-service/* root@truenas-ip:/mnt/votre-pool/appdata/blind-test-ingestion/
+   scp ingestion-service/.env.production root@truenas-ip:/mnt/votre-pool/appdata/blind-test-ingestion/
+   ```
 
-# Créer le dossier
-mkdir -p /mnt/votre-pool/appdata/blind-test-ingestion
-cd /mnt/votre-pool/appdata/blind-test-ingestion
-```
+3. **Creer docker-compose.yml**
+   ```yaml
+   version: '3.8'
+   services:
+     ingestion:
+       build: .
+       container_name: blind-test-ingestion
+       restart: unless-stopped
+       ports:
+         - "4000:4000"
+       env_file:
+         - .env.production
+       volumes:
+         - ./temp:/app/temp
+         - ./cookies:/app/cookies
+   ```
 
-#### 2. Copier les fichiers
+4. **Build et lancer**
+   ```bash
+   docker-compose up -d --build
+   ```
 
-```bash
-# Depuis votre machine locale
-scp -r ingestion-service/* root@truenas-ip:/mnt/votre-pool/appdata/blind-test-ingestion/
-scp ingestion-service/.env.production root@truenas-ip:/mnt/votre-pool/appdata/blind-test-ingestion/
-```
-
-#### 3. Créer docker-compose.yml
-
-```yaml
-version: '3.8'
-services:
-  ingestion:
-    build: .
-    container_name: blind-test-ingestion
-    restart: unless-stopped
-    ports:
-      - "4000:4000"
-    env_file:
-      - .env.production
-    volumes:
-      - ./temp:/app/temp
-      - ./cookies:/app/cookies
-```
-
-#### 4. Build et lancer
-
-```bash
-docker-compose up -d --build
-```
-
-#### 5. Vérifier
-
-```bash
-docker ps | grep blind-test
-curl http://localhost:4000/health
-# → {"status":"ok"}
-```
+5. **Verifier**
+   ```bash
+   curl http://localhost:4000/health
+   # -> {"status":"ok"}
+   ```
 
 ### Cloudflare Tunnel
 
-#### 1. Installer cloudflared
+1. **Installer cloudflared**
+   ```bash
+   wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+   chmod +x cloudflared-linux-amd64
+   mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
+   ```
 
-```bash
-wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
-chmod +x cloudflared-linux-amd64
-mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
-```
+2. **Authentifier et creer le tunnel**
+   ```bash
+   cloudflared tunnel login
+   cloudflared tunnel create blind-test-ingestion
+   ```
 
-#### 2. Authentifier et créer le tunnel
+3. **Configurer**
+   ```bash
+   nano ~/.cloudflared/config.yml
+   ```
 
-```bash
-cloudflared tunnel login
-cloudflared tunnel create blind-test-ingestion
-```
+   ```yaml
+   tunnel: VOTRE_TUNNEL_ID
+   credentials-file: /root/.cloudflared/VOTRE_TUNNEL_ID.json
 
-#### 3. Configurer
+   ingress:
+     - hostname: ingestion.votre-domaine.fr
+       service: http://localhost:4000
+     - service: http_status:404
+   ```
 
-```bash
-nano ~/.cloudflared/config.yml
-```
-
-```yaml
-tunnel: VOTRE_TUNNEL_ID
-credentials-file: /root/.cloudflared/VOTRE_TUNNEL_ID.json
-
-ingress:
-  - hostname: ingestion.votre-domaine.fr
-    service: http://localhost:4000
-  - service: http_status:404
-```
-
-#### 4. Créer l'enregistrement DNS et lancer
-
-```bash
-cloudflared tunnel route dns blind-test-ingestion ingestion.votre-domaine.fr
-cloudflared service install
-cloudflared service start
-```
+4. **Creer l'enregistrement DNS et lancer**
+   ```bash
+   cloudflared tunnel route dns blind-test-ingestion ingestion.votre-domaine.fr
+   cloudflared service install
+   cloudflared service start
+   ```
 
 ### Monitoring (UptimeRobot)
 
-1. Créez un compte sur [uptimerobot.com](https://uptimerobot.com/)
-2. Add New Monitor :
+1. Creer un compte sur uptimerobot.com
+2. Add New Monitor:
    - Type: HTTP(s)
-   - URL: `https://ingestion.votre-domaine.fr/health`
+   - URL: https://ingestion.votre-domaine.fr/health
    - Interval: 5 minutes
-3. Configurez les alertes email
 
 ---
 
 ## 💻 Utilisation
 
-### Développement local
+### Developpement local
 
 #### Frontend
 ```bash
 npm run dev
-# → http://localhost:3000
+# -> http://localhost:3000
 ```
 
-#### PartyKit (en parallèle)
+#### PartyKit (en parallele)
 ```bash
 npm run dev:partykit
-# → http://localhost:1999
+# -> http://localhost:1999
 ```
 
 #### Backend Ingestion (optionnel)
 ```bash
 cd ingestion-service
 npm run dev
-# → http://localhost:4000
+# -> http://localhost:4000
 ```
 
 ### Commandes utiles
@@ -607,68 +563,49 @@ npm run lint
 npm run build
 npm run start
 
-# Déployer PartyKit
+# Deployer PartyKit
 npm run deploy:partykit
 
-# TypeScript check
-npx tsc --noEmit
+# Tests
+npm run test
+npm run test:watch
+npm run test:coverage
+npm run test:e2e
+npm run test:e2e:ui
 ```
 
 ### Workflow admin
 
-1. **Créer un univers**
-   ```
-   Dashboard → Créer un univers
-   Nom: "Harry Potter"
-   Description: "Musiques des films Harry Potter"
-   ```
-
-2. **Créer une œuvre avec import**
-   ```
-   Dashboard → Univers → Créer une œuvre
-   Titre: "Harry Potter à l'école des sorciers"
-   URL playlist: https://www.youtube.com/playlist?list=PL...
-   Cliquez "Créer et importer"
-   ```
-
-3. **Jouer**
-   ```
-   Page d'accueil → Sélectionner univers → Sélectionner œuvre → Play!
-   ```
-
-4. **Mode multijoueur**
-   ```
-   Créer une room → Partager le code → Attendre les joueurs → Start!
-   ```
+1. **Creer un univers**
+2. **Creer une oeuvre avec import playlist**
+3. **Lancer un jeu** (solo ou multi)
 
 ---
 
 ## 🔧 Maintenance
 
-### Mise à jour du service d'ingestion
+### Mise a jour du service d'ingestion
 
 ```bash
 ssh root@truenas-ip
 cd /mnt/votre-pool/appdata/blind-test-ingestion
-git pull  # Si vous utilisez git
+# Si vous utilisez git
+# git pull
+# Puis
 docker-compose up -d --build
 ```
 
-### Mise à jour des cookies YouTube (si blocage)
+### Mise a jour des cookies YouTube (si blocage)
 
-Si YouTube bloque les téléchargements (rare avec IP résidentielle) :
+1. Exporter cookies.txt depuis le navigateur
+2. Upload via API:
+   - POST /api/admin/upload-cookies
+   - form-data: field `cookies`
 
-1. **Exporter les cookies** depuis votre navigateur :
-   - Installez l'extension "Get cookies.txt LOCALLY" (Chrome/Edge)
-   - Connectez-vous à YouTube
-   - Exportez cookies.txt
-
-2. **Copier vers le NAS** :
-   ```bash
-   scp cookies.txt root@truenas-ip:/mnt/votre-pool/appdata/blind-test-ingestion/cookies/
-   ```
-
-3. **Pas besoin de redémarrer** - yt-dlp relit le fichier à chaque téléchargement
+Alternative: copier manuellement sur le NAS:
+```bash
+scp cookies.txt root@truenas-ip:/mnt/votre-pool/appdata/blind-test-ingestion/cookies/
+```
 
 ### Logs et debugging
 
@@ -685,48 +622,32 @@ curl https://ingestion.votre-domaine.fr/health
 
 ---
 
-## 🐛 Dépannage
+## 🐛 Depannage
 
 ### Erreurs courantes
 
 #### ❌ "Configuration Firebase manquante"
-**Solution :** Vérifiez les variables `NEXT_PUBLIC_FIREBASE_*` dans Vercel
+**Solution :** verifier les variables NEXT_PUBLIC_FIREBASE_* dans Vercel
 
-#### ❌ Import YouTube échoue
+#### ❌ Import YouTube echoue
 **Causes possibles :**
-- Quota YouTube API dépassé → Attendez 24h
-- YouTube bloque yt-dlp → Mettez à jour les cookies
-- Service d'ingestion down → Vérifiez UptimeRobot/logs
+- Quota YouTube API depasse -> attendre 24h
+- YouTube bloque yt-dlp -> mettre a jour les cookies
+- Service ingestion down -> verifier UptimeRobot / logs
 
 **Debug :**
 ```bash
-# Vérifier le service
 curl https://ingestion.votre-domaine.fr/health
-
-# Voir les logs
-docker logs --tail 100 blind-test-ingestion
 ```
 
 #### ❌ "Sign in to confirm you're not a bot"
-**Cause :** YouTube détecte un bot
-**Solution :** Mettez à jour les cookies (voir section Maintenance)
+**Cause :** YouTube detecte un bot
+**Solution :** mettre a jour les cookies (voir Maintenance)
 
 #### ❌ PartyKit ne se connecte pas
-**Vérifiez :**
-1. `NEXT_PUBLIC_PARTYKIT_HOST` est correctement configuré
-2. PartyKit est déployé : `npx partykit list`
-
-#### ❌ Tunnel Cloudflare down
-```bash
-# Vérifier le status
-systemctl status cloudflared
-
-# Redémarrer
-systemctl restart cloudflared
-
-# Voir les logs
-journalctl -u cloudflared -f
-```
+**Verifiez :**
+1. NEXT_PUBLIC_PARTYKIT_HOST
+2. partykit deploy
 
 ### Performance
 
@@ -734,30 +655,30 @@ journalctl -u cloudflared -f
 
 ```env
 # Dans .env.production sur TrueNAS
-INGESTION_CONCURRENCY=2  # Augmenter si stable (max 4-6)
+INGESTION_CONCURRENCY=2
 ```
 
-**Trade-offs :**
-- Plus élevé = plus rapide
+Trade-offs:
+- Plus eleve = plus rapide
 - Mais risque accru de rate limiting YouTube
-- Recommandation : **1-2** pour stabilité
+- Recommandation: 1-2 pour stabilite
 
 ---
 
-## 📊 Coûts estimés (production)
+## 📊 Couts estimes (production)
 
-| Service | Plan | Coût estimé/mois |
+| Service | Plan | Cout estime/mois |
 |---------|------|------------------|
 | Vercel | Hobby | Gratuit |
 | PartyKit | Free | Gratuit |
-| TrueNAS | Self-hosted | 0€ (électricité uniquement) |
+| TrueNAS | Self-hosted | 0€ (electricite) |
 | Cloudflare Tunnel | Free | Gratuit |
 | Cloudflare R2 | Pay-as-you-go | ~$0.15 pour 10GB |
 | Firebase | Spark | Gratuit |
 | YouTube API | Gratuit | Gratuit |
 | UptimeRobot | Free | Gratuit |
 
-**Total estimé : ~$0-1/mois** (principalement stockage R2)
+**Total estime : ~$0-1/mois** (principalement stockage R2)
 
 ---
 
@@ -766,28 +687,27 @@ INGESTION_CONCURRENCY=2  # Augmenter si stable (max 4-6)
 Les contributions sont les bienvenues !
 
 1. Fork le projet
-2. Créez une branche (`git checkout -b feature/amazing-feature`)
-3. Commit (`git commit -m 'Add amazing feature'`)
-4. Push (`git push origin feature/amazing-feature`)
-5. Ouvrez une Pull Request
+2. Creer une branche (git checkout -b feature/amazing-feature)
+3. Commit (git commit -m "Add amazing feature")
+4. Push (git push origin feature/amazing-feature)
+5. Ouvrir une Pull Request
 
 ---
 
 ## 📝 Licence
 
-Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
+Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de details.
 
 ---
 
 ## 🙏 Remerciements
 
-- [Next.js](https://nextjs.org/) - Framework React
-- [PartyKit](https://partykit.io/) - WebSocket infrastructure
-- [Firebase](https://firebase.google.com/) - Backend as a Service
-- [Cloudflare R2](https://www.cloudflare.com/products/r2/) - Stockage objet
-- [Cloudflare Tunnel](https://www.cloudflare.com/products/tunnel/) - Secure tunneling
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - Téléchargement YouTube
-- [shadcn/ui](https://ui.shadcn.com/) - Composants UI
+- Next.js - Framework React
+- PartyKit - WebSocket infrastructure
+- Firebase - Backend as a Service
+- Cloudflare R2 - Stockage objet
+- Cloudflare Tunnel - Secure tunneling
+- yt-dlp - Telechargement YouTube
 
 ---
 
@@ -795,9 +715,9 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 
 **Yannis Fouzi** - yfouzi.dev@gmail.com
 
-**Repository** : [https://github.com/YannisFouzi/blind-test](https://github.com/YannisFouzi/blind-test)
+**Repository** : https://github.com/YannisFouzi/blind-test
 
-**App** : [https://blind-test-brown.vercel.app](https://blind-test-brown.vercel.app)
+**App** : https://blind-test-brown.vercel.app
 
 ---
 
