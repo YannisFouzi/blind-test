@@ -1,6 +1,7 @@
 ﻿import { memo, useCallback, type HTMLAttributes } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RangeSlider } from "@/components/ui";
 import { pressable } from "@/styles/ui";
 
 const MIN_VOLUME = 0;
@@ -26,8 +27,8 @@ const VolumeControlComponent = ({
   ...props
 }: VolumeControlProps) => {
   const handleSliderChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const newVolume = clampVolume(Number(event.target.value));
+    (nextVolume: number) => {
+      const newVolume = clampVolume(nextVolume);
       onVolumeChange(newVolume);
     },
     [onVolumeChange]
@@ -52,38 +53,15 @@ const VolumeControlComponent = ({
         )}
       </button>
 
-      <div className="relative flex-1 h-2 max-w-[100px]">
-        <input
-          type="range"
-          min={MIN_VOLUME}
-          max={MAX_VOLUME}
-          value={displayVolume}
-          onChange={handleSliderChange}
-          className={cn(
-            "w-full h-2 rounded-full appearance-none cursor-pointer",
-            "bg-white border-2 border-black shadow-[2px_2px_0_#1B1B1B]",
-            "[&::-webkit-slider-thumb]:appearance-none",
-            "[&::-webkit-slider-thumb]:w-4",
-            "[&::-webkit-slider-thumb]:h-4",
-            "[&::-webkit-slider-thumb]:rounded-full",
-            "[&::-webkit-slider-thumb]:bg-black",
-            "[&::-webkit-slider-thumb]:cursor-pointer",
-            "[&::-webkit-slider-thumb]:shadow-[2px_2px_0_#1B1B1B]",
-            "[&::-moz-range-thumb]:w-4",
-            "[&::-moz-range-thumb]:h-4",
-            "[&::-moz-range-thumb]:rounded-full",
-            "[&::-moz-range-thumb]:bg-black",
-            "[&::-moz-range-thumb]:border-0",
-            "[&::-moz-range-thumb]:cursor-pointer"
-          )}
-          aria-label="Volume"
-        />
-
-        <div
-          className="absolute inset-y-0 left-0 bg-gradient-to-r from-yellow-400 to-yellow-300 rounded-full pointer-events-none"
-          style={{ width: `${displayVolume}%` }}
-        />
-      </div>
+      <RangeSlider
+        min={MIN_VOLUME}
+        max={MAX_VOLUME}
+        value={displayVolume}
+        onValueChange={handleSliderChange}
+        variant="compact"
+        className="flex-1 max-w-[100px]"
+        aria-label="Volume"
+      />
 
       <span className="text-sm text-[var(--color-text-secondary)] w-8 text-right">
         {Math.round(displayVolume)}

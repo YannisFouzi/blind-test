@@ -13,15 +13,8 @@ import {
 import { getAllWorks, getSongCountByWork, getWorksByUniverse } from "@/services/firebase";
 import { activeUniversesQueryOptions } from "@/features/home/queries/universes.query";
 import { worksKeys } from "@/features/home/queries/works.query";
-import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui";
+import { Dialog, DialogClose, DialogContent, DialogTitle, RangeSliderField, ToggleSwitch } from "@/components/ui";
 import { pressable } from "@/styles/ui";
-
-const MYSTERY_INTENSITY_PRESETS = [
-  { label: "Leger", value: 10 },
-  { label: "Moyen", value: 25 },
-  { label: "Beaucoup", value: 50 },
-  { label: "Atroce", value: 100 },
-] as const;
 
 const WORK_SKELETON_ITEMS = Array.from({ length: 6 }, (_, index) => `work-skeleton-${index}`);
 const QUERY_STALE_TIME_MS = 15 * 60 * 1000;
@@ -93,6 +86,7 @@ const UniverseCustomizeModalComponent = ({
   const works = useMemo(() => worksQuery.data ?? [], [worksQuery.data]);
   const worksLoading = worksQuery.isLoading;
   const shouldUseScrollableLayout = isCustomMode || isRandomMode || works.length > 8;
+  const hasMysterySelection = mysteryEffects.selectedEffects.length > 0;
 
   const universesQuery = useQuery({
     ...activeUniversesQueryOptions,
@@ -153,13 +147,20 @@ const UniverseCustomizeModalComponent = ({
   }, [customizingUniverse, works.length, setTotalWorksInUniverse]);
 
   useEffect(() => {
-    if (!customizingUniverse || countsLoading) {
-      setTotalSongsForPreview(0);
-      return;
+    if (mysteryEffects.enabled !== hasMysterySelection) {
+      setMysteryEffectsEnabled(hasMysterySelection);
     }
-    const total = Object.values(songCountByWork).reduce((a, b) => a + b, 0);
-    setTotalSongsForPreview(total);
-  }, [customizingUniverse, countsLoading, songCountByWork, setTotalSongsForPreview]);
+  }, [hasMysterySelection, mysteryEffects.enabled, setMysteryEffectsEnabled]);
+
+  const totalSongsInUniverse = useMemo(() => {
+    if (countsLoading) return 0;
+    return Object.values(songCountByWork).reduce((a, b) => a + b, 0);
+  }, [countsLoading, songCountByWork]);
+
+  useEffect(() => {
+    if (!customizingUniverse) return;
+    setTotalSongsForPreview(totalSongsInUniverse);
+  }, [customizingUniverse, totalSongsInUniverse, setTotalSongsForPreview]);
 
   const totalSongsAvailable = useMemo(() => {
     if (countsLoading) return 0;
@@ -183,7 +184,7 @@ const UniverseCustomizeModalComponent = ({
 
   // 100% double + nombre impair de musiques = impossible (derniere manche ne peut pas etre double)
   const isDouble100Odd =
-    mysteryEffects.enabled &&
+    (mysteryEffects.enabled || hasMysterySelection) &&
     mysteryEffects.frequency === 100 &&
     mysteryEffects.selectedEffects.includes("double") &&
     sliderValue > 0 &&
@@ -342,7 +343,7 @@ const UniverseCustomizeModalComponent = ({
         }`}
       >
         <div className="flex items-center justify-center">
-          <DialogTitle className="text-xl font-extrabold text-[var(--color-text-primary)]">
+          <DialogTitle className="text-2xl font-extrabold text-[var(--color-text-primary)]">
             {customizingUniverse.name}
           </DialogTitle>
         </div>
@@ -352,22 +353,14 @@ const UniverseCustomizeModalComponent = ({
             <span className={`text-sm font-semibold ${!isRandomMode ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}>
               Personnalise
             </span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={isRandomMode}
-              aria-label={isRandomMode ? "Mode aleatoire actif" : "Mode personnalise actif"}
-              onClick={() => setUnifiedCustomSubMode(isRandomMode ? "custom" : "random")}
-              className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full border-2 border-black transition-colors ${
-                isRandomMode ? "bg-[#10B981]" : "bg-[#8B5CF6]"
-              }`}
-            >
-              <span
-                className={`inline-block h-5 w-5 transform rounded-full border-2 border-black bg-white shadow-[2px_2px_0_#1B1B1B] transition-transform ${
-                  isRandomMode ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
+            <ToggleSwitch
+              size="md"
+              checked={isRandomMode}
+              onCheckedChange={(checked) => setUnifiedCustomSubMode(checked ? "random" : "custom")}
+              ariaLabel={isRandomMode ? "Mode aleatoire actif" : "Mode personnalise actif"}
+              onClassName="bg-[#10B981]"
+              offClassName="bg-[var(--color-surface-overlay)]"
+            />
             <span className={`text-sm font-semibold ${isRandomMode ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}>
               Aleatoire
             </span>
@@ -381,94 +374,6 @@ const UniverseCustomizeModalComponent = ({
               : "flex flex-col gap-3"
           }
         >
-          <div className="space-y-1">
-            <label className="flex items-center gap-2 text-[var(--color-text-primary)] text-sm font-semibold">
-              <input
-                type="checkbox"
-                checked={noSeek}
-                onChange={(e) => setNoSeek(e.target.checked)}
-                className="w-4 h-4 rounded border-2 border-black accent-yellow-400"
-              />
-              Mode sans avance rapide
-            </label>
-            <p className="text-xs text-[var(--color-text-secondary)]">
-              Impossible de se deplacer pendant la lecture du morceau.
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-[var(--color-text-primary)] text-sm font-semibold">
-                <input
-                  type="checkbox"
-                  checked={mysteryEffects.enabled}
-                  onChange={(e) => setMysteryEffectsEnabled(e.target.checked)}
-                  className="w-4 h-4 rounded border-2 border-black accent-yellow-400"
-                />
-                Activer les effets mysteres
-              </label>
-              {mysteryEffects.enabled && (
-                <span className="text-[var(--color-text-secondary)] text-xs">
-                  Frequence : {mysteryEffects.frequency}%
-                </span>
-              )}
-            </div>
-
-            {mysteryEffects.enabled && (
-              <div className="space-y-3 pl-1">
-                <div className="flex flex-wrap gap-2">
-                  {MYSTERY_INTENSITY_PRESETS.map((preset) => {
-                    const isActive = mysteryEffects.frequency === preset.value;
-                    return (
-                      <button
-                        key={preset.value}
-                        type="button"
-                        onClick={() => setMysteryEffectsFrequency(preset.value)}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-full border-2 border-black shadow-[2px_2px_0_#1B1B1B] transition-colors ${
-                          isActive
-                            ? "bg-[#FDE68A] text-[var(--color-text-primary)]"
-                            : "bg-white text-[var(--color-text-secondary)]"
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => toggleMysteryEffect("double")}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-full border-2 border-black shadow-[2px_2px_0_#1B1B1B] transition-colors ${
-                      mysteryEffects.selectedEffects.includes("double")
-                        ? "bg-[#FDE68A] text-[var(--color-text-primary)]"
-                        : "bg-white text-[var(--color-text-secondary)]"
-                    }`}
-                  >
-                    Deux musiques en meme temps
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggleMysteryEffect("reverse")}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-full border-2 border-black shadow-[2px_2px_0_#1B1B1B] transition-colors ${
-                      mysteryEffects.selectedEffects.includes("reverse")
-                        ? "bg-[#FDE68A] text-[var(--color-text-primary)]"
-                        : "bg-white text-[var(--color-text-secondary)]"
-                    }`}
-                  >
-                    Musique a l&apos;envers
-                  </button>
-                </div>
-                {mysteryEffects.selectedEffects.length === 0 && (
-                  <p className="text-[var(--color-text-secondary)] text-xs">
-                    Selectionne au moins un effet a activer.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
           <div
             className={
               shouldUseScrollableLayout
@@ -476,8 +381,8 @@ const UniverseCustomizeModalComponent = ({
                 : "flex flex-col gap-2"
             }
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--color-text-primary)] text-sm font-semibold">Oeuvres incluses</span>
+            <div className="space-y-1 text-center">
+              <span className="text-[var(--color-text-primary)] text-sm font-bold">Oeuvres incluses</span>
               {!isRandomMode && isCustomMode && maxWorksAllowed && (
                 <span
                   className={`text-xs ${
@@ -496,35 +401,23 @@ const UniverseCustomizeModalComponent = ({
               )}
             </div>
             {(!isCustomMode || isRandomMode) && (
-              <div className="flex items-center">
-                <label
+              <div className="flex justify-center">
+                <div
                   className={`flex items-center gap-2 text-xs font-bold ${
                     selectAllDisabled
-                      ? "text-[var(--color-text-secondary)] cursor-not-allowed"
-                      : "text-[var(--color-text-primary)] cursor-pointer"
+                      ? "text-[var(--color-text-secondary)]"
+                      : "text-[var(--color-text-primary)]"
                   }`}
                 >
                   <span>Toutes</span>
-                  <span
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full border-2 border-black transition-colors ${
-                      allWorksSelected ? "bg-[#FDE68A]" : "bg-white"
-                    } ${selectAllDisabled ? "opacity-60" : ""}`}
-                  >
-                    <input
-                      type="checkbox"
-                      className="sr-only"
-                      checked={allWorksSelected}
-                      onChange={(event) => handleSelectAllWorks(event.target.checked)}
-                      disabled={selectAllDisabled}
-                      aria-label="Selectionner toutes les oeuvres"
-                    />
-                    <span
-                      className={`inline-block h-3.5 w-3.5 transform rounded-full border-2 border-black bg-white transition-transform ${
-                        allWorksSelected ? "translate-x-4" : "translate-x-0.5"
-                      }`}
-                    />
-                  </span>
-                </label>
+                  <ToggleSwitch
+                    size="sm"
+                    checked={allWorksSelected}
+                    onCheckedChange={handleSelectAllWorks}
+                    ariaLabel="Selectionner toutes les oeuvres"
+                    disabled={selectAllDisabled}
+                  />
+                </div>
               </div>
             )}
 
@@ -568,84 +461,151 @@ const UniverseCustomizeModalComponent = ({
             )}
           </div>
 
-        </div>
-
-        <div className="space-y-2">
           {isRandomMode && (() => {
             const poolSize = allowedWorks.length;
             const effectiveMax = Math.max(WORKS_PER_ROUND_MIN, Math.min(WORKS_PER_ROUND_MAX, poolSize));
             const rawValue = worksPerRound ?? WORKS_PER_ROUND_DEFAULT;
             const clampedValue = Math.max(WORKS_PER_ROUND_MIN, Math.min(effectiveMax, rawValue));
             return (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--color-text-primary)] text-sm font-semibold">Oeuvres par manche</span>
-                  <span className="text-[var(--color-text-secondary)] text-xs">
+              <div className="space-y-2 text-center">
+                <div className="space-y-0.5">
+                  <span className="text-[var(--color-text-primary)] text-sm font-bold">Oeuvres par manche</span>
+                  <span className="block text-[var(--color-text-secondary)] text-xs">
                     {clampedValue} choix (max {effectiveMax} avec {poolSize} oeuvre{poolSize !== 1 ? "s" : ""} dans le pool)
                   </span>
                 </div>
-                <div className="flex items-center gap-4 min-h-[52px]">
-                  <input
-                    type="range"
-                    min={WORKS_PER_ROUND_MIN}
-                    max={effectiveMax}
-                    value={clampedValue}
-                    onChange={(e) => setWorksPerRound(Math.max(WORKS_PER_ROUND_MIN, Math.min(effectiveMax, Number(e.target.value))))}
-                    className="flex-1 h-2 bg-white border-2 border-black rounded-full appearance-none cursor-pointer accent-yellow-400 shadow-[2px_2px_0_#1B1B1B]"
-                  />
-                  <input
-                    type="number"
-                    min={WORKS_PER_ROUND_MIN}
-                    max={effectiveMax}
-                    value={clampedValue}
-                    onChange={(e) => setWorksPerRound(Math.max(WORKS_PER_ROUND_MIN, Math.min(effectiveMax, Number(e.target.value))))}
-                    className="w-14 px-2 py-1 bg-white border-2 border-black rounded text-[var(--color-text-primary)] text-sm text-center shadow-[2px_2px_0_#1B1B1B]"
-                  />
-                </div>
+                <RangeSliderField
+                  min={WORKS_PER_ROUND_MIN}
+                  max={effectiveMax}
+                  value={clampedValue}
+                  onValueChange={(value) =>
+                    setWorksPerRound(
+                      Math.max(WORKS_PER_ROUND_MIN, Math.min(effectiveMax, value))
+                    )
+                  }
+                  showFill
+                  numberInputClassName="w-14"
+                  numberInputAriaLabel="Nombre d'oeuvres par manche"
+                />
                 <p className="text-xs text-[var(--color-text-secondary)]">
                   A chaque manche, ce nombre d&apos;oeuvres sera propose comme reponses (dont la bonne). Min 2, max {effectiveMax} avec ce pool.
                 </p>
               </div>
             );
           })()}
+          <div className="h-px w-full bg-black/15" />
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--color-text-primary)] text-sm font-semibold">Nombre de musiques</span>
-              <span className="text-[var(--color-text-secondary)] text-xs">
-                {totalSongsAvailable} disponible{totalSongsAvailable > 1 ? "s" : ""}
+          <div className="space-y-1 text-center">
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-[var(--color-text-primary)] text-sm font-bold">
+                Mode sans avance rapide
+              </span>
+              <ToggleSwitch
+                size="sm"
+                checked={noSeek}
+                onCheckedChange={setNoSeek}
+                ariaLabel="Mode sans avance rapide"
+              />
+            </div>
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              Impossible de se deplacer pendant la lecture du morceau.
+            </p>
+          </div>
+
+          <div className="h-px w-full bg-black/15" />
+
+          <div className="space-y-3">
+            <div className="text-center">
+              <span className="text-[var(--color-text-primary)] text-sm font-bold">
+                Effets mysteres
               </span>
             </div>
 
-            <div className={`flex items-center gap-4 min-h-[52px] ${sliderDisabled ? "opacity-60" : ""}`}>
-              <input
-                type="range"
-                min={sliderMin}
-                max={sliderMax}
-                value={sliderValue}
-                onChange={(e) => handleMaxSongsChange(Number(e.target.value))}
-                disabled={sliderDisabled}
-                className="flex-1 h-2 bg-white border-2 border-black rounded-full appearance-none cursor-pointer accent-yellow-400 shadow-[2px_2px_0_#1B1B1B] disabled:cursor-not-allowed"
-              />
-              <input
-                type="number"
-                min={sliderMin}
-                max={sliderMax}
-                value={sliderValue}
-                onChange={(e) => handleMaxSongsChange(Number(e.target.value))}
-                disabled={sliderDisabled}
-                className="w-16 px-2 py-1 bg-white border-2 border-black rounded text-[var(--color-text-primary)] text-sm text-center shadow-[2px_2px_0_#1B1B1B] disabled:cursor-not-allowed"
-              />
+            <div className="space-y-3">
+              <div className="flex flex-wrap justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => toggleMysteryEffect("double")}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-full border-2 border-black shadow-[2px_2px_0_#1B1B1B] transition-colors ${
+                    mysteryEffects.selectedEffects.includes("double")
+                      ? "bg-[#FDE68A] text-[var(--color-text-primary)]"
+                      : "bg-white text-[var(--color-text-secondary)]"
+                  }`}
+                >
+                  Deux musiques en meme temps
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleMysteryEffect("reverse")}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-full border-2 border-black shadow-[2px_2px_0_#1B1B1B] transition-colors ${
+                    mysteryEffects.selectedEffects.includes("reverse")
+                      ? "bg-[#FDE68A] text-[var(--color-text-primary)]"
+                      : "bg-white text-[var(--color-text-secondary)]"
+                  }`}
+                >
+                  Musique a l&apos;envers
+                </button>
+              </div>
+              <div className="space-y-2">
+                <div className="text-center">
+                  <span className="text-[var(--color-text-secondary)] text-xs font-semibold">
+                    Fréquence
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[10, 25, 50, 100].map((freq) => (
+                    <button
+                      key={freq}
+                      type="button"
+                      onClick={() => setMysteryEffectsFrequency(freq)}
+                      disabled={!hasMysterySelection}
+                      className={`px-3 py-2 text-sm font-bold rounded-lg border-2 border-black shadow-[2px_2px_0_#1B1B1B] transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed ${
+                        mysteryEffects.frequency === freq
+                          ? "bg-[#FDE68A] text-black"
+                          : "bg-white text-black hover:bg-[var(--color-surface-overlay)]"
+                      }`}
+                    >
+                      {freq}%
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
+          </div>
+
+        </div>
+
+        <div className="space-y-2">
+          <div className="h-px w-full bg-black/15" />
+          <div className="space-y-2">
+            <div className="text-center">
+              <span className="text-[var(--color-text-primary)] text-sm font-bold">Nombre de musiques</span>
+            </div>
+
+            <RangeSliderField
+              min={sliderMin}
+              max={sliderMax}
+              value={sliderValue}
+              onValueChange={handleMaxSongsChange}
+              disabled={sliderDisabled}
+              showFill
+              numberInputAriaLabel="Nombre de musiques"
+              valueSuffix={countsLoading ? "/..." : `/${totalSongsAvailable}`}
+            />
           </div>
 
           {errorMessage && <div className="text-xs text-red-600">{errorMessage}</div>}
 
-          {isDouble100Odd && (
-            <p className="text-sm text-red-600 w-full text-center sm:text-left">
+          <div className="min-h-[2.5rem]">
+            <p
+              className={`text-sm text-red-600 w-full text-center sm:text-left ${
+                isDouble100Odd ? "" : "invisible"
+              }`}
+              aria-hidden={!isDouble100Odd}
+            >
               Avec &quot;Deux musiques en meme temps&quot; a 100 %, le nombre de musiques doit etre pair.
             </p>
-          )}
+          </div>
           <div className="flex justify-end gap-3 w-full">
             <DialogClose asChild>
               <button

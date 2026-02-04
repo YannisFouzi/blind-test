@@ -25,4 +25,6 @@ export { ErrorMessage } from "./ErrorMessage";
 export { LoadingSpinner } from "./LoadingSpinner";
 export { Toaster } from "./Toaster";
 export { OutlinedTitle, type OutlinedTitleProps } from "./OutlinedTitle";
+export { RangeSlider, RangeSliderField, type RangeSliderProps, type RangeSliderFieldProps } from "./RangeSlider";
+export { ToggleSwitch, type ToggleSwitchProps } from "./ToggleSwitch";
 export * from "./dialog";
