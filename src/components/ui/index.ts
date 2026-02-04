@@ -24,4 +24,5 @@ export { QuitRoomButton, type QuitRoomButtonProps } from "./QuitRoomButton";
 export { ErrorMessage } from "./ErrorMessage";
 export { LoadingSpinner } from "./LoadingSpinner";
 export { Toaster } from "./Toaster";
+export { OutlinedTitle, type OutlinedTitleProps } from "./OutlinedTitle";
 export * from "./dialog";

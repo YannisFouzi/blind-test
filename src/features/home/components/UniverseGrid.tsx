@@ -7,6 +7,7 @@ import { Universe } from "@/types";
 import { generateStylesFromColor } from "@/utils/colorGenerator";
 import { getUniverseBackgroundImage, CUSTOM_UNIVERSE_ID } from "@/constants/gameModes";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { OutlinedTitle } from "@/components/ui/OutlinedTitle";
 import { pressable } from "@/styles/ui";
 
 interface UniverseGridProps {
@@ -122,6 +123,7 @@ const UniverseGridComponent = ({
   const pressClasses = pressable;
   const totalCards = universes.length + (onCustomMode ? 1 : 0);
   const isLastCardAlone = totalCards % 2 === 1;
+  const customBgImage = getUniverseBackgroundImage(CUSTOM_UNIVERSE_ID);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_minmax(0,6rem)] gap-4 md:gap-6 md:gap-8 max-w-6xl mx-auto">
@@ -155,9 +157,12 @@ const UniverseGridComponent = ({
                   styles.bgImage ? "text-white [--color-text-primary:white]" : ""
                 }`}
               >
-                <h2 className="text-center text-2xl font-extrabold uppercase tracking-wide text-[var(--color-text-primary)] drop-shadow-md">
+                <OutlinedTitle
+                  as="h2"
+                  className="text-center text-2xl font-extrabold tracking-wide"
+                >
                   {universe.name}
-                </h2>
+                </OutlinedTitle>
 
                 <div className="flex flex-col items-center gap-1.5">
                   <button
@@ -191,14 +196,21 @@ const UniverseGridComponent = ({
           <div
             className={`${CARD_BASE_CLASSES} h-[280px] xl:h-full flex flex-col justify-center items-center p-3 xl:p-4 gap-2`}
             style={getCardBackgroundStyle(
-              getUniverseBackgroundImage(CUSTOM_UNIVERSE_ID),
+              customBgImage,
               "linear-gradient(180deg, rgba(167, 139, 250, 0.25) 0%, rgba(255, 255, 255, 0.95) 60%)"
             )}
           >
-            <div className="relative z-10 flex flex-col items-center gap-2 flex-1 justify-center text-white [--color-text-primary:white] xl:justify-center xl:py-4">
-              <h2 className="text-center text-2xl xl:text-sm xl:leading-tight font-extrabold uppercase tracking-wide text-[var(--color-text-primary)] drop-shadow-md">
+            <div
+              className={`relative z-10 flex flex-col items-center gap-2 flex-1 justify-center xl:justify-center xl:py-4 ${
+                customBgImage ? "text-white [--color-text-primary:white]" : ""
+              }`}
+            >
+              <OutlinedTitle
+                as="h2"
+                className="text-center text-2xl font-extrabold tracking-wide"
+              >
                 Mode Custom
-              </h2>
+              </OutlinedTitle>
 
               <div className="flex flex-col items-center gap-1.5">
                 <button

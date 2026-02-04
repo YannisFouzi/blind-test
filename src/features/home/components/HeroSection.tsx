@@ -1,6 +1,7 @@
 "use client";
 
 import { Cog } from "lucide-react";
+import { OutlinedTitle } from "@/components/ui/OutlinedTitle";
 
 interface HeroSectionProps {
   isAdmin: boolean;
@@ -22,9 +23,9 @@ export const HeroSection = ({
           <span className="hidden sm:inline">Administration</span>
         </button>
       )}
-      <h1 className="fantasy-text text-5xl md:text-7xl font-bold mb-4">
+      <OutlinedTitle as="h1" className="text-5xl md:text-7xl font-bold mb-4">
         ULTIMATE BLIND TEST
-      </h1>
+      </OutlinedTitle>
     </div>
   );
 };
