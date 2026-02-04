@@ -3,11 +3,13 @@
 import { memo, useCallback, useMemo, useRef } from "react";
 import { Play as PlayIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Universe } from "@/types";
 import { generateStylesFromColor } from "@/utils/colorGenerator";
 import { getUniverseBackgroundImage, CUSTOM_UNIVERSE_ID } from "@/constants/gameModes";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { OutlinedTitle } from "@/components/ui/OutlinedTitle";
+import { allWorksQueryOptions, worksByUniverseQueryOptions } from "@/features/home/queries/works.query";
 import { pressable } from "@/styles/ui";
 
 interface UniverseGridProps {
@@ -76,6 +78,7 @@ const UniverseGridComponent = ({
   onCustomMode,
 }: UniverseGridProps) => {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const prefetchedUniversesRef = useRef<Set<string>>(new Set());
 
   const styleCache = useMemo(() => {
@@ -96,6 +99,19 @@ const UniverseGridComponent = ({
       router.prefetch(`/game/${universeId}`);
     },
     [router]
+  );
+
+  const prefetchWorks = useCallback(
+    (universeId?: string, mode: "all" | "universe" = "universe") => {
+      if (mode === "all") {
+        queryClient.prefetchQuery(allWorksQueryOptions());
+        return;
+      }
+      if (universeId) {
+        queryClient.prefetchQuery(worksByUniverseQueryOptions(universeId));
+      }
+    },
+    [queryClient]
   );
 
   if (error) {
@@ -177,6 +193,8 @@ const UniverseGridComponent = ({
                     <button
                       type="button"
                       onClick={() => onCustomize(universe)}
+                      onMouseEnter={() => prefetchWorks(universe.id)}
+                      onFocus={() => prefetchWorks(universe.id)}
                       className={`${BUTTON_BASE_CLASSES} bg-white hover:bg-[var(--color-surface-overlay)] ${pressClasses}`}
                     >
                       Personnaliser
@@ -216,6 +234,8 @@ const UniverseGridComponent = ({
                 <button
                   type="button"
                   onClick={onCustomMode}
+                  onMouseEnter={() => prefetchWorks(undefined, "all")}
+                  onFocus={() => prefetchWorks(undefined, "all")}
                   className={`${BUTTON_BASE_CLASSES} bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-light)] ${pressClasses}`}
                 >
                   Personnaliser

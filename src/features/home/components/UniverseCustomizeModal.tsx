@@ -1,6 +1,7 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo } from "react";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import type { Work } from "@/types";
 import { useGameConfiguration, useCanSelectMoreWorks } from "@/stores";
 import {
@@ -9,12 +10,10 @@ import {
   WORKS_PER_ROUND_MAX,
   WORKS_PER_ROUND_DEFAULT,
 } from "@/constants/gameModes";
-import {
-  getAllWorks,
-  getSongsByWork,
-  getWorksByUniverse,
-  getActiveUniverses,
-} from "@/services/firebase";
+import { getAllWorks, getSongCountByWork, getWorksByUniverse } from "@/services/firebase";
+import { activeUniversesQueryOptions } from "@/features/home/queries/universes.query";
+import { worksKeys } from "@/features/home/queries/works.query";
+import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui";
 import { pressable } from "@/styles/ui";
 
 const MYSTERY_INTENSITY_PRESETS = [
@@ -23,6 +22,10 @@ const MYSTERY_INTENSITY_PRESETS = [
   { label: "Beaucoup", value: 50 },
   { label: "Atroce", value: 100 },
 ] as const;
+
+const WORK_SKELETON_ITEMS = Array.from({ length: 6 }, (_, index) => `work-skeleton-${index}`);
+const QUERY_STALE_TIME_MS = 15 * 60 * 1000;
+const QUERY_GC_TIME_MS = 30 * 60 * 1000;
 
 interface UniverseCustomizeModalProps {
   onApply: () => void;
@@ -62,127 +65,108 @@ const UniverseCustomizeModalComponent = ({
 
   const canSelectMoreWorks = useCanSelectMoreWorks();
 
-  // Data fetching local
-  const [works, setWorks] = useState<Work[]>([]);
-  const [songCountByWork, setSongCountByWork] = useState<Record<string, number>>({});
-  const [universesById, setUniversesById] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const isCustomOrRandom = isCustomMode || isRandomMode;
+
+  const worksQuery = useQuery<Work[], Error>({
+    queryKey:
+      customizingUniverse && !isCustomOrRandom
+        ? worksKeys.universe(customizingUniverse.id)
+        : worksKeys.allWorks(),
+    queryFn: async () => {
+      const result =
+        customizingUniverse && !isCustomOrRandom
+          ? await getWorksByUniverse(customizingUniverse.id)
+          : await getAllWorks();
+
+      if (!result.success || !result.data) {
+        throw new Error(result.error || "Impossible de charger les oeuvres");
+      }
+
+      return result.data;
+    },
+    staleTime: QUERY_STALE_TIME_MS,
+    gcTime: QUERY_GC_TIME_MS,
+    retry: 1,
+    enabled: Boolean(customizingUniverse),
+  });
+
+  const works = useMemo(() => worksQuery.data ?? [], [worksQuery.data]);
+  const worksLoading = worksQuery.isLoading;
+  const shouldUseScrollableLayout = isCustomMode || isRandomMode || works.length > 8;
+
+  const universesQuery = useQuery({
+    ...activeUniversesQueryOptions,
+    enabled: Boolean(customizingUniverse) && isCustomOrRandom,
+  });
+
+  const universesById = useMemo(() => {
+    if (!isCustomOrRandom || !universesQuery.data) return {};
+    const next: Record<string, string> = {};
+    for (const universe of universesQuery.data) {
+      next[universe.id] = universe.name;
+    }
+    return next;
+  }, [isCustomOrRandom, universesQuery.data]);
+
+  const countQueries = useQueries({
+    queries: works.map((work) => ({
+      queryKey: ["work-song-count", work.id],
+      queryFn: async () => {
+        const result = await getSongCountByWork(work.id);
+        if (!result.success || typeof result.data !== "number") {
+          throw new Error(result.error || "Impossible de compter les chansons");
+        }
+        return result.data;
+      },
+      staleTime: QUERY_STALE_TIME_MS,
+      gcTime: QUERY_GC_TIME_MS,
+      enabled: Boolean(customizingUniverse),
+      retry: 1,
+    })),
+  });
+
+  const countsLoading = countQueries.some((query) => query.isLoading);
+  const countsError = countQueries.find((query) => query.isError)?.error;
+
+  const songCountByWork = useMemo(() => {
+    const counts: Record<string, number> = {};
+    works.forEach((work, index) => {
+      const query = countQueries[index];
+      if (!query) return;
+      if (typeof query.data === "number") {
+        counts[work.id] = query.data;
+      }
+    });
+    return counts;
+  }, [countQueries, works]);
+
+  const errorMessage =
+    worksQuery.error instanceof Error
+      ? worksQuery.error.message
+      : countsError instanceof Error
+        ? countsError.message
+        : null;
 
   useEffect(() => {
-    if (!customizingUniverse) {
-      setWorks([]);
-      setSongCountByWork({});
-      setUniversesById({});
-      setError(null);
+    if (!customizingUniverse) return;
+    setTotalWorksInUniverse(works.length);
+  }, [customizingUniverse, works.length, setTotalWorksInUniverse]);
+
+  useEffect(() => {
+    if (!customizingUniverse || countsLoading) {
+      setTotalSongsForPreview(0);
       return;
     }
-
-    const loadWorksAndCounts = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        // Charger les works de l'univers (ou toutes les oeuvres en mode custom / aleatoire)
-        const [worksResult, universesResult] = await Promise.all([
-          isCustomMode || isRandomMode
-            ? getAllWorks()
-            : getWorksByUniverse(customizingUniverse.id),
-          isCustomMode || isRandomMode
-            ? getActiveUniverses()
-            : Promise.resolve({ success: true, data: [] }),
-        ]);
-
-        if (process.env.NODE_ENV === "development") {
-          console.info("[UNIVERS-INCONNU] loadWorksAndCounts apres Promise.all", {
-            isCustomMode,
-            isRandomMode,
-            worksSuccess: worksResult.success,
-            worksCount: Array.isArray((worksResult as { data?: unknown[] }).data)
-              ? (worksResult as { data: unknown[] }).data.length
-              : 0,
-            universesSuccess: universesResult.success,
-            universesDataLength: universesResult.data?.length ?? 0,
-            universesError: (universesResult as { error?: string }).error,
-            universesSample: universesResult.data?.slice(0, 3).map((u) => ({ id: u.id, name: u.name })),
-          });
-        }
-
-        if (!worksResult.success || !worksResult.data) {
-          throw new Error("Impossible de charger les oeuvres");
-        }
-
-        const loadedWorks = worksResult.data;
-        setWorks(loadedWorks);
-
-        if (isCustomMode || isRandomMode) {
-          if (universesResult.success && universesResult.data) {
-            const nextUniverses: Record<string, string> = {};
-            for (const universe of universesResult.data) {
-              nextUniverses[universe.id] = universe.name;
-            }
-            if (process.env.NODE_ENV === "development") {
-              console.info("[UNIVERS-INCONNU] universesById rempli (mode custom/aleatoire)", {
-                count: Object.keys(nextUniverses).length,
-                keys: Object.keys(nextUniverses),
-                sample: Object.entries(nextUniverses).slice(0, 5),
-              });
-            }
-            setUniversesById(nextUniverses);
-          } else {
-            if (process.env.NODE_ENV === "development") {
-              console.warn("[UNIVERS-INCONNU] universesById vide car getActiveUniverses() a echoue ou data vide", {
-                success: universesResult.success,
-                hasData: Boolean(universesResult.data),
-                dataLength: universesResult.data?.length ?? 0,
-                error: (universesResult as { error?: string }).error,
-              });
-            }
-            setUniversesById({});
-          }
-        } else {
-          setUniversesById({});
-        }
-
-        // Charger le nombre de songs par work
-        const songCounts = await Promise.all(
-          loadedWorks.map(async (work) => {
-            const songsResult = await getSongsByWork(work.id);
-            const count = songsResult.success && songsResult.data
-              ? songsResult.data.length
-              : 0;
-            return { workId: work.id, count };
-          })
-        );
-
-        const counts: Record<string, number> = {};
-        for (const { workId, count } of songCounts) {
-          counts[workId] = count;
-        }
-        setSongCountByWork(counts);
-        setTotalWorksInUniverse(loadedWorks.length);
-        setTotalSongsForPreview(Object.values(counts).reduce((a, b) => a + b, 0));
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Erreur inconnue");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadWorksAndCounts();
-  }, [
-    customizingUniverse,
-    isCustomMode,
-    isRandomMode,
-    setTotalSongsForPreview,
-    setTotalWorksInUniverse,
-  ]);
+    const total = Object.values(songCountByWork).reduce((a, b) => a + b, 0);
+    setTotalSongsForPreview(total);
+  }, [customizingUniverse, countsLoading, songCountByWork, setTotalSongsForPreview]);
 
   const totalSongsAvailable = useMemo(() => {
+    if (countsLoading) return 0;
     return allowedWorks.reduce((total, workId) => {
-      return total + (songCountByWork[workId] || 0);
+      return total + (songCountByWork[workId] ?? 0);
     }, 0);
-  }, [allowedWorks, songCountByWork]);
+  }, [allowedWorks, songCountByWork, countsLoading]);
 
   // Synchroniser la preview invites avec ce que l'hote voit (0 si 0 oeuvres, sinon maxSongs ou total selection)
   useEffect(() => {
@@ -195,7 +179,7 @@ const UniverseCustomizeModalComponent = ({
   const sliderMax = totalSongsAvailable === 0 ? 0 : totalSongsAvailable;
   const sliderValue =
     totalSongsAvailable === 0 ? 0 : Math.min(sliderMax, Math.max(1, effectiveMaxSongs));
-  const sliderDisabled = loading || totalSongsAvailable === 0;
+  const sliderDisabled = worksLoading || countsLoading || totalSongsAvailable === 0;
 
   // 100% double + nombre impair de musiques = impossible (derniere manche ne peut pas etre double)
   const isDouble100Odd =
@@ -220,7 +204,7 @@ const UniverseCustomizeModalComponent = ({
     return allSelectableWorkIds.every((workId) => allowedWorks.includes(workId));
   }, [allSelectableWorkIds, allowedWorks]);
 
-  const selectAllDisabled = loading || allSelectableWorkIds.length === 0;
+  const selectAllDisabled = worksLoading || allSelectableWorkIds.length === 0;
   const groupedWorks = useMemo(() => {
     if (!isCustomMode && !isRandomMode) return [];
     const groups = new Map<string, Work[]>();
@@ -312,7 +296,7 @@ const UniverseCustomizeModalComponent = ({
 
   const renderWorkItem = useCallback(
     (work: Work) => {
-      const songCount = songCountByWork[work.id] || 0;
+      const songCount = songCountByWork[work.id];
       const isSelected = allowedWorks.includes(work.id);
       const isDisabled = !isSelected && !canSelectMoreWorks;
 
@@ -336,7 +320,7 @@ const UniverseCustomizeModalComponent = ({
             {work.title}
           </span>
           <span className="text-[var(--color-text-secondary)] text-xs shrink-0">
-            ({songCount})
+            ({songCount === undefined ? "…" : songCount})
           </span>
         </label>
       );
@@ -344,25 +328,23 @@ const UniverseCustomizeModalComponent = ({
     [allowedWorks, canSelectMoreWorks, songCountByWork, toggleWork]
   );
 
+  const showWorksSkeleton = worksLoading && works.length === 0;
+
   if (!customizingUniverse) {
     return null;
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={closeCustomize}
-    >
-      <div
-        className={`w-full max-w-3xl bg-white border-[3px] border-black rounded-3xl p-6 mx-4 shadow-[6px_6px_0_#1B1B1B] flex flex-col ${
-          isCustomMode || isRandomMode ? "min-h-[70vh] max-h-[85vh]" : "space-y-4"
+    <Dialog open onOpenChange={(open) => !open && closeCustomize()}>
+      <DialogContent
+        className={`w-[calc(100%-2rem)] max-w-3xl flex flex-col gap-3 ${
+          shouldUseScrollableLayout ? "min-h-[70vh] max-h-[85vh]" : ""
         }`}
-        onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-center">
-          <h3 className="text-xl font-extrabold text-[var(--color-text-primary)]">
+          <DialogTitle className="text-xl font-extrabold text-[var(--color-text-primary)]">
             {customizingUniverse.name}
-          </h3>
+          </DialogTitle>
         </div>
 
         {customizingUniverse.id === CUSTOM_UNIVERSE_ID && (
@@ -392,7 +374,13 @@ const UniverseCustomizeModalComponent = ({
           </div>
         )}
 
-        <div className={isCustomMode || isRandomMode ? "flex flex-col gap-4 flex-1 min-h-0" : "space-y-4"}>
+        <div
+          className={
+            shouldUseScrollableLayout
+              ? "flex flex-col gap-3 flex-1 min-h-0"
+              : "flex flex-col gap-3"
+          }
+        >
           <div className="space-y-1">
             <label className="flex items-center gap-2 text-[var(--color-text-primary)] text-sm font-semibold">
               <input
@@ -481,7 +469,13 @@ const UniverseCustomizeModalComponent = ({
             )}
           </div>
 
-          <div className={`space-y-2 ${isCustomMode || isRandomMode ? "flex flex-col flex-1 min-h-0 overflow-hidden" : ""}`}>
+          <div
+            className={
+              shouldUseScrollableLayout
+                ? "flex flex-col flex-1 min-h-0 overflow-hidden gap-2"
+                : "flex flex-col gap-2"
+            }
+          >
             <div className="flex items-center justify-between">
               <span className="text-[var(--color-text-primary)] text-sm font-semibold">Oeuvres incluses</span>
               {!isRandomMode && isCustomMode && maxWorksAllowed && (
@@ -534,12 +528,24 @@ const UniverseCustomizeModalComponent = ({
               </div>
             )}
 
-            {loading ? (
-              <div className="text-[var(--color-text-secondary)] text-sm">Chargement des oeuvres...</div>
+            {showWorksSkeleton ? (
+              <div
+                className={`grid grid-cols-2 md:grid-cols-3 gap-2 animate-pulse ${
+                  shouldUseScrollableLayout ? "flex-1 min-h-0" : ""
+                }`}
+                aria-hidden="true"
+              >
+                {WORK_SKELETON_ITEMS.map((key) => (
+                  <div
+                    key={key}
+                    className="h-10 rounded border-2 border-black/30 bg-[var(--color-surface-overlay)]/70"
+                  />
+                ))}
+              </div>
             ) : (
               <div
-                className={`overflow-y-auto pr-2 pb-2 pt-1 space-y-4 scrollbar-dark ${
-                  isCustomMode || isRandomMode ? "flex-1 min-h-0" : "max-h-48"
+                className={`pr-2 pb-2 pt-1 space-y-4 scrollbar-dark ${
+                  shouldUseScrollableLayout ? "overflow-y-auto flex-1 min-h-0" : ""
                 }`}
               >
                 {isCustomMode || isRandomMode ? (
@@ -562,6 +568,9 @@ const UniverseCustomizeModalComponent = ({
             )}
           </div>
 
+        </div>
+
+        <div className="space-y-2">
           {isRandomMode && (() => {
             const poolSize = allowedWorks.length;
             const effectiveMax = Math.max(WORKS_PER_ROUND_MIN, Math.min(WORKS_PER_ROUND_MAX, poolSize));
@@ -630,22 +639,21 @@ const UniverseCustomizeModalComponent = ({
             </div>
           </div>
 
-          {error && <div className="text-xs text-red-600">{error}</div>}
-        </div>
+          {errorMessage && <div className="text-xs text-red-600">{errorMessage}</div>}
 
-        <div className="flex flex-col items-end gap-2 pt-2">
           {isDouble100Odd && (
             <p className="text-sm text-red-600 w-full text-center sm:text-left">
               Avec &quot;Deux musiques en meme temps&quot; a 100 %, le nombre de musiques doit etre pair.
             </p>
           )}
           <div className="flex justify-end gap-3 w-full">
-            <button
-              onClick={closeCustomize}
-              className={`px-4 py-2 text-sm font-bold bg-white hover:bg-[var(--color-surface-overlay)] ${pressable}`}
-            >
-              Annuler
-            </button>
+            <DialogClose asChild>
+              <button
+                className={`px-4 py-2 text-sm font-bold bg-white hover:bg-[var(--color-surface-overlay)] ${pressable}`}
+              >
+                Annuler
+              </button>
+            </DialogClose>
             <button
               onClick={onApply}
               className="magic-button px-4 py-2 text-sm font-bold"
@@ -660,8 +668,8 @@ const UniverseCustomizeModalComponent = ({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

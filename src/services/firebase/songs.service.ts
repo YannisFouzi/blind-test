@@ -1,4 +1,4 @@
-﻿import { where } from "firebase/firestore";
+import { collection, getCountFromServer, query, where } from "firebase/firestore";
 import { SongSchema, type Song } from "@/types";
 import {
   createDocument,
@@ -8,6 +8,7 @@ import {
   updateDocument,
   type ServiceResponse,
 } from "./base";
+import { db } from "@/lib/firebase";
 
 const COLLECTION = "songs";
 
@@ -49,6 +50,21 @@ export const getSongsByWork = async (
     return {
       success: false,
       error: formatError(error, "Erreur lors du chargement des chansons"),
+    };
+  }
+};
+
+export const getSongCountByWork = async (
+  workId: string
+): Promise<ServiceResponse<number>> => {
+  try {
+    const q = query(collection(db, COLLECTION), where("workId", "==", workId));
+    const snapshot = await getCountFromServer(q);
+    return { success: true, data: snapshot.data().count };
+  } catch (error) {
+    return {
+      success: false,
+      error: formatError(error, "Erreur lors du comptage des chansons"),
     };
   }
 };

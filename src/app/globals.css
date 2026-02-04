@@ -80,12 +80,11 @@
 }
 
 /**
- * Quand une modale (Radix Dialog) est ouverte : masquer la scrollbar du body
- * et annuler tout padding ajoute par Radix pour eviter le decalage.
+ * Quand une modale (Radix Dialog) est ouverte : masquer la scrollbar du body.
+ * Le padding de compensation est gere par Radix/RemoveScroll.
  */
 body:has([role="dialog"][data-state="open"]) {
   overflow: hidden !important;
-  padding-right: 0 !important;
 }
 
 /**
@@ -338,9 +337,16 @@ textarea:not(:disabled),
   background: #B07E00;
 }
 
-/* Amelioration des transitions globales */
+/* Amelioration des transitions globales (sans layout shift) */
 * {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity, filter;
+  transition-duration: 0.3s;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html,
+body {
+  transition: none;
 }
 
 /* Effet de focus accessible */
