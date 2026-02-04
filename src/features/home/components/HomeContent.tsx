@@ -5,7 +5,7 @@ import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState }
 import { HeroSection } from "@/features/home/components/HeroSection";
 import { UniverseGrid } from "@/features/home/components/UniverseGrid";
 import { UniverseCustomizeModal } from "@/features/home/components/UniverseCustomizeModal";
-import { HomePageSkeleton } from "@/features/home/components/HomePageSkeleton";
+import { UniverseGridSkeleton } from "@/features/home/components/UniverseGridSkeleton";
 import { useAuth } from "@/lib/auth/useAuth";
 import { useUniverses } from "@/features/home/hooks/useUniverses";
 import { CUSTOM_UNIVERSE, MAX_WORKS_CUSTOM_MODE } from "@/features/home/hooks/useUniverseCustomization";
@@ -31,11 +31,17 @@ const displayNameSchema = z.object({
     .max(50, "Pseudo trop long"),
 });
 
-export const HomeContent = () => {
+interface HomeContentProps {
+  initialUniverses?: Universe[];
+}
+
+export const HomeContent = ({ initialUniverses }: HomeContentProps) => {
   const router = useRouter();
   const { navigate } = useGameNavigation();
   const { user } = useAuth();
-  const { universes, loading: universesLoading, error: universesError } = useUniverses();
+  const { universes, loading: universesLoading, error: universesError } = useUniverses(
+    initialUniverses
+  );
 
   const [mode, setMode] = useState<Mode>("solo");
 
@@ -415,9 +421,7 @@ export const HomeContent = () => {
     closeCustomize,
   ]);
 
-  if (universesLoading) {
-    return <HomePageSkeleton />;
-  }
+  const showUniverseSkeleton = mode === "solo" && universesLoading && universes.length === 0;
 
   const modeToggle = (
     <div
@@ -563,13 +567,17 @@ export const HomeContent = () => {
         </div>
       </div>
       {mode === "solo" && (
-        <UniverseGrid
-          universes={universes}
-          error={universesError}
-          onSelect={handleUniverseClick}
-          onCustomize={openCustomize}
-          onCustomMode={openCustomMode}
-        />
+        showUniverseSkeleton ? (
+          <UniverseGridSkeleton />
+        ) : (
+          <UniverseGrid
+            universes={universes}
+            error={universesError}
+            onSelect={handleUniverseClick}
+            onCustomize={openCustomize}
+            onCustomMode={openCustomMode}
+          />
+        )
       )}
 
       {customizingUniverse && (
