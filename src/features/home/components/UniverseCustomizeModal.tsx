@@ -483,7 +483,6 @@ const UniverseCustomizeModalComponent = ({
                       Math.max(WORKS_PER_ROUND_MIN, Math.min(effectiveMax, value))
                     )
                   }
-                  showFill
                   numberInputClassName="w-14"
                   numberInputAriaLabel="Nombre d'oeuvres par manche"
                 />
@@ -559,7 +558,7 @@ const UniverseCustomizeModalComponent = ({
                       type="button"
                       onClick={() => setMysteryEffectsFrequency(freq)}
                       disabled={!hasMysterySelection}
-                      className={`px-3 py-2 text-sm font-bold rounded-lg border-2 border-black shadow-[2px_2px_0_#1B1B1B] transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed ${
+                      className={`px-3 py-1.5 text-sm font-bold rounded-lg border-2 border-black shadow-[2px_2px_0_#1B1B1B] transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed ${
                         mysteryEffects.frequency === freq
                           ? "bg-[#FDE68A] text-black"
                           : "bg-white text-black hover:bg-[var(--color-surface-overlay)]"
@@ -575,12 +574,12 @@ const UniverseCustomizeModalComponent = ({
 
         </div>
 
-        <div className="space-y-2">
-          <div className="h-px w-full bg-black/15" />
-          <div className="space-y-2">
-            <div className="text-center">
-              <span className="text-[var(--color-text-primary)] text-sm font-bold">Nombre de musiques</span>
-            </div>
+          <div className="space-y-1">
+            <div className="h-px w-full bg-black/15" />
+            <div className="space-y-1">
+              <div className="text-center">
+                <span className="text-[var(--color-text-primary)] text-sm font-bold">Nombre de musiques</span>
+              </div>
 
             <RangeSliderField
               min={sliderMin}
@@ -588,25 +587,24 @@ const UniverseCustomizeModalComponent = ({
               value={sliderValue}
               onValueChange={handleMaxSongsChange}
               disabled={sliderDisabled}
-              showFill
               numberInputAriaLabel="Nombre de musiques"
               valueSuffix={countsLoading ? "/..." : `/${totalSongsAvailable}`}
             />
           </div>
 
-          {errorMessage && <div className="text-xs text-red-600">{errorMessage}</div>}
+            {errorMessage && <div className="text-xs text-red-600">{errorMessage}</div>}
 
-          <div className="min-h-[2.5rem]">
-            <p
-              className={`text-sm text-red-600 w-full text-center sm:text-left ${
-                isDouble100Odd ? "" : "invisible"
-              }`}
-              aria-hidden={!isDouble100Odd}
-            >
-              Avec &quot;Deux musiques en meme temps&quot; a 100 %, le nombre de musiques doit etre pair.
-            </p>
-          </div>
-          <div className="flex justify-end gap-3 w-full">
+            <div className="min-h-[1.5rem]">
+              <p
+                className={`text-sm text-red-600 w-full text-center sm:text-left ${
+                  isDouble100Odd ? "" : "invisible"
+                }`}
+                aria-hidden={!isDouble100Odd}
+              >
+                Avec &quot;Deux musiques en meme temps&quot; a 100 %, le nombre de musiques doit etre pair.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 w-full">
             <DialogClose asChild>
               <button
                 className={`px-4 py-2 text-sm font-bold bg-white hover:bg-[var(--color-surface-overlay)] ${pressable}`}
