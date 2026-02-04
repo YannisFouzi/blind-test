@@ -5,7 +5,20 @@ import { getFirestore } from "firebase-admin/firestore";
 
 const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
 const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
-const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n");
+// Accepter 2 formats: soit avec \n (local), soit avec espaces (Vercel)
+let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
+if (privateKey) {
+  // Si la clé contient des espaces entre BEGIN et END, la reformater
+  if (privateKey.includes("-----BEGIN PRIVATE KEY----- ") && privateKey.includes(" -----END PRIVATE KEY-----")) {
+    privateKey = privateKey
+      .replace("-----BEGIN PRIVATE KEY----- ", "-----BEGIN PRIVATE KEY-----\n")
+      .replace(" -----END PRIVATE KEY-----", "\n-----END PRIVATE KEY-----")
+      .replace(/ /g, "\n");
+  } else {
+    // Sinon utiliser le format classique avec \n
+    privateKey = privateKey.replace(/\\n/g, "\n");
+  }
+}
 
 console.log("[firebase-admin] Checking credentials...");
 console.log("[firebase-admin] projectId:", projectId ? "✅ EXISTS" : "❌ MISSING");
