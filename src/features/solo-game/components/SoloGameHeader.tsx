@@ -30,10 +30,10 @@ export const SoloGameHeader = ({
           {onGoHome && (
             <button
               onClick={onGoHome}
-              className="magic-button px-4 py-2 flex items-center gap-2 text-sm"
+              className="magic-button home-button px-4 py-2 flex items-center gap-2 text-sm"
             >
               <HomeIcon className="w-4 h-4" />
-              <span className="hidden sm:inline">Accueil</span>
+              <span className="home-button-label hidden sm:inline">Accueil</span>
             </button>
           )}
 

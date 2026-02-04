@@ -153,7 +153,7 @@ const WorkSelectorComponent = ({
 
       {/* Boutons fixes - au-dessus de la barre de lecteur */}
       {canValidate && !isCurrentSongAnswered && !isValidateButtonVisible && (
-        <div className="fixed bottom-48 sm:bottom-32 md:bottom-24 left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
+        <div className="fixed player-action-float left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
           <GameActionButton label={validateLabel} onClick={onValidateAnswer} />
         </div>
       )}

@@ -146,10 +146,10 @@ export default function MultiScoresPage() {
             cancelText="Annuler"
             onConfirm={() => void resetToWaiting?.()}
             variant="warning"
-            className="magic-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
+            className="magic-button home-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
           >
             <HomeIcon className="text-base sm:text-lg" />
-            <span className="hidden sm:inline">Accueil</span>
+            <span className="home-button-label hidden sm:inline">Accueil</span>
           </ConfirmActionButton>
         )}
         <QuitRoomButton onConfirm={handleLeaveRoom} title="Quitter la partie ?" />

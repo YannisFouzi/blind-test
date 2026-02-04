@@ -473,14 +473,14 @@ export const SoloGameClient = ({
           cancelText="Annuler"
           onConfirm={handleGoHome}
           variant="warning"
-          className="magic-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
+          className="magic-button home-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
         >
           <HomeIcon className="text-base sm:text-lg" />
-          <span className="hidden sm:inline">Accueil</span>
+          <span className="home-button-label hidden sm:inline">Accueil</span>
         </ConfirmActionButton>
       </div>
 
-      <div className="container mx-auto px-4 py-6 sm:py-8 pb-16 sm:pb-24 relative z-10">
+      <div className="container mx-auto px-4 py-6 sm:py-8 player-safe-area relative z-10">
         <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 min-h-[calc(100svh-180px)] sm:min-h-[calc(100svh-240px)] md:min-h-[calc(100svh-280px)]">
           <div className="w-full flex justify-center">
             {loading ? null : isDoubleMode && currentRoundSongs.length >= 1 ? (
@@ -531,7 +531,7 @@ export const SoloGameClient = ({
             <div className="px-3 py-2 sm:px-6 sm:py-4">
               <div className="flex flex-col items-center gap-1.5 sm:gap-3">
                 {/* MOBILE: Ligne fusionnée durées + boutons */}
-                <div className="sm:hidden w-full max-w-4xl">
+                <div className="player-controls-compact w-full max-w-4xl">
                   <div className="flex items-center justify-between w-full text-[var(--color-text-primary)] text-[0.7rem] font-semibold mb-1.5">
                     <span className="min-w-[2rem]">{formatTime(effectiveCurrentTime)}</span>
 
@@ -586,8 +586,8 @@ export const SoloGameClient = ({
                   </div>
                 </div>
 
-                {/* DESKTOP: Layout original avec boutons séparés */}
-                <div className="hidden sm:flex items-center justify-center gap-4">
+                {/* STANDARD: Layout original avec boutons séparés */}
+                <div className="player-controls-standard items-center justify-center gap-4">
                   <button
                     onClick={handlePrevSong}
                     disabled={!canGoPrev}
@@ -627,8 +627,8 @@ export const SoloGameClient = ({
                 </div>
 
                 <div className="w-full max-w-4xl flex flex-col items-center gap-1.5 sm:gap-3">
-                  {/* Durées (desktop uniquement) */}
-                  <div className="hidden sm:flex items-center justify-between w-full text-[var(--color-text-primary)] text-xs font-semibold">
+                  {/* Durées (standard uniquement) */}
+                  <div className="player-durations-standard items-center justify-between w-full text-[var(--color-text-primary)] text-xs font-semibold">
                     <span>{formatTime(effectiveCurrentTime)}</span>
                     <div className="flex items-center gap-2">
                       {isReverseMode && (

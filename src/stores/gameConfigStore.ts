@@ -146,11 +146,26 @@ export const useGameConfig = create<GameConfigStore>((set) => ({
     }),
 
   setUnifiedCustomSubMode: (subMode: 'custom' | 'random') =>
-    set({
-      isCustomMode: subMode === 'custom',
-      isRandomMode: subMode === 'random',
-      maxWorksAllowed: subMode === 'custom' ? MAX_WORKS_CUSTOM_MODE : null,
-      worksPerRound: subMode === 'random' ? WORKS_PER_ROUND_DEFAULT : null,
+    set((state) => {
+      if (subMode === 'custom') {
+        const limitedWorks = state.allowedWorks.slice(0, MAX_WORKS_CUSTOM_MODE);
+        const limitedNames = state.allowedWorkNames.slice(0, MAX_WORKS_CUSTOM_MODE);
+        return {
+          isCustomMode: true,
+          isRandomMode: false,
+          maxWorksAllowed: MAX_WORKS_CUSTOM_MODE,
+          worksPerRound: null,
+          allowedWorks: limitedWorks,
+          allowedWorkNames: limitedNames,
+        };
+      }
+
+      return {
+        isCustomMode: false,
+        isRandomMode: true,
+        maxWorksAllowed: null,
+        worksPerRound: WORKS_PER_ROUND_DEFAULT,
+      };
     }),
 
   reset: () => set(INITIAL_STATE),
