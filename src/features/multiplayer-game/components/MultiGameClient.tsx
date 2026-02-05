@@ -607,6 +607,8 @@ export const MultiGameClient = ({
     [isHost, displayedRoundCount, isLastRound, allPlayersAnswered]
   );
   const isDenseActionLayout = works.length >= 7;
+  const useInlineTopButtonsMobile = works.length >= 2 && works.length <= 6;
+  const useFloatingScoreboardMobile = useInlineTopButtonsMobile;
 
   const answerFooter = useMemo(() => {
     const primaryAction = shouldShowScoresButton ? (
@@ -642,7 +644,7 @@ export const MultiGameClient = ({
                   key={song.id}
                   className="text-[0.65rem] sm:text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide leading-tight"
                 >
-                  {song.artist} &mdash; <span className="text-[#B45309]">{song.title}</span>
+                  {song.artist} {" — "} <span className="text-[#B45309]">{song.title}</span>
                   {work && (
                     <span className="ml-2 text-[0.65rem] sm:text-xs text-[var(--color-text-secondary)]">
                       ({work.title})
@@ -663,7 +665,7 @@ export const MultiGameClient = ({
           <div className="px-3 py-2 sm:px-5 sm:py-3 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B]">
             <p className="text-[0.7rem] sm:text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide">
               {currentSong?.artist}{" "}
-              {currentSong?.artist && currentSong?.title ? "&mdash; " : ""}
+              {currentSong?.artist && currentSong?.title ? " — " : ""}
               <span className="text-[#B45309]">{currentSong?.title ?? ""}</span>
             </p>
           </div>
@@ -778,7 +780,12 @@ export const MultiGameClient = ({
 
       <div className="absolute inset-0 bg-gradient-to-r from-yellow-200/40 via-transparent to-blue-200/40 pointer-events-none" />
 
-      <div className="fixed home-button-anchor home-button-anchor--stacked z-50 flex flex-col items-start">
+      <div
+        className={cn(
+          "fixed home-button-anchor home-button-anchor--stacked z-50 flex flex-col items-start",
+          useInlineTopButtonsMobile && "home-button-anchor--inline-mobile"
+        )}
+      >
         {isHost && (
           <ConfirmActionButton
             buttonLabel="Accueil"
@@ -794,17 +801,39 @@ export const MultiGameClient = ({
             <span className="home-button-label">Accueil</span>
           </ConfirmActionButton>
         )}
-        <QuitRoomButton onConfirm={handleLeaveRoom} title="Quitter la partie ?" />
+        <QuitRoomButton
+          onConfirm={handleLeaveRoom}
+          title="Quitter la partie ?"
+          showLabelOnMobile={useInlineTopButtonsMobile}
+        />
       </div>
 
       <div className="fixed top-6 right-6 z-40 hidden lg:block">
         <PlayersScoreboard players={players} currentPlayerId={playerId} />
       </div>
 
-      <div className="container mx-auto px-4 py-6 sm:py-8 home-safe-area home-safe-area--stacked player-safe-area relative z-10">
-        <div className="lg:hidden flex justify-center mb-4 sm:mb-6">
-          <PlayersScoreboard players={players} currentPlayerId={playerId} />
+      {useFloatingScoreboardMobile && (
+        <div
+          className="fixed left-1/2 -translate-x-1/2 z-40 lg:hidden pointer-events-none"
+          style={{ top: "calc(var(--home-button-offset) + var(--home-button-height) + 0.6rem)" }}
+        >
+          <div className="pointer-events-auto">
+            <PlayersScoreboard players={players} currentPlayerId={playerId} compact />
+          </div>
         </div>
+      )}
+
+      <div
+        className={cn(
+          "container mx-auto px-4 py-6 sm:py-8 home-safe-area home-safe-area--stacked player-safe-area relative z-10",
+          useInlineTopButtonsMobile && "home-safe-area--inline-mobile"
+        )}
+      >
+        {!useFloatingScoreboardMobile && (
+          <div className="lg:hidden flex justify-center mb-4 sm:mb-6">
+            <PlayersScoreboard players={players} currentPlayerId={playerId} compact />
+          </div>
+        )}
 
         <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 min-h-[calc(100svh-180px)] sm:min-h-[calc(100svh-240px)] md:min-h-[calc(100svh-280px)]">
           <div className="w-full flex justify-center">

@@ -529,6 +529,17 @@ a:focus-visible {
     gap: clamp(0.25rem, min(0.8vw, 0.8vh), 0.6rem);
   }
 
+  @media (max-width: 900px) {
+    .home-button-anchor--inline-mobile {
+      flex-direction: row !important;
+      align-items: center !important;
+    }
+
+    .home-safe-area--inline-mobile {
+      --top-stack-count: 1;
+    }
+  }
+
   .home-button {
     padding: var(--home-button-pad-y) var(--home-button-pad-x) !important;
     gap: var(--home-button-gap) !important;

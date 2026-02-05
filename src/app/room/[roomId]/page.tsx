@@ -542,8 +542,7 @@ export default function WaitingRoomPage() {
                     >
                       <span className="font-semibold">{p.displayName}</span>
                       <span className="flex items-center gap-2">
-                        {p.id === playerId && <span className="text-xs text-[var(--color-brand-primary)] font-semibold">Toi</span>}
-                        {p.isHost && <span className="text-xs text-[#B45309]">Hote</span>}
+                        {p.isHost && p.id !== playerId && <span className="text-xs text-[#B45309]">Hote</span>}
                       </span>
                     </li>
                   ))}
@@ -630,8 +629,7 @@ export default function WaitingRoomPage() {
                 >
                   <span className="font-semibold">{p.displayName}</span>
                   <span className="flex items-center gap-2">
-                    {p.id === playerId && <span className="text-xs text-[var(--color-brand-primary)] font-semibold">Toi</span>}
-                    {p.isHost && <span className="text-xs text-[#B45309]">Hote</span>}
+                    {p.isHost && p.id !== playerId && <span className="text-xs text-[#B45309]">Hote</span>}
                   </span>
                 </li>
               ))}

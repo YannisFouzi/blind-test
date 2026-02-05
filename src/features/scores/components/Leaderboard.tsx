@@ -47,12 +47,7 @@ const LeaderboardRow = memo(({ player, isCurrentPlayer, rank }: LeaderboardRowPr
           <span className="text-base font-semibold text-[var(--color-text-primary)] truncate">
             {player.displayName}
           </span>
-          {isCurrentPlayer && (
-            <span className="px-2 py-0.5 text-xs font-semibold uppercase tracking-wider bg-yellow-200 text-[var(--color-text-primary)] rounded border border-black">
-              Toi
-            </span>
-          )}
-          {player.isHost && (
+          {player.isHost && !isCurrentPlayer && (
             <span className="px-2 py-0.5 text-xs font-semibold uppercase tracking-wider bg-blue-200 text-[var(--color-text-primary)] rounded border border-black">
               Hote
             </span>

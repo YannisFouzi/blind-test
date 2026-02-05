@@ -145,12 +145,7 @@ const WaitingRoomComponent = ({
                             <span className="text-[var(--color-text-primary)] font-bold">
                               {player.displayName}
                             </span>
-                            {isCurrentPlayer && (
-                              <Badge variant="primary" size="sm">
-                                Toi
-                              </Badge>
-                            )}
-                            {player.isHost && (
+                            {player.isHost && !isCurrentPlayer && (
                               <Badge
                                 variant="warning"
                                 size="sm"

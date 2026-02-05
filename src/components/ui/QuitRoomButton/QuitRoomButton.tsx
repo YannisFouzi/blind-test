@@ -8,6 +8,7 @@ export interface QuitRoomButtonProps {
   title?: string;
   message?: string;
   className?: string;
+  showLabelOnMobile?: boolean;
 }
 
 const DEFAULT_TITLE = "Quitter la salle ?";
@@ -20,6 +21,7 @@ export const QuitRoomButton = ({
   title = DEFAULT_TITLE,
   message = DEFAULT_MESSAGE,
   className,
+  showLabelOnMobile = false,
 }: QuitRoomButtonProps) => (
   <div className={className}>
     <ConfirmActionButton
@@ -32,7 +34,7 @@ export const QuitRoomButton = ({
       className={BUTTON_CLASS}
     >
       <LogOut className="text-base sm:text-lg" />
-      <span className="hidden sm:inline">Quitter</span>
+      <span className={showLabelOnMobile ? "inline" : "hidden sm:inline"}>Quitter</span>
     </ConfirmActionButton>
   </div>
 );

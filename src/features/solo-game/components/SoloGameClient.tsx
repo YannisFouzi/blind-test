@@ -201,7 +201,7 @@ export const SoloGameClient = ({
                     key={song.id}
                     className="text-[0.65rem] sm:text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide leading-tight"
                   >
-                    {song.artist} &mdash; <span className="text-[#B45309]">{song.title}</span>
+                    {song.artist} {" — "} <span className="text-[#B45309]">{song.title}</span>
                     {work && (
                       <span className="ml-2 text-[0.65rem] sm:text-xs text-[var(--color-text-secondary)]">
                         ({work.title})
@@ -212,7 +212,7 @@ export const SoloGameClient = ({
               })
             : currentSong && (
                 <p className="text-[0.7rem] sm:text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide">
-                  {currentSong.artist} &mdash; <span className="text-[#B45309]">{currentSong.title}</span>
+                  {currentSong.artist} {" — "} <span className="text-[#B45309]">{currentSong.title}</span>
                 </p>
               )}
         </div>
