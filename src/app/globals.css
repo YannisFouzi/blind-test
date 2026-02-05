@@ -527,6 +527,7 @@ a:focus-visible {
   .work-selector {
     width: 100%;
     --work-selector-max-width: 56rem;
+    --work-selector-actions-height: clamp(120px, 18vh, 180px);
   }
 
   .work-selector-grid,
@@ -539,6 +540,8 @@ a:focus-visible {
   .work-selector-actions {
     display: grid;
     place-items: center;
+    height: var(--work-selector-actions-height);
+    min-height: var(--work-selector-actions-height);
   }
 
   .work-selector-actions-layer {
@@ -561,7 +564,8 @@ a:focus-visible {
   }
 
   .work-card--stacked {
-    padding: clamp(0.5rem, 1.4vh, 0.9rem);
+    padding: 0 clamp(0.6rem, 2vw, 1rem);
+    --work-card-band-height: clamp(1.8rem, 3vh, 2.4rem);
   }
 
   .work-card-content--default {
@@ -571,10 +575,10 @@ a:focus-visible {
   }
 
   .work-card-content--stacked {
-    display: grid;
-    grid-template-rows: minmax(1rem, auto) minmax(1.1rem, 1fr) minmax(1.2rem, auto);
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    row-gap: 0.35rem;
+    justify-content: space-evenly;
   }
 
   .work-card-header,
@@ -582,17 +586,12 @@ a:focus-visible {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 1.2rem;
+    height: var(--work-card-band-height);
+    min-height: var(--work-card-band-height);
   }
 
   .work-card-header-dots {
     margin-bottom: 0;
-  }
-
-  .work-card-footer-spacer {
-    display: block;
-    width: 1px;
-    height: 1.2rem;
   }
 
   .uniform-card {
@@ -855,6 +854,11 @@ a:focus-visible {
   }
 }
 
+/* 2 cards: toujours 1 colonne, tous ecrans */
+.uniform-card-grid.uniform-card-grid--two {
+  grid-template-columns: 1fr;
+}
+
 /**
  * ========================================
  * PLAYER DOME STYLE
@@ -904,9 +908,6 @@ a:focus-visible {
     display: inline-flex;
   }
 
-  .uniform-card-grid--two {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 640px) and (min-height: 701px) {

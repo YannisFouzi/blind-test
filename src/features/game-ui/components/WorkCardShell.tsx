@@ -46,21 +46,32 @@ export const WorkCardShell = memo(
           style={backgroundStyle}
         >
           <div className={contentClassName}>
-            {isStacked ? <div className="work-card-header">{header}</div> : header}
-            <h3
-              className={`uniform-card-title font-bold text-base transition-all duration-300 px-2 ${
-                titleClassName ?? "text-[var(--color-text-primary)]"
-              }`}
-              title={title}
-            >
-              {title}
-            </h3>
             {isStacked ? (
-              <div className="work-card-footer">
-                {footer ?? <span className="work-card-footer-spacer" aria-hidden="true" />}
-              </div>
+              <>
+                <div className="work-card-header">{header}</div>
+                <h3
+                  className={`uniform-card-title font-bold text-base transition-all duration-300 px-2 ${
+                    titleClassName ?? "text-[var(--color-text-primary)]"
+                  }`}
+                  title={title}
+                >
+                  {title}
+                </h3>
+                <div className="work-card-footer">{footer}</div>
+              </>
             ) : (
-              footer
+              <>
+                {header}
+                <h3
+                  className={`uniform-card-title font-bold text-base transition-all duration-300 px-2 ${
+                    titleClassName ?? "text-[var(--color-text-primary)]"
+                  }`}
+                  title={title}
+                >
+                  {title}
+                </h3>
+                {footer}
+              </>
             )}
           </div>
         </div>

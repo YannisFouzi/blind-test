@@ -142,10 +142,7 @@ const WorkSelectorComponent = ({
           </div>
 
           {/* Zone d'actions reservee (valider ou resultat) */}
-          <div
-            ref={validateButtonRef}
-            className="work-selector-actions min-h-[72px] sm:min-h-[96px] md:min-h-[120px]"
-          >
+          <div ref={validateButtonRef} className="work-selector-actions">
             <div
               className={`work-selector-actions-layer ${
                 isAnswerRevealed ? "work-selector-actions-layer--visible" : "work-selector-actions-layer--hidden"

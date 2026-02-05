@@ -428,7 +428,7 @@ const DoubleWorkSelectorComponent = ({
           ))}
         </div>
 
-        <div className="work-selector-actions min-h-[72px] sm:min-h-[96px] md:min-h-[120px]">
+        <div className="work-selector-actions">
           <div
             className={`work-selector-actions-layer ${
               !canInteract ? "work-selector-actions-layer--visible" : "work-selector-actions-layer--hidden"
