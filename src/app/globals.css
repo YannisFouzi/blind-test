@@ -556,6 +556,45 @@ a:focus-visible {
     opacity: 1;
   }
 
+  .work-card--default {
+    padding: 1rem;
+  }
+
+  .work-card--stacked {
+    padding: clamp(0.5rem, 1.4vh, 0.9rem);
+  }
+
+  .work-card-content--default {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .work-card-content--stacked {
+    display: grid;
+    grid-template-rows: minmax(1rem, auto) minmax(1.1rem, 1fr) minmax(1.2rem, auto);
+    align-items: center;
+    row-gap: 0.35rem;
+  }
+
+  .work-card-header,
+  .work-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.2rem;
+  }
+
+  .work-card-header-dots {
+    margin-bottom: 0;
+  }
+
+  .work-card-footer-spacer {
+    display: block;
+    width: 1px;
+    height: 1.2rem;
+  }
+
   .uniform-card {
     height: clamp(96px, 12vh, 128px);
     min-height: clamp(96px, 12vh, 128px);

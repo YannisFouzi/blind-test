@@ -285,7 +285,7 @@ const SelectionDots = ({
   if (!show) return null;
 
   return (
-    <div className="flex items-center justify-center gap-1 mb-2">
+    <div className="work-card-header-dots flex items-center justify-center gap-1">
       <span
         className={`w-3.5 h-3.5 rounded-full border border-[#1B1B1B] shadow-[1px_1px_0_#1B1B1B] ${
           SLOT_CLASS_BY_STATE[leftState]
@@ -334,7 +334,17 @@ const DoubleWorkSelectorComponent = ({
     (workId: string) => {
       if (!canInteract) return;
       const slot = getNextSlotForWork({ workId, selectedWorkSlot1, selectedWorkSlot2 });
-      if (slot === null) return;
+      if (slot === null) {
+        if (
+          selectedWorkSlot1 &&
+          selectedWorkSlot2 &&
+          selectedWorkSlot1 === selectedWorkSlot2 &&
+          selectedWorkSlot1 !== workId
+        ) {
+          onSelectSlotWork(1, workId);
+        }
+        return;
+      }
       onSelectSlotWork(slot, workId);
     },
     [canInteract, onSelectSlotWork, selectedWorkSlot1, selectedWorkSlot2]
@@ -388,6 +398,7 @@ const DoubleWorkSelectorComponent = ({
                 title={state.work.title}
                 isInteractive={canInteract}
                 isActive={state.isSelected}
+                layout="stacked"
                 backgroundStyle={state.backgroundStyle}
                 titleClassName={
                   state.isSelected && canInteract
@@ -406,7 +417,7 @@ const DoubleWorkSelectorComponent = ({
                     <button
                       type="button"
                       onClick={(event) => handleClearWork(event, state.work.id)}
-                      className="mt-2 inline-flex items-center justify-center rounded-full border-2 border-[#1B1B1B] bg-white px-3 py-0.5 text-[0.7rem] font-semibold shadow-[2px_2px_0_#1B1B1B] hover:bg-[var(--color-surface-overlay)]"
+                      className="work-card-remove inline-flex items-center justify-center rounded-full border-2 border-[#1B1B1B] bg-white px-3 py-0.5 text-[0.7rem] font-semibold shadow-[2px_2px_0_#1B1B1B] hover:bg-[var(--color-surface-overlay)]"
                     >
                       Enlever
                     </button>
