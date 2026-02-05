@@ -89,27 +89,10 @@ export const useSoloGame = ({
         allowedWorks.length > 0;
 
       if (isCustomOrRandom) {
-        if (process.env.NODE_ENV === "development") {
-          console.info("[SOLO-GAME] Chargement works par IDs (custom/random)", {
-            universeId,
-            allowedWorksCount: allowedWorks.length,
-            allowedWorksSample: allowedWorks.slice(0, 3),
-          });
-        }
         const worksResult = await getWorksByIds(allowedWorks);
         fetchedWorks = worksResult.success && worksResult.data ? worksResult.data : [];
         filteredWorks = fetchedWorks;
-        if (process.env.NODE_ENV === "development") {
-          console.info("[SOLO-GAME] getWorksByIds resultat", {
-            success: worksResult.success,
-            fetchedCount: fetchedWorks.length,
-            error: (worksResult as { error?: string }).error,
-          });
-        }
       } else {
-        if (process.env.NODE_ENV === "development") {
-          console.info("[SOLO-GAME] Chargement works par univers", { universeId });
-        }
         const worksResult = await getWorksByUniverse(universeId);
         fetchedWorks = worksResult.success && worksResult.data ? worksResult.data : [];
         filteredWorks =
@@ -122,13 +105,6 @@ export const useSoloGame = ({
         const msg = isCustomOrRandom
           ? `Aucune oeuvre trouvee pour les IDs selectionnes (${universeId}). Verifiez que ?works=... contient des IDs valides.`
           : `Aucune oeuvre trouvee pour l'univers "${universeId}"`;
-        if (process.env.NODE_ENV === "development") {
-          console.error("[SOLO-GAME] Aucune oeuvre", {
-            universeId,
-            isCustomOrRandom,
-            allowedWorksCount: allowedWorks?.length,
-          });
-        }
         setError(msg);
         setLoading(false);
         return;
@@ -198,7 +174,6 @@ export const useSoloGame = ({
       setCurrentSong(firstSong);
       setLoading(false);
     } catch (err) {
-      console.error("[useSoloGame] Erreur lors de l'initialisation:", err);
       setError("Erreur lors du chargement du jeu");
       setLoading(false);
     }
@@ -396,7 +371,9 @@ export const useSoloGame = ({
     const nextSongId = nextRound.songIds[0];
     const nextSong = gameSession.songs.find((song) => song.id === nextSongId);
 
-    if (!nextSong) return;
+    if (!nextSong) {
+      return;
+    }
 
     setGameSession({
       ...gameSession,
@@ -409,6 +386,30 @@ export const useSoloGame = ({
 
   const prevSong = useCallback(() => {
     if (!gameSession) return;
+
+    if (gameSession.rounds && gameSession.currentRoundIndex !== undefined) {
+      const prevRoundIndex = gameSession.currentRoundIndex - 1;
+      if (prevRoundIndex < 0) return;
+
+      const prevRound = gameSession.rounds[prevRoundIndex];
+      const prevSongId = prevRound?.songIds[0];
+      const prevSong = prevSongId
+        ? gameSession.songs.find((song) => song.id === prevSongId)
+        : undefined;
+
+      if (!prevSong) {
+        return;
+      }
+
+      setGameSession({
+        ...gameSession,
+        currentRoundIndex: prevRoundIndex,
+        currentSongIndex: gameSession.songs.findIndex((song) => song.id === prevSong.id),
+      });
+      setCurrentSong(prevSong);
+      resetGameState();
+      return;
+    }
 
     const prevIndex = gameSession.currentSongIndex - 1;
 
@@ -467,7 +468,11 @@ export const useSoloGame = ({
       : gameSession.currentSongIndex < gameSession.songs.length - 1
     : false;
 
-  const canGoPrev = gameSession ? gameSession.currentSongIndex > 0 : false;
+  const canGoPrev = gameSession
+    ? gameSession.rounds && gameSession.currentRoundIndex !== undefined
+      ? gameSession.currentRoundIndex > 0
+      : gameSession.currentSongIndex > 0
+    : false;
 
   const isCurrentSongAnswered = useMemo(() => {
     if (!gameSession) return false;
@@ -587,18 +592,6 @@ export const useSoloGame = ({
 
   const displayWorks = useMemo(() => {
     if (!worksPerRound || !currentSong || works.length === 0) {
-      if (
-        process.env.NODE_ENV === "development" &&
-        universeId === RANDOM_UNIVERSE_ID &&
-        works.length > 0 &&
-        !worksPerRound
-      ) {
-        console.warn(
-          "[SOLO-GAME] worksPerRound non passe en mode aleatoire -> affichage des",
-          works.length,
-          "oeuvres (pas d'echantillonnage)"
-        );
-      }
       return works;
     }
 
@@ -611,15 +604,6 @@ export const useSoloGame = ({
     const correctWorkForRound = works.find((work) => work.id === correctId);
     const pool = correctWorkForRound ? [correctWorkForRound, ...selectedWrong] : selectedWrong;
     const result = shuffleWithSeed(pool, `${seed}-final`);
-
-    if (process.env.NODE_ENV === "development") {
-      console.info("[SOLO-GAME] worksPerRound actif", {
-        worksPerRound,
-        currentSongIndex,
-        displayCount: result.length,
-        totalWorks: works.length,
-      });
-    }
 
     return result;
   }, [works, worksPerRound, currentSong, currentSongIndex, universeId]);

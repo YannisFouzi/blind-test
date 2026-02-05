@@ -144,9 +144,6 @@ export const useAudioPlayer = (options: UseAudioPlayerOptions = {}): UseAudioPla
         const errorMsg = "Impossible de demarrer la lecture audio.";
         setError(errorMsg);
         onError?.(errorMsg);
-        if (process.env.NODE_ENV === "development") {
-          console.warn("Audio playback error:", err);
-        }
         return false;
       }
     },

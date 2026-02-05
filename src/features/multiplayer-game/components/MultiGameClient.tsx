@@ -2,17 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import {
-  Check,
-  Home as HomeIcon,
-  LogOut,
-  Pause,
-  Play as PlayIcon,
-  SkipForward,
-  Volume2,
-  VolumeX,
-  X,
-} from "lucide-react";
+  import {
+    Check,
+    Home as HomeIcon,
+    LogOut,
+    Pause,
+    Play as PlayIcon,
+    Volume2,
+    VolumeX,
+    X,
+  } from "lucide-react";
 import type { RoomPlayer } from "@/types";
 
 import { useAudioPlayer, useDoubleAudioPlayer } from "@/features/audio-player";
@@ -877,19 +876,6 @@ export const MultiGameClient = ({
                       )}
                     </button>
 
-                    {isHost && (
-                      <button
-                        onClick={handleNextSong}
-                        disabled={!canGoNext}
-                        className={cn(
-                          "magic-button p-1 rounded-full bg-white hover:bg-[var(--color-surface-overlay)]",
-                          !canGoNext && "opacity-60"
-                        )}
-                      >
-                        <SkipForward className="w-3 h-3" />
-                      </button>
-                    )}
-
                     {isReverseMode && (
                       <span className="inline-flex items-center gap-0.5 rounded-full bg-[#f97316] px-1.5 py-0.5 text-[0.55rem] font-extrabold uppercase text-[#1B1B1B] border-2 border-[#1B1B1B] shadow-[1px_1px_0_#1B1B1B]">
                         <span className="inline-block rotate-180">
@@ -920,18 +906,6 @@ export const MultiGameClient = ({
                   )}
                 </button>
 
-                {isHost && (
-                  <button
-                    onClick={handleNextSong}
-                    disabled={!canGoNext}
-                    className={cn(
-                      "magic-button p-2 rounded-full bg-white hover:bg-[var(--color-surface-overlay)]",
-                      !canGoNext && "opacity-60"
-                    )}
-                  >
-                    <SkipForward className="w-4 h-4" />
-                  </button>
-                )}
               </div>
 
               <div className="w-full max-w-4xl flex flex-col items-center gap-1.5 sm:gap-3">

@@ -67,6 +67,9 @@ export const useDoubleAudioPlayer = (
   const secondaryRef = useRef<HTMLAudioElement | null>(null);
   const primaryDurationRef = useRef(0);
   const secondaryDurationRef = useRef(0);
+  const lastLoadedRef = useRef<{ primary: string; secondary: string } | null>(null);
+  const needsReloadRef = useRef(false);
+  const hadErrorRef = useRef(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolumeState] = useState(initialVolume);
@@ -129,6 +132,8 @@ export const useDoubleAudioPlayer = (
       setIsPlaying(false);
       setIsLoading(false);
       onError?.(errorMsg);
+      hadErrorRef.current = true;
+      needsReloadRef.current = true;
     };
 
     const handleLoadStart = () => {
@@ -224,9 +229,6 @@ export const useDoubleAudioPlayer = (
         const errorMsg = "Impossible de demarrer la lecture audio.";
         setError(errorMsg);
         onError?.(errorMsg);
-        if (process.env.NODE_ENV === "development") {
-          console.warn("Double audio playback error:", err);
-        }
         return false;
       }
     },
@@ -243,22 +245,23 @@ export const useDoubleAudioPlayer = (
       const currentSecondarySrc = secondary.currentSrc || secondary.src;
       const normalizedPrimary = primaryUrl || "";
       const normalizedSecondary = secondaryUrl || "";
+      const lastLoaded = lastLoadedRef.current;
+      const sameAsLast =
+        lastLoaded?.primary === normalizedPrimary && lastLoaded?.secondary === normalizedSecondary;
+      const hasElementError = Boolean(primary.error || secondary.error);
 
-      if (
-        currentPrimarySrc &&
-        currentSecondarySrc &&
-        (currentPrimarySrc.endsWith(normalizedPrimary) || currentPrimarySrc === normalizedPrimary) &&
-        (currentSecondarySrc.endsWith(normalizedSecondary) ||
-          currentSecondarySrc === normalizedSecondary)
-      ) {
+      if (sameAsLast && !needsReloadRef.current && !hasElementError && !hadErrorRef.current) {
         return;
       }
 
       setError(null);
       setIsLoading(true);
+      hadErrorRef.current = false;
+      needsReloadRef.current = false;
       primary.pause();
       secondary.pause();
 
+      lastLoadedRef.current = { primary: normalizedPrimary, secondary: normalizedSecondary };
       primary.src = primaryUrl || "";
       secondary.src = secondaryUrl || "";
 
@@ -284,7 +287,6 @@ export const useDoubleAudioPlayer = (
       });
 
       setIsLoading(false);
-
       if (autoPlay && (primaryUrl || secondaryUrl)) {
         void playInternal("auto");
       }
@@ -352,12 +354,17 @@ export const useDoubleAudioPlayer = (
       primary.pause();
       primary.currentTime = 0;
       primary.src = "";
+      primary.load();
     }
     if (secondary) {
       secondary.pause();
       secondary.currentTime = 0;
       secondary.src = "";
+      secondary.load();
     }
+    lastLoadedRef.current = null;
+    needsReloadRef.current = false;
+    hadErrorRef.current = false;
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);

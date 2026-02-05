@@ -409,13 +409,6 @@ export const SoloGameClient = ({
   }
 
   if (!loading && works.length === 0) {
-    if (process.env.NODE_ENV === "development") {
-      console.error('[SOLO-GAME] Affichage erreur "Aucune oeuvre"', {
-        universeId,
-        allowedWorksCount: allowedWorks?.length ?? 0,
-        error,
-      });
-    }
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center p-6">
         <div className="text-center">
