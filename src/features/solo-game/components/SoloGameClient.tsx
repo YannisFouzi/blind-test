@@ -618,7 +618,7 @@ export const SoloGameClient = ({
                     <span>{formatTime(effectiveCurrentTime)}</span>
                     <div className="flex items-center gap-2">
                       {isReverseMode && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[#f97316] px-3 py-1 text-[0.65rem] font-extrabold uppercase tracking-wide text-[#1B1B1B] border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#f97316] px-3 py-1 text-[0.65rem] font-extrabold uppercase tracking-wide leading-none text-[#1B1B1B] border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] whitespace-nowrap">
                           <span className="inline-block rotate-180">
                             <PlayIcon className="w-3 h-3" />
                           </span>
@@ -626,7 +626,7 @@ export const SoloGameClient = ({
                         </span>
                       )}
                       {isDoubleMode && !isReverseMode && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-3 py-1 text-[0.65rem] font-extrabold uppercase tracking-wide text-[#1B1B1B] border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-3 py-1 text-[0.65rem] font-extrabold uppercase tracking-wide leading-none text-[#1B1B1B] border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] whitespace-nowrap">
                           <span>x2</span>
                           <span>Double</span>
                         </span>

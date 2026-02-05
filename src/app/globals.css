@@ -801,6 +801,7 @@ a:focus-visible {
 
 .player-durations-standard {
   display: none;
+  min-height: 1.5rem;
 }
 
 .player-x2-compact {
