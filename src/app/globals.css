@@ -484,7 +484,7 @@ a:focus-visible {
     }
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 900px) {
     :root {
       --home-button-height: 2.45rem;
       --home-button-pad-x: 0.68rem;
@@ -708,7 +708,7 @@ a:focus-visible {
   }
 
   /* Mobile/tablette: taille compacte uniforme */
-  @media (max-width: 768px) {
+  @media (max-width: 900px) {
     .uniform-card {
       height: 88px;
       min-height: 88px;
@@ -915,21 +915,16 @@ a:focus-visible {
  * ========================================
  */
 
-/* Mobile/tablette: même rendu que 480px */
-@media (max-width: 768px) {
+/* Mobile/tablette jusqu'a 900px: meme rendu */
+@media (max-width: 900px) {
   .uniform-card-grid {
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.625rem;
   }
 
   .uniform-card-title {
     font-size: 0.8125rem;
     line-height: 1.1;
-  }
-}
-
-@media (min-width: 769px) and (max-width: 900px) {
-  .uniform-card-grid {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -944,7 +939,51 @@ a:focus-visible {
   grid-template-columns: 1fr;
 }
 
-@media (min-width: 481px) and (max-width: 768px) {
+/* 6-7 cards: mobile + micro mobile + tablette = 2 colonnes */
+@media (max-width: 900px) {
+  .uniform-card-grid.uniform-card-grid--six {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .uniform-card-grid.uniform-card-grid--seven {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .uniform-card-grid.uniform-card-grid--seven > :nth-child(7) {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: calc((100% - var(--work-grid-gap)) / 2);
+  }
+}
+
+/* Micro mobile dense (7-8 cards): cards et CTA un peu plus compacts */
+@media (max-width: 900px) and (max-height: 700px) {
+  .uniform-card-grid.uniform-card-grid--seven .uniform-card,
+  .uniform-card-grid.uniform-card-grid--eight .uniform-card {
+    height: 80px;
+    min-height: 80px;
+    max-height: 80px;
+  }
+
+  .uniform-card-grid.uniform-card-grid--seven .uniform-card-title,
+  .uniform-card-grid.uniform-card-grid--eight .uniform-card-title {
+    font-size: 0.75rem;
+    line-height: 1.05;
+  }
+
+  .uniform-card-grid.uniform-card-grid--seven .work-card--stacked,
+  .uniform-card-grid.uniform-card-grid--eight .work-card--stacked {
+    --work-card-band-height: clamp(1.2rem, 2.1vh, 1.5rem);
+  }
+
+  .game-action-button--dense {
+    padding: 0.45rem 1.1rem !important;
+    font-size: 0.8rem !important;
+    line-height: 1.1;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 900px) {
   .uniform-card-grid.uniform-card-grid--four {
     grid-template-columns: 1fr;
   }
@@ -968,7 +1007,7 @@ a:focus-visible {
   }
 }
 
-@media (min-width: 769px) {
+@media (min-width: 901px) {
   .uniform-card-grid.uniform-card-grid--four {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -981,6 +1020,14 @@ a:focus-visible {
     grid-column: 1 / -1;
     justify-self: center;
     width: calc((100% - var(--work-grid-gap)) / 2);
+  }
+}
+
+@media (min-width: 901px) {
+  .uniform-card-grid.uniform-card-grid--seven > :nth-child(7) {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: calc((100% - (var(--work-grid-gap) * 2)) / 3);
   }
 }
 
@@ -1012,6 +1059,14 @@ a:focus-visible {
   display: none;
 }
 
+.player-extra-compact {
+  display: flex;
+}
+
+.player-extra-desktop {
+  display: none;
+}
+
 .player-compact-button {
   box-shadow: 4px 4px 0 #0A0B0E;
 }
@@ -1020,7 +1075,7 @@ a:focus-visible {
   box-shadow: 4px 4px 0 #0A0B0E;
 }
 
-@media (max-width: 768px) and (max-height: 700px) {
+@media (max-width: 900px) and (max-height: 700px) {
   .player-controls-compact {
     display: block;
   }
@@ -1035,7 +1090,7 @@ a:focus-visible {
 
 }
 
-@media (max-width: 768px) and (min-height: 701px) {
+@media (max-width: 900px) and (min-height: 701px) {
   .player-controls-standard {
     display: flex;
   }
@@ -1045,13 +1100,23 @@ a:focus-visible {
   }
 }
 
-@media (min-width: 769px) {
+@media (min-width: 901px) {
   .player-controls-standard {
     display: flex;
   }
 
   .player-durations-standard {
     display: flex;
+  }
+}
+
+@media (min-width: 901px) {
+  .player-extra-compact {
+    display: none !important;
+  }
+
+  .player-extra-desktop {
+    display: flex !important;
   }
 }
 

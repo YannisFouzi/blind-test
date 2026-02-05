@@ -27,6 +27,7 @@ const WorkSelectorComponent = ({
   footer,
 }: WorkSelectorProps) => {
   const validateLabel = "Valider ma reponse";
+  const isDenseActionLayout = works.length >= 7;
   const [isValidateButtonVisible, setIsValidateButtonVisible] = useState(true);
   const validateButtonRef = useRef<HTMLDivElement>(null);
   const isAnswerRevealed = showAnswer || isCurrentSongAnswered;
@@ -138,6 +139,9 @@ const WorkSelectorComponent = ({
               works.length <= 3 ? " uniform-card-grid--stacked" : ""
             }${works.length === 4 ? " uniform-card-grid--four" : ""}${
               works.length === 5 ? " uniform-card-grid--five" : ""
+            }${works.length === 6 ? " uniform-card-grid--six" : ""
+            }${works.length === 7 ? " uniform-card-grid--seven" : ""
+            }${works.length === 8 ? " uniform-card-grid--eight" : ""
             }`}
           >
             {workCards}
@@ -159,7 +163,13 @@ const WorkSelectorComponent = ({
               }`}
               aria-hidden={isAnswerRevealed}
             >
-              {canValidate ? <GameActionButton label={validateLabel} onClick={onValidateAnswer} /> : null}
+              {canValidate ? (
+                <GameActionButton
+                  label={validateLabel}
+                  onClick={onValidateAnswer}
+                  compact={isDenseActionLayout}
+                />
+              ) : null}
             </div>
           </div>
         </div>
@@ -168,7 +178,11 @@ const WorkSelectorComponent = ({
       {/* Boutons fixes - au-dessus de la barre de lecteur */}
       {canValidate && !isCurrentSongAnswered && !isValidateButtonVisible && (
         <div className="fixed player-action-float left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
-          <GameActionButton label={validateLabel} onClick={onValidateAnswer} />
+          <GameActionButton
+            label={validateLabel}
+            onClick={onValidateAnswer}
+            compact={isDenseActionLayout}
+          />
         </div>
       )}
     </>

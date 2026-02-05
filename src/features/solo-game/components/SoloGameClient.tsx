@@ -155,6 +155,7 @@ export const SoloGameClient = ({
 
   const isLastRound = displayedRoundCount > 0 && displayedRoundIndex >= displayedRoundCount;
   const shouldShowScoresButton = isLastRound && isCurrentSongAnswered;
+  const isDenseActionLayout = works.length >= 7;
 
   const handleShowScores = useCallback(() => {
     const params = new URLSearchParams({
@@ -170,14 +171,20 @@ export const SoloGameClient = ({
     const primaryAction = shouldShowScoresButton ? (
       <button
         onClick={handleShowScores}
-        className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
+        className={cn(
+          "magic-button game-action-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold",
+          isDenseActionLayout && "game-action-button--dense"
+        )}
       >
         <span className="relative z-10 flex items-center gap-2">Voir les scores</span>
       </button>
     ) : canGoNext ? (
       <button
         onClick={nextSong}
-        className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
+        className={cn(
+          "magic-button game-action-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold",
+          isDenseActionLayout && "game-action-button--dense"
+        )}
       >
         <span className="relative z-10 flex items-center gap-2">Manche suivante</span>
       </button>
@@ -218,6 +225,7 @@ export const SoloGameClient = ({
     currentSong,
     works,
     shouldShowScoresButton,
+    isDenseActionLayout,
     handleShowScores,
     canGoNext,
     nextSong,
@@ -657,7 +665,7 @@ export const SoloGameClient = ({
                     </div>
 
                     <div className="flex items-center justify-end gap-2 text-[var(--color-text-primary)] text-xs">
-                      <div className="flex items-center gap-2 md:hidden">
+                      <div className="player-extra-compact items-center gap-2">
                         {isReverseMode && (
                           <span className="player-reverse-compact px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#f97316] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1 text-xs whitespace-nowrap">
                             <span className="inline-block rotate-180">
@@ -673,7 +681,7 @@ export const SoloGameClient = ({
                           </span>
                         )}
                       </div>
-                      <div className="hidden md:flex items-center justify-end gap-3 text-[var(--color-text-primary)] text-xs">
+                      <div className="player-extra-desktop items-center justify-end gap-3 text-[var(--color-text-primary)] text-xs">
                         <button
                           onClick={isDoubleRound ? doubleToggleMute : audioToggleMute}
                           className={cn(

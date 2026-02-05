@@ -316,6 +316,7 @@ const DoubleWorkSelectorComponent = ({
   const isAnswerRevealed = showAnswer || isCurrentSongAnswered;
   const canInteract = !isAnswerRevealed;
   const showDots = roundSongs.length >= 2;
+  const isDenseActionLayout = works.length >= 7;
 
   const correctCountByWorkId = useMemo(() => countByWorkId(roundSongs), [roundSongs]);
 
@@ -388,6 +389,9 @@ const DoubleWorkSelectorComponent = ({
             works.length <= 3 ? " uniform-card-grid--stacked" : ""
           }${works.length === 4 ? " uniform-card-grid--four" : ""}${
             works.length === 5 ? " uniform-card-grid--five" : ""
+          }${works.length === 6 ? " uniform-card-grid--six" : ""
+          }${works.length === 7 ? " uniform-card-grid--seven" : ""
+          }${works.length === 8 ? " uniform-card-grid--eight" : ""
           }`}
         >
           {workCardStates.map((state) => (
@@ -446,7 +450,11 @@ const DoubleWorkSelectorComponent = ({
             aria-hidden={!canInteract}
           >
             {canValidate ? (
-              <GameActionButton label="Valider mes 2 reponses" onClick={onValidateAnswer} />
+              <GameActionButton
+                label="Valider mes 2 reponses"
+                onClick={onValidateAnswer}
+                compact={isDenseActionLayout}
+              />
             ) : null}
           </div>
         </div>
