@@ -13,7 +13,15 @@ import {
 import { getAllWorks, getSongCountByWork, getWorksByUniverse } from "@/services/firebase";
 import { activeUniversesQueryOptions } from "@/features/home/queries/universes.query";
 import { worksKeys } from "@/features/home/queries/works.query";
-import { Dialog, DialogClose, DialogContent, DialogTitle, RangeSliderField, ToggleSwitch } from "@/components/ui";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  RangeSliderField,
+  ToggleSwitch,
+} from "@/components/ui";
 import { pressable } from "@/styles/ui";
 
 const WORK_SKELETON_ITEMS = Array.from({ length: 6 }, (_, index) => `work-skeleton-${index}`);
@@ -346,6 +354,9 @@ const UniverseCustomizeModalComponent = ({
             {customizingUniverse.name}
           </DialogTitle>
         </div>
+        <DialogDescription className="sr-only">
+          Personnalisez les oeuvres, la difficulte et les effets pour cette partie.
+        </DialogDescription>
 
         {customizingUniverse.id === CUSTOM_UNIVERSE_ID && (
           <div className="space-y-1 text-center">
