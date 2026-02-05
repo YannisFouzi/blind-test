@@ -603,14 +603,11 @@ export const MultiGameClient = ({
       isHost &&
       displayedRoundCount >= 1 &&
       isLastRound &&
-      allPlayersAnswered &&
-      showAnswer,
-    [isHost, displayedRoundCount, isLastRound, allPlayersAnswered, showAnswer]
+      allPlayersAnswered,
+    [isHost, displayedRoundCount, isLastRound, allPlayersAnswered]
   );
 
   const answerFooter = useMemo(() => {
-    if (!showAnswer) return null;
-
     const primaryAction = shouldShowScoresButton ? (
       <button
         onClick={handleShowScores}
@@ -668,7 +665,6 @@ export const MultiGameClient = ({
       </div>
     );
   }, [
-    showAnswer,
     shouldShowScoresButton,
     canGoNext,
     isHost,

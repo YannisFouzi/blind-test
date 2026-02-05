@@ -524,6 +524,38 @@ a:focus-visible {
     gap: clamp(0.75rem, 1.8vh, 1.5rem);
   }
 
+  .work-selector {
+    width: 100%;
+    --work-selector-max-width: 56rem;
+  }
+
+  .work-selector-grid,
+  .work-selector-actions {
+    width: min(100%, var(--work-selector-max-width));
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .work-selector-actions {
+    display: grid;
+    place-items: center;
+  }
+
+  .work-selector-actions-layer {
+    grid-area: 1 / 1;
+  }
+
+  .work-selector-actions-layer--hidden {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .work-selector-actions-layer--visible {
+    visibility: visible;
+    opacity: 1;
+  }
+
   .uniform-card {
     height: clamp(96px, 12vh, 128px);
     min-height: clamp(96px, 12vh, 128px);
@@ -831,6 +863,10 @@ a:focus-visible {
 
   .player-reverse-compact {
     display: inline-flex;
+  }
+
+  .uniform-card-grid--two {
+    grid-template-columns: 1fr;
   }
 }
 

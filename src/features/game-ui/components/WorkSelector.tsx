@@ -130,23 +130,38 @@ const WorkSelectorComponent = ({
 
   return (
     <>
-      <div className="relative">
+      <div className="relative w-full work-selector">
         <div className="space-y-3 sm:space-y-4 md:space-y-6">
           {/* Grille de cartes responsive avec tailles uniformes */}
-          <div className="uniform-card-grid">{workCards}</div>
+          <div
+            className={`uniform-card-grid work-selector-grid${
+              works.length === 2 ? " uniform-card-grid--two" : ""
+            }`}
+          >
+            {workCards}
+          </div>
 
           {/* Zone d'actions reservee (valider ou resultat) */}
           <div
             ref={validateButtonRef}
-            className="flex items-center justify-center min-h-[72px] sm:min-h-[96px] md:min-h-[120px]"
+            className="work-selector-actions min-h-[72px] sm:min-h-[96px] md:min-h-[120px]"
           >
-            {!isAnswerRevealed ? (
-              canValidate ? (
-                <GameActionButton label={validateLabel} onClick={onValidateAnswer} />
-              ) : null
-            ) : (
-              footer
-            )}
+            <div
+              className={`work-selector-actions-layer ${
+                isAnswerRevealed ? "work-selector-actions-layer--visible" : "work-selector-actions-layer--hidden"
+              }`}
+              aria-hidden={!isAnswerRevealed}
+            >
+              {footer}
+            </div>
+            <div
+              className={`work-selector-actions-layer ${
+                !isAnswerRevealed ? "work-selector-actions-layer--visible" : "work-selector-actions-layer--hidden"
+              }`}
+              aria-hidden={isAnswerRevealed}
+            >
+              {canValidate ? <GameActionButton label={validateLabel} onClick={onValidateAnswer} /> : null}
+            </div>
           </div>
         </div>
       </div>

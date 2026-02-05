@@ -154,7 +154,7 @@ export const SoloGameClient = ({
   } = game;
 
   const isLastRound = displayedRoundCount > 0 && displayedRoundIndex >= displayedRoundCount;
-  const shouldShowScoresButton = isLastRound && isCurrentSongAnswered && showAnswer;
+  const shouldShowScoresButton = isLastRound && isCurrentSongAnswered;
 
   const handleShowScores = useCallback(() => {
     const params = new URLSearchParams({
@@ -165,7 +165,6 @@ export const SoloGameClient = ({
   }, [score.correct, score.incorrect, router]);
 
   const answerFooter = useMemo(() => {
-    if (!showAnswer) return null;
     if (isDoubleMode ? currentRoundSongs.length === 0 : !currentSong) return null;
 
     const primaryAction = shouldShowScoresButton ? (
@@ -214,7 +213,6 @@ export const SoloGameClient = ({
       </div>
     );
   }, [
-    showAnswer,
     isDoubleMode,
     currentRoundSongs,
     currentSong,

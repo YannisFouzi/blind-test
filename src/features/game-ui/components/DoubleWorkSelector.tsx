@@ -371,9 +371,13 @@ const DoubleWorkSelectorComponent = ({
   );
 
   return (
-    <div className="relative">
+    <div className="relative w-full work-selector">
       <div className="space-y-3 sm:space-y-4 md:space-y-6">
-        <div className="uniform-card-grid">
+        <div
+          className={`uniform-card-grid work-selector-grid${
+            works.length === 2 ? " uniform-card-grid--two" : ""
+          }`}
+        >
           {workCardStates.map((state) => (
             <div
               key={state.work.id}
@@ -413,14 +417,25 @@ const DoubleWorkSelectorComponent = ({
           ))}
         </div>
 
-        <div className="flex items-center justify-center min-h-[72px] sm:min-h-[96px] md:min-h-[120px]">
-          {canInteract ? (
-            canValidate ? (
+        <div className="work-selector-actions min-h-[72px] sm:min-h-[96px] md:min-h-[120px]">
+          <div
+            className={`work-selector-actions-layer ${
+              !canInteract ? "work-selector-actions-layer--visible" : "work-selector-actions-layer--hidden"
+            }`}
+            aria-hidden={canInteract}
+          >
+            {footer}
+          </div>
+          <div
+            className={`work-selector-actions-layer ${
+              canInteract ? "work-selector-actions-layer--visible" : "work-selector-actions-layer--hidden"
+            }`}
+            aria-hidden={!canInteract}
+          >
+            {canValidate ? (
               <GameActionButton label="Valider mes 2 reponses" onClick={onValidateAnswer} />
-            ) : null
-          ) : (
-            footer
-          )}
+            ) : null}
+          </div>
         </div>
       </div>
     </div>
