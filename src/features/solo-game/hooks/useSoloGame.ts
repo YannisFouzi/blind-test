@@ -517,6 +517,13 @@ export const useSoloGame = ({
     return gameSession?.songs.length ?? 0;
   }, [gameSession?.rounds, gameSession?.songs.length]);
 
+  const displayedRoundCount = useMemo(() => {
+    if (gameSession?.rounds && gameSession.rounds.length > 0) {
+      return gameSession.rounds.length;
+    }
+    return gameSession?.songs.length ?? 0;
+  }, [gameSession?.rounds, gameSession?.songs.length]);
+
   const displayedSongIndex = useMemo(() => {
     if (gameSession?.rounds && gameSession.currentRoundIndex !== undefined) {
       let consumed = 0;
@@ -527,6 +534,13 @@ export const useSoloGame = ({
       return consumed + 1;
     }
 
+    return (gameSession?.currentSongIndex ?? 0) + 1;
+  }, [gameSession]);
+
+  const displayedRoundIndex = useMemo(() => {
+    if (gameSession?.rounds && gameSession.currentRoundIndex !== undefined) {
+      return gameSession.currentRoundIndex + 1;
+    }
     return (gameSession?.currentSongIndex ?? 0) + 1;
   }, [gameSession]);
 
@@ -631,6 +645,8 @@ export const useSoloGame = ({
     totalSongs: gameSession?.songs.length ?? 0,
     displayedSongIndex,
     displayedTotalSongs,
+    displayedRoundIndex,
+    displayedRoundCount,
     score: gameSession?.score ?? { correct: 0, incorrect: 0 },
 
     currentRound,

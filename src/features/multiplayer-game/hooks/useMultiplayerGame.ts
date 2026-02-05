@@ -416,6 +416,20 @@ export const useMultiplayerGame = ({
     return songId ? doubleSelections[songId] ?? null : null;
   }, [isDoubleMode, currentRoundSongs, doubleSelections]);
 
+  const displayedRoundIndex = useMemo(() => {
+    if (room?.currentRoundIndex != null) {
+      return room.currentRoundIndex + 1;
+    }
+    return currentSongIndex + 1;
+  }, [room?.currentRoundIndex, currentSongIndex]);
+
+  const displayedRoundCount = useMemo(() => {
+    if (room?.roundCount != null) {
+      return room.roundCount;
+    }
+    return room?.songs?.length ?? 0;
+  }, [room?.roundCount, room?.songs?.length]);
+
   return {
     mode: "multiplayer" as const,
 
@@ -437,6 +451,8 @@ export const useMultiplayerGame = ({
     totalSongs: room?.songs?.length ?? 0,
     displayedSongIndex: room?.displayedSongIndex ?? currentSongIndex + 1,
     displayedTotalSongs: room?.displayedTotalSongs ?? room?.songs?.length ?? 0,
+    displayedRoundIndex,
+    displayedRoundCount,
     roundCount: room?.roundCount,
     currentRoundIndex: room?.currentRoundIndex,
 

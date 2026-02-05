@@ -245,15 +245,13 @@ export const MultiGameClient = ({
     submitPassword,
     allPlayersAnswered,
     isHost,
-    isLoadingWorks,
-    isReverseMode,
-    isDoubleMode,
-    currentRoundSongs = [],
-    displayedSongIndex,
-    displayedTotalSongs,
-    roundCount,
-    currentRoundIndex,
-    doubleSelectedWorkSlot1,
+      isLoadingWorks,
+      isReverseMode,
+      isDoubleMode,
+      currentRoundSongs = [],
+      displayedRoundIndex,
+      displayedRoundCount,
+      doubleSelectedWorkSlot1,
     doubleSelectedWorkSlot2,
     handleDoubleSelection,
     clearDoubleSelectionForWork,
@@ -596,21 +594,19 @@ export const MultiGameClient = ({
     [currentPlayer]
   );
 
-  const isLastSong = useMemo(() => {
-    if (roundCount != null && roundCount > 0) {
-      return (currentRoundIndex ?? 0) >= roundCount - 1;
-    }
-    return displayedSongIndex >= displayedTotalSongs;
-  }, [roundCount, currentRoundIndex, displayedSongIndex, displayedTotalSongs]);
+  const isLastRound = useMemo(() => {
+    if (displayedRoundCount <= 0) return false;
+    return displayedRoundIndex >= displayedRoundCount;
+  }, [displayedRoundIndex, displayedRoundCount]);
 
   const shouldShowScoresButton = useMemo(
     () =>
       isHost &&
-      displayedTotalSongs >= 1 &&
-      isLastSong &&
+      displayedRoundCount >= 1 &&
+      isLastRound &&
       allPlayersAnswered &&
       showAnswer,
-    [isHost, displayedTotalSongs, isLastSong, allPlayersAnswered, showAnswer]
+    [isHost, displayedRoundCount, isLastRound, allPlayersAnswered, showAnswer]
   );
 
   const answerFooter = useMemo(() => {
@@ -628,7 +624,7 @@ export const MultiGameClient = ({
         onClick={handleNextSong}
         className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
       >
-        <span className="relative z-10 flex items-center gap-2">Morceau suivant</span>
+        <span className="relative z-10 flex items-center gap-2">Manche suivante</span>
       </button>
     ) : null;
 
@@ -963,11 +959,9 @@ export const MultiGameClient = ({
                 </div>
 
                 <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center text-xs sm:text-sm gap-2 sm:gap-3 pt-0.5 sm:pt-1">
-                  <span className="text-[#B45309] font-semibold">
-                    {isDoubleMode && currentRoundSongs.length === 2
-                      ? `Morceau ${displayedSongIndex}+${displayedSongIndex + 1} / ${displayedTotalSongs}`
-                      : `Morceau ${displayedSongIndex} / ${displayedTotalSongs}`}
-                  </span>
+                    <span className="text-[#B45309] font-semibold">
+                      Manche {displayedRoundIndex} / {displayedRoundCount}
+                    </span>
 
                   <div className="flex items-center justify-center gap-2 sm:gap-3 text-xs">
                     <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#86efac] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">

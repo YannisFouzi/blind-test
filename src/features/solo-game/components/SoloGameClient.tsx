@@ -137,13 +137,13 @@ export const SoloGameClient = ({
     handleAnswer,
     validateAnswer,
     nextSong,
-    prevSong,
-    displayedSongIndex,
-    displayedTotalSongs,
-    score,
-    isReverseMode,
-    isDoubleMode,
-    currentRoundSongs = [],
+      prevSong,
+      displayedRoundIndex,
+      displayedRoundCount,
+      score,
+      isReverseMode,
+      isDoubleMode,
+      currentRoundSongs = [],
     doubleSelectedWorkSlot1,
     doubleSelectedWorkSlot2,
     handleDoubleSelection,
@@ -153,8 +153,8 @@ export const SoloGameClient = ({
     lastGain,
   } = game;
 
-  const isLastSong = displayedSongIndex >= displayedTotalSongs;
-  const shouldShowScoresButton = isLastSong && isCurrentSongAnswered && showAnswer;
+  const isLastRound = displayedRoundCount > 0 && displayedRoundIndex >= displayedRoundCount;
+  const shouldShowScoresButton = isLastRound && isCurrentSongAnswered && showAnswer;
 
   const handleShowScores = useCallback(() => {
     const params = new URLSearchParams({
@@ -180,7 +180,7 @@ export const SoloGameClient = ({
         onClick={nextSong}
         className="magic-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold"
       >
-        <span className="relative z-10 flex items-center gap-2">Morceau suivant</span>
+        <span className="relative z-10 flex items-center gap-2">Manche suivante</span>
       </button>
     ) : null;
 
@@ -651,9 +651,9 @@ export const SoloGameClient = ({
                   </div>
 
                   <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center text-xs sm:text-sm gap-2 sm:gap-3 pt-0.5 sm:pt-1">
-                    <span className="text-[#B45309] font-semibold">
-                      Morceau {displayedSongIndex} / {displayedTotalSongs}
-                    </span>
+                      <span className="text-[#B45309] font-semibold">
+                        Manche {displayedRoundIndex} / {displayedRoundCount}
+                      </span>
 
                     <div className="flex items-center justify-center gap-2 sm:gap-3 text-xs">
                       <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#86efac] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">

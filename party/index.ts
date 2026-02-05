@@ -796,7 +796,7 @@ export default class BlindTestRoom implements Party.Server {
     this.state.worksPerRound = worksPerRound;
     this.state.options = options;
 
-    // Effets mystères : calculer les rounds si configurés
+    // Effets mysteres : calculer les rounds si configures
     const hasEffects =
       mysteryEffectsConfig?.enabled && mysteryEffectsConfig.effects && mysteryEffectsConfig.effects.length > 0;
 

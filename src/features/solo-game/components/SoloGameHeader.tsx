@@ -8,20 +8,20 @@ export interface SoloGameHeaderProps {
     correct: number;
     incorrect: number;
   };
-  currentSongIndex: number;
-  totalSongs: number;
+  currentRoundIndex: number;
+  roundCount: number;
   onGoHome?: () => void;
   universeName?: string;
 }
 
 export const SoloGameHeader = ({
   score,
-  currentSongIndex,
-  totalSongs,
+  currentRoundIndex,
+  roundCount,
   onGoHome,
   universeName,
 }: SoloGameHeaderProps) => {
-  const displayIndex = currentSongIndex + 1;
+  const displayIndex = currentRoundIndex + 1;
 
   return (
     <div className="fixed top-0 left-0 right-0 z-40 bg-white border-b-[3px] border-[#1B1B1B] shadow-[0_4px_0_#1B1B1B]">
@@ -47,7 +47,7 @@ export const SoloGameHeader = ({
 
           <div className="flex items-center gap-4">
             <Badge variant="primary" glow>
-              Morceau {displayIndex} / {totalSongs}
+              Manche {displayIndex} / {roundCount}
             </Badge>
 
             <div className="flex items-center gap-2">
