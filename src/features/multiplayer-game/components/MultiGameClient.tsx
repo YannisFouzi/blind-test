@@ -865,7 +865,7 @@ export const MultiGameClient = ({
                       onClick={handlePlayToggle}
                       disabled={playbackUnavailable}
                       className={cn(
-                        "magic-button rounded-full p-2",
+                        "magic-button player-compact-button rounded-full p-2",
                         playbackUnavailable && "opacity-60 cursor-not-allowed"
                       )}
                     >
@@ -876,13 +876,6 @@ export const MultiGameClient = ({
                       )}
                     </button>
 
-                    {isReverseMode && (
-                      <span className="inline-flex items-center gap-0.5 rounded-full bg-[#f97316] px-1.5 py-0.5 text-[0.55rem] font-extrabold uppercase text-[#1B1B1B] border-2 border-[#1B1B1B] shadow-[1px_1px_0_#1B1B1B]">
-                        <span className="inline-block rotate-180">
-                          <PlayIcon className="w-2 h-2" />
-                        </span>
-                      </span>
-                    )}
                   </div>
 
                   <span className="min-w-[2rem] text-right">{formatTime(effectiveDuration)}</span>
@@ -921,6 +914,12 @@ export const MultiGameClient = ({
                         <span>Reverse</span>
                       </span>
                     )}
+                    {isDoubleMode && !isReverseMode && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-3 py-1 text-[0.65rem] font-extrabold uppercase tracking-wide text-[#1B1B1B] border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] whitespace-nowrap">
+                        <span>x2</span>
+                        <span>Double</span>
+                      </span>
+                    )}
                   </div>
                   <span>{formatTime(effectiveDuration)}</span>
                 </div>
@@ -937,52 +936,65 @@ export const MultiGameClient = ({
                       Manche {displayedRoundIndex} / {displayedRoundCount}
                     </span>
 
-                  <div className="flex items-center justify-center gap-2 sm:gap-3 text-xs">
-                    <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#86efac] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">
-                      <Check className="w-3 h-3" />
-                      {currentPlayerScore.correct}
-                    </span>
-                    <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#fca5a5] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">
-                      <X className="w-3 h-3" />
-                      {currentPlayerScore.incorrect}
-                    </span>
-                    {isDoubleMode && !isReverseMode && (
-                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#22c55e] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1 text-[0.65rem] sm:text-xs whitespace-nowrap">
-                        <span className="text-[0.7rem] sm:text-xs font-black leading-none">x2</span>
+                    <div className="flex items-center justify-center gap-2 sm:gap-3 text-xs">
+                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#86efac] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">
+                        <Check className="w-3 h-3" />
+                        {currentPlayerScore.correct}
                       </span>
-                    )}
-                  </div>
-
-                  <div className="hidden md:flex items-center justify-end gap-3 text-[var(--color-text-primary)] text-xs">
-                    <button
-                      onClick={isDoubleRound ? doubleToggleMute : audioToggleMute}
-                      className={cn(
-                        "p-2 rounded-full bg-white hover:bg-[var(--color-surface-overlay)]",
-                        pressable
-                      )}
-                    >
-                      {effectiveIsMuted ? (
-                        <VolumeX className="w-4 h-4" />
-                      ) : (
-                        <Volume2 className="w-4 h-4" />
-                      )}
-                    </button>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-28 magic-progress-bar h-2 cursor-pointer"
-                        onClick={handleVolumeBarClick}
-                      >
-                        <div
-                          className="magic-progress-fill h-full"
-                          style={{ width: `${effectiveVolume}%` }}
-                        />
-                      </div>
-                      <span className="text-[var(--color-text-primary)] text-xs w-10 text-center">
-                        {Math.round(effectiveVolume)}%
+                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#fca5a5] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">
+                        <X className="w-3 h-3" />
+                        {currentPlayerScore.incorrect}
                       </span>
                     </div>
+
+                    <div className="flex items-center justify-end gap-2 text-[var(--color-text-primary)] text-xs">
+                      <div className="flex items-center gap-2 md:hidden">
+                        {isReverseMode && (
+                          <span className="player-reverse-compact px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#f97316] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1 text-xs whitespace-nowrap">
+                            <span className="inline-block rotate-180">
+                              <PlayIcon className="w-3 h-3" />
+                            </span>
+                            <span>Reverse</span>
+                          </span>
+                        )}
+                        {isDoubleMode && !isReverseMode && (
+                          <span className="player-x2-compact px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#22c55e] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1 text-xs whitespace-nowrap">
+                            <span>x2</span>
+                            <span>Double</span>
+                          </span>
+                        )}
+                      </div>
+                      <div className="hidden md:flex items-center justify-end gap-3 text-[var(--color-text-primary)] text-xs">
+                        <button
+                          onClick={isDoubleRound ? doubleToggleMute : audioToggleMute}
+                          className={cn(
+                            "p-2 rounded-full bg-white hover:bg-[var(--color-surface-overlay)]",
+                            pressable
+                          )}
+                        >
+                          {effectiveIsMuted ? (
+                            <VolumeX className="w-4 h-4" />
+                          ) : (
+                            <Volume2 className="w-4 h-4" />
+                          )}
+                        </button>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-28 magic-progress-bar h-2 cursor-pointer"
+                            onClick={handleVolumeBarClick}
+                          >
+                            <div
+                              className="magic-progress-fill h-full"
+                              style={{ width: `${effectiveVolume}%` }}
+                            />
+                          </div>
+                          <span className="text-[var(--color-text-primary)] text-xs w-10 text-center">
+                            {Math.round(effectiveVolume)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
               </div>
             </div>
           </div>
