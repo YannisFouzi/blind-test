@@ -114,8 +114,8 @@ function StartingPhaseUI({
     Date.now() >= startAt - START_MESSAGE_WINDOW_MS;
 
   return (
-    <div className="min-h-screen bg-[var(--color-surface-base)] flex flex-col items-center justify-center p-6">
-      <div className="fixed top-3 left-2 sm:top-6 sm:left-6 z-50 flex flex-col items-start gap-2">
+    <div className="min-h-screen bg-[var(--color-surface-base)] flex flex-col items-center justify-center p-6 home-safe-area home-safe-area--stacked">
+      <div className="fixed home-button-anchor home-button-anchor--stacked z-50 flex flex-col items-start">
         {isHost && resetToWaiting && (
           <ConfirmActionButton
             buttonLabel="Accueil"
@@ -128,7 +128,7 @@ function StartingPhaseUI({
             className="magic-button home-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
           >
             <HomeIcon className="text-base sm:text-lg" />
-            <span className="home-button-label hidden sm:inline">Accueil</span>
+            <span className="home-button-label">Accueil</span>
           </ConfirmActionButton>
         )}
         <QuitRoomButton onConfirm={onLeave} title="Quitter la partie ?" />
@@ -770,7 +770,7 @@ export const MultiGameClient = ({
 
       <div className="absolute inset-0 bg-gradient-to-r from-yellow-200/40 via-transparent to-blue-200/40 pointer-events-none" />
 
-      <div className="fixed top-3 left-2 sm:top-6 sm:left-6 z-50 flex flex-col items-start gap-2">
+      <div className="fixed home-button-anchor home-button-anchor--stacked z-50 flex flex-col items-start">
         {isHost && (
           <ConfirmActionButton
             buttonLabel="Accueil"
@@ -783,7 +783,7 @@ export const MultiGameClient = ({
             className="magic-button home-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
           >
             <HomeIcon className="text-base sm:text-lg" />
-            <span className="home-button-label hidden sm:inline">Accueil</span>
+            <span className="home-button-label">Accueil</span>
           </ConfirmActionButton>
         )}
         <QuitRoomButton onConfirm={handleLeaveRoom} title="Quitter la partie ?" />
@@ -793,7 +793,7 @@ export const MultiGameClient = ({
         <PlayersScoreboard players={players} currentPlayerId={playerId} />
       </div>
 
-      <div className="container mx-auto px-4 py-6 sm:py-8 player-safe-area relative z-10">
+      <div className="container mx-auto px-4 py-6 sm:py-8 home-safe-area home-safe-area--stacked player-safe-area relative z-10">
         <div className="lg:hidden flex justify-center mb-4 sm:mb-6">
           <PlayersScoreboard players={players} currentPlayerId={playerId} />
         </div>

@@ -385,7 +385,9 @@ const DoubleWorkSelectorComponent = ({
       <div className="space-y-3 sm:space-y-4 md:space-y-6">
         <div
           className={`uniform-card-grid work-selector-grid${
-            works.length === 2 ? " uniform-card-grid--two" : ""
+            works.length <= 3 ? " uniform-card-grid--stacked" : ""
+          }${works.length === 4 ? " uniform-card-grid--four" : ""}${
+            works.length === 5 ? " uniform-card-grid--five" : ""
           }`}
         >
           {workCardStates.map((state) => (

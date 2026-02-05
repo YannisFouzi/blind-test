@@ -135,7 +135,9 @@ const WorkSelectorComponent = ({
           {/* Grille de cartes responsive avec tailles uniformes */}
           <div
             className={`uniform-card-grid work-selector-grid${
-              works.length === 2 ? " uniform-card-grid--two" : ""
+              works.length <= 3 ? " uniform-card-grid--stacked" : ""
+            }${works.length === 4 ? " uniform-card-grid--four" : ""}${
+              works.length === 5 ? " uniform-card-grid--five" : ""
             }`}
           >
             {workCards}

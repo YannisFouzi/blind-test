@@ -68,7 +68,7 @@ export const ConfirmModal = ({
             {message}
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="sm:space-x-2">
+        <DialogFooter className="mt-1 gap-3 sm:gap-3 sm:space-x-0">
           <Button
             type="button"
             variant="secondary"

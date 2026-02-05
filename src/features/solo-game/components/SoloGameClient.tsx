@@ -455,7 +455,7 @@ export const SoloGameClient = ({
 
       <div className="absolute inset-0 bg-gradient-to-r from-yellow-200/40 via-transparent to-blue-200/40 pointer-events-none" />
 
-      <div className="fixed top-3 left-2 sm:top-6 sm:left-6 z-50">
+      <div className="fixed home-button-anchor z-50">
         <ConfirmActionButton
           buttonLabel="Accueil"
           title="Retour a l'accueil ?"
@@ -467,11 +467,11 @@ export const SoloGameClient = ({
           className="magic-button home-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
         >
           <HomeIcon className="text-base sm:text-lg" />
-          <span className="home-button-label hidden sm:inline">Accueil</span>
+          <span className="home-button-label">Accueil</span>
         </ConfirmActionButton>
       </div>
 
-      <div className="container mx-auto px-4 py-6 sm:py-8 player-safe-area relative z-10">
+      <div className="container mx-auto px-4 py-6 sm:py-8 home-safe-area player-safe-area relative z-10">
         <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 min-h-[calc(100svh-180px)] sm:min-h-[calc(100svh-240px)] md:min-h-[calc(100svh-280px)]">
           <div className="w-full flex justify-center">
             {loading ? null : isDoubleMode && currentRoundSongs.length >= 1 ? (

@@ -136,7 +136,7 @@ export default function MultiScoresPage() {
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#BFDBFE]/40 rounded-full blur-3xl" />
       </div>
 
-      <div className="fixed top-3 left-2 sm:top-6 sm:left-6 z-50 flex flex-col items-start gap-2">
+      <div className="fixed home-button-anchor home-button-anchor--stacked z-50 flex flex-col items-start">
         {isHost && (
           <ConfirmActionButton
             buttonLabel="Accueil"
@@ -149,13 +149,13 @@ export default function MultiScoresPage() {
             className="magic-button home-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
           >
             <HomeIcon className="text-base sm:text-lg" />
-            <span className="home-button-label hidden sm:inline">Accueil</span>
+            <span className="home-button-label">Accueil</span>
           </ConfirmActionButton>
         )}
         <QuitRoomButton onConfirm={handleLeaveRoom} title="Quitter la partie ?" />
       </div>
 
-      <div className="container mx-auto px-4 py-8 pb-24 relative z-10">
+      <div className="container mx-auto px-4 py-8 pb-24 home-safe-area home-safe-area--stacked relative z-10">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-extrabold text-[var(--color-text-primary)] mb-2">
