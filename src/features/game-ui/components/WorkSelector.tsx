@@ -1,9 +1,13 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Work } from "@/types";
+import { cn } from "@/lib/utils";
 import { GameActionButton } from "./GameActionButton";
 import { WorkCardShell } from "./WorkCardShell";
+import { WorkGrid } from "./WorkGrid";
+import styles from "./GameUi.module.css";
 
 export interface WorkSelectorProps {
+  mode?: "solo" | "multi";
   works: Work[];
   currentSongWorkId: string | undefined;
   selectedWork: string | null;
@@ -16,6 +20,7 @@ export interface WorkSelectorProps {
 }
 
 const WorkSelectorComponent = ({
+  mode = "solo",
   works,
   currentSongWorkId,
   selectedWork,
@@ -105,7 +110,7 @@ const WorkSelectorComponent = ({
           ? "text-red-600"
           : "text-[var(--color-text-primary)]"
         : isSelected
-        ? "work-card-title--active"
+        ? styles.workCardTitleActive
         : "text-[var(--color-text-primary)]";
 
       return (
@@ -113,6 +118,9 @@ const WorkSelectorComponent = ({
           key={work.id}
           className={wrapperClassName}
           onClick={() => handleCardClick(work.id)}
+          data-testid="work-card-item"
+          data-work-id={work.id}
+          data-work-index={index}
           style={{
             animationDelay: `${index * 0.1}s`,
           }}
@@ -131,36 +139,33 @@ const WorkSelectorComponent = ({
 
   return (
     <>
-      <div className="relative w-full work-selector">
+      <div className={cn("relative w-full", styles.workSelector)} data-testid="work-selector">
         <div className="space-y-3 sm:space-y-4 md:space-y-6">
           {/* Grille de cartes responsive avec tailles uniformes */}
-          <div
-            className={`uniform-card-grid work-selector-grid${
-              works.length <= 3 ? " uniform-card-grid--stacked" : ""
-            }${works.length === 4 ? " uniform-card-grid--four" : ""}${
-              works.length === 5 ? " uniform-card-grid--five" : ""
-            }${works.length === 6 ? " uniform-card-grid--six" : ""
-            }${works.length === 7 ? " uniform-card-grid--seven" : ""
-            }${works.length === 8 ? " uniform-card-grid--eight" : ""
-            }`}
-          >
+          <WorkGrid count={works.length} mode={mode}>
             {workCards}
-          </div>
+          </WorkGrid>
 
           {/* Zone d'actions reservee (valider ou resultat) */}
-          <div ref={validateButtonRef} className="work-selector-actions">
+          <div ref={validateButtonRef} className={cn("work-selector-actions", styles.workSelectorActions)}>
             <div
-              className={`work-selector-actions-layer ${
-                isAnswerRevealed ? "work-selector-actions-layer--visible" : "work-selector-actions-layer--hidden"
-              }`}
+              className={cn(
+                styles.workSelectorActionsLayer,
+                isAnswerRevealed
+                  ? styles.workSelectorActionsLayerVisible
+                  : styles.workSelectorActionsLayerHidden
+              )}
               aria-hidden={!isAnswerRevealed}
             >
               {footer}
             </div>
             <div
-              className={`work-selector-actions-layer ${
-                !isAnswerRevealed ? "work-selector-actions-layer--visible" : "work-selector-actions-layer--hidden"
-              }`}
+              className={cn(
+                styles.workSelectorActionsLayer,
+                !isAnswerRevealed
+                  ? styles.workSelectorActionsLayerVisible
+                  : styles.workSelectorActionsLayerHidden
+              )}
               aria-hidden={isAnswerRevealed}
             >
               {canValidate ? (
@@ -177,7 +182,12 @@ const WorkSelectorComponent = ({
 
       {/* Boutons fixes - au-dessus de la barre de lecteur */}
       {canValidate && !isCurrentSongAnswered && !isValidateButtonVisible && (
-        <div className="fixed player-action-float left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap">
+        <div
+          className={cn(
+            "fixed left-1/2 transform -translate-x-1/2 z-50 whitespace-nowrap",
+            styles.playerActionFloat
+          )}
+        >
           <GameActionButton
             label={validateLabel}
             onClick={onValidateAnswer}

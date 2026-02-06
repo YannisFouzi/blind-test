@@ -7,13 +7,17 @@ import {
   type MouseEvent,
 } from "react";
 import type { Song, Work } from "@/types";
+import { cn } from "@/lib/utils";
 import { GameActionButton } from "./GameActionButton";
 import { WorkCardShell } from "./WorkCardShell";
+import { WorkGrid } from "./WorkGrid";
+import styles from "./GameUi.module.css";
 
 type SlotState = "none" | "pending" | "correct" | "wrong";
 type SlotIndex = 0 | 1;
 
 export interface DoubleWorkSelectorProps {
+  mode?: "solo" | "multi";
   works: Work[];
   roundSongs: Song[];
   selectedWorkSlot1: string | null;
@@ -285,7 +289,7 @@ const SelectionDots = ({
   if (!show) return null;
 
   return (
-    <div className="work-card-header-dots flex items-center justify-center gap-1">
+    <div className={cn(styles.workCardHeaderDots, "flex items-center justify-center gap-1")}>
       <span
         className={`w-3.5 h-3.5 rounded-full border border-[#1B1B1B] shadow-[1px_1px_0_#1B1B1B] ${
           SLOT_CLASS_BY_STATE[leftState]
@@ -301,6 +305,7 @@ const SelectionDots = ({
 };
 
 const DoubleWorkSelectorComponent = ({
+  mode = "solo",
   works,
   roundSongs,
   selectedWorkSlot1,
@@ -382,23 +387,17 @@ const DoubleWorkSelectorComponent = ({
   );
 
   return (
-    <div className="relative w-full work-selector">
+    <div className={cn("relative w-full", styles.workSelector)} data-testid="double-work-selector">
       <div className="space-y-3 sm:space-y-4 md:space-y-6">
-        <div
-          className={`uniform-card-grid work-selector-grid${
-            works.length <= 3 ? " uniform-card-grid--stacked" : ""
-          }${works.length === 4 ? " uniform-card-grid--four" : ""}${
-            works.length === 5 ? " uniform-card-grid--five" : ""
-          }${works.length === 6 ? " uniform-card-grid--six" : ""
-          }${works.length === 7 ? " uniform-card-grid--seven" : ""
-          }${works.length === 8 ? " uniform-card-grid--eight" : ""
-          }`}
-        >
-          {workCardStates.map((state) => (
+        <WorkGrid count={works.length} mode={mode}>
+          {workCardStates.map((state, index) => (
             <div
               key={state.work.id}
               className="relative transition-all duration-200 ease-out cursor-pointer"
               onClick={() => handleCardClick(state.work.id)}
+              data-testid="work-card-item"
+              data-work-id={state.work.id}
+              data-work-index={index}
             >
               <WorkCardShell
                 title={state.work.title}
@@ -408,7 +407,7 @@ const DoubleWorkSelectorComponent = ({
                 backgroundStyle={state.backgroundStyle}
                 titleClassName={
                   state.isSelected && canInteract
-                    ? "work-card-title--active"
+                    ? styles.workCardTitleActive
                     : "text-[var(--color-text-primary)]"
                 }
                 header={
@@ -432,21 +431,27 @@ const DoubleWorkSelectorComponent = ({
               />
             </div>
           ))}
-        </div>
+        </WorkGrid>
 
-        <div className="work-selector-actions">
+        <div className={cn("work-selector-actions", styles.workSelectorActions)}>
           <div
-            className={`work-selector-actions-layer ${
-              !canInteract ? "work-selector-actions-layer--visible" : "work-selector-actions-layer--hidden"
-            }`}
+            className={cn(
+              styles.workSelectorActionsLayer,
+              !canInteract
+                ? styles.workSelectorActionsLayerVisible
+                : styles.workSelectorActionsLayerHidden
+            )}
             aria-hidden={canInteract}
           >
             {footer}
           </div>
           <div
-            className={`work-selector-actions-layer ${
-              canInteract ? "work-selector-actions-layer--visible" : "work-selector-actions-layer--hidden"
-            }`}
+            className={cn(
+              styles.workSelectorActionsLayer,
+              canInteract
+                ? styles.workSelectorActionsLayerVisible
+                : styles.workSelectorActionsLayerHidden
+            )}
             aria-hidden={!canInteract}
           >
             {canValidate ? (

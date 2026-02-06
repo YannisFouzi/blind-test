@@ -173,7 +173,7 @@ export const useSoloGame = ({
 
       setCurrentSong(firstSong);
       setLoading(false);
-    } catch (err) {
+    } catch {
       setError("Erreur lors du chargement du jeu");
       setLoading(false);
     }
@@ -606,7 +606,7 @@ export const useSoloGame = ({
     const result = shuffleWithSeed(pool, `${seed}-final`);
 
     return result;
-  }, [works, worksPerRound, currentSong, currentSongIndex, universeId]);
+  }, [works, worksPerRound, currentSong, currentSongIndex]);
 
   return {
     gameSession,

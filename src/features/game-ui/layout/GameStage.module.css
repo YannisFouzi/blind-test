@@ -1,0 +1,15 @@
+.particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: rgba(27, 27, 27, 0.15);
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .particle {
+    animation: none !important;
+  }
+}

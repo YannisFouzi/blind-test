@@ -2,6 +2,8 @@
 
 import { Check, Home as HomeIcon, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { cn } from "@/lib/utils";
+import chromeStyles from "@/styles/gameChrome.module.css";
 
 export interface SoloGameHeaderProps {
   score: {
@@ -30,10 +32,10 @@ export const SoloGameHeader = ({
           {onGoHome && (
             <button
               onClick={onGoHome}
-              className="magic-button home-button px-4 py-2 flex items-center gap-2 text-sm"
+              className={cn("magic-button flex items-center text-sm", chromeStyles.homeButton)}
             >
               <HomeIcon className="w-4 h-4" />
-              <span className="home-button-label">Accueil</span>
+              <span className={chromeStyles.homeButtonLabel}>Accueil</span>
             </button>
           )}
 

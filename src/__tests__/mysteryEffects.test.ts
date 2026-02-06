@@ -87,7 +87,11 @@ describe("calculateGameRounds", () => {
 
   it("is deterministic for the same RNG", () => {
     const songs = makeSongs(12);
-    const config = { enabled: true, frequency: 30, effects: ["double", "reverse"] } as const;
+    const config: Parameters<typeof calculateGameRounds>[1] = {
+      enabled: true,
+      frequency: 30,
+      effects: ["double", "reverse"],
+    };
 
     const roundsA = calculateGameRounds(songs, config, { rng: makeSeededRng(98765) });
     const roundsB = calculateGameRounds(songs, config, { rng: makeSeededRng(98765) });

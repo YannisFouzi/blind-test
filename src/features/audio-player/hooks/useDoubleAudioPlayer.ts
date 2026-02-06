@@ -241,8 +241,6 @@ export const useDoubleAudioPlayer = (
       const secondary = secondaryRef.current;
       if (!primary || !secondary) return;
 
-      const currentPrimarySrc = primary.currentSrc || primary.src;
-      const currentSecondarySrc = secondary.currentSrc || secondary.src;
       const normalizedPrimary = primaryUrl || "";
       const normalizedSecondary = secondaryUrl || "";
       const lastLoaded = lastLoadedRef.current;

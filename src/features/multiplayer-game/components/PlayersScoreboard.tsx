@@ -328,6 +328,7 @@ const PlayersScoreboardComponent = ({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      data-testid="players-scoreboard"
       className={cn(
         "w-full max-w-xs bg-white rounded-2xl border-[3px] border-[#1B1B1B] overflow-hidden shadow-[4px_4px_0_#1B1B1B]",
         compact && "max-w-[min(92vw,34rem)]"

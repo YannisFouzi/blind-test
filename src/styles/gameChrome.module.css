@@ -1,0 +1,58 @@
+.homeButtonLabel {
+  display: inline;
+  white-space: nowrap;
+}
+
+.homeButton {
+  padding: clamp(0.24rem, 0.4vw + 0.2rem, 0.44rem) clamp(0.5rem, 1.2vw + 0.4rem, 0.95rem) !important;
+  gap: clamp(0.3rem, 0.5vw, 0.4rem) !important;
+  font-size: clamp(0.7rem, 1.2vw + 0.4rem, 0.92rem) !important;
+  min-height: clamp(2.1rem, 3vw + 1.5rem, 2.95rem);
+  line-height: 1;
+}
+
+.homeButton :global(svg) {
+  width: clamp(0.88rem, 1vw + 0.5rem, 1.12rem);
+  height: clamp(0.88rem, 1vw + 0.5rem, 1.12rem);
+}
+
+.homeButtonAnchor {
+  top: clamp(0.35rem, 0.8vw, 0.9rem);
+  left: clamp(0.35rem, 0.8vw, 0.9rem);
+}
+
+.homeButtonAnchorStacked {
+  gap: clamp(0.25rem, min(0.8vw, 0.8vh), 0.6rem);
+}
+
+@media (max-width: 1023px) {
+  .homeButtonAnchorInlineMobile {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+}
+
+.homeSafeArea {
+  --button-height: clamp(2.1rem, 3vw + 1.5rem, 2.95rem);
+  --button-gap: clamp(0.5rem, 0.8vw + 0.3rem, 0.75rem);
+  --anchor-offset: clamp(0.35rem, 0.8vw, 0.9rem);
+  --shadow-offset: clamp(3px, 0.6vw + 2px, 5px);
+
+  padding-top: max(1rem, calc(var(--anchor-offset) + var(--button-height) + var(--button-gap) + var(--shadow-offset))) !important;
+}
+
+.homeSafeAreaStacked {
+  padding-top: max(1rem, calc(var(--anchor-offset) + (var(--button-height) * 2) + (var(--button-gap) * 2) + var(--shadow-offset))) !important;
+}
+
+.homeSafeAreaStackedMobile {
+  padding-top: max(1rem, calc(var(--anchor-offset) + (var(--button-height) * 2) + (var(--button-gap) * 2) + var(--shadow-offset))) !important;
+}
+
+.homeSafeAreaInlineMobile {
+  padding-top: max(1rem, calc(var(--anchor-offset) + var(--button-height) + var(--button-gap) + var(--shadow-offset))) !important;
+}
+
+.floatingScoreboard {
+  top: calc(clamp(0.35rem, 0.8vw, 0.9rem) + clamp(2.1rem, 3vw + 1.5rem, 2.95rem) + 0.6rem);
+}

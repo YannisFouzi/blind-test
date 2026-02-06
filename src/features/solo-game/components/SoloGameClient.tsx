@@ -2,50 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, type MouseEvent } from "react";
-import {
-  Check,
-  Home as HomeIcon,
-  Pause,
-  Play as PlayIcon,
-  SkipBack,
-  SkipForward,
-  Volume2,
-  VolumeX,
-  X,
-} from "lucide-react";
+import { Home as HomeIcon } from "lucide-react";
 
 import type { MysteryEffectsConfig } from "@/types";
 import { useAudioPlayer, useDoubleAudioPlayer } from "@/features/audio-player";
-import { DoubleWorkSelector, WorkSelector } from "@/features/game-ui/components";
+import { DoubleWorkSelector, PlayerDome, WorkSelector } from "@/features/game-ui/components";
 import { PointsCelebration } from "@/features/game-ui/components/PointsCelebration";
+import { GameLayout, GameStage } from "@/features/game-ui/layout";
 import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { cn } from "@/lib/utils";
-import { pressable } from "@/styles/ui";
+import chromeStyles from "@/styles/gameChrome.module.css";
 import { useSoloGame } from "../hooks/useSoloGame";
-
-const PARTICLE_POSITIONS = [
-  { top: 15, left: 20 },
-  { top: 35, left: 75 },
-  { top: 55, left: 25 },
-  { top: 70, left: 85 },
-  { top: 85, left: 15 },
-  { top: 20, left: 60 },
-  { top: 45, left: 90 },
-  { top: 65, left: 40 },
-  { top: 90, left: 70 },
-  { top: 25, left: 35 },
-  { top: 50, left: 80 },
-  { top: 75, left: 10 },
-  { top: 30, left: 55 },
-  { top: 60, left: 30 },
-  { top: 80, left: 65 },
-  { top: 40, left: 45 },
-  { top: 12, left: 85 },
-  { top: 67, left: 12 },
-  { top: 82, left: 92 },
-  { top: 38, left: 68 },
-] as const;
 
 const clampPercentage = (value: number) => Math.max(0, Math.min(100, value));
 
@@ -137,13 +105,13 @@ export const SoloGameClient = ({
     handleAnswer,
     validateAnswer,
     nextSong,
-      prevSong,
-      displayedRoundIndex,
-      displayedRoundCount,
-      score,
-      isReverseMode,
-      isDoubleMode,
-      currentRoundSongs = [],
+    prevSong,
+    displayedRoundIndex,
+    displayedRoundCount,
+    score,
+    isReverseMode,
+    isDoubleMode,
+    currentRoundSongs = [],
     doubleSelectedWorkSlot1,
     doubleSelectedWorkSlot2,
     handleDoubleSelection,
@@ -201,7 +169,9 @@ export const SoloGameClient = ({
                     key={song.id}
                     className="text-[0.65rem] sm:text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide leading-tight"
                   >
-                    {song.artist} {" — "} <span className="text-[#B45309]">{song.title}</span>
+                    {song.artist}
+                    {" \u2014 "}
+                    <span className="text-[#B45309]">{song.title}</span>
                     {work && (
                       <span className="ml-2 text-[0.65rem] sm:text-xs text-[var(--color-text-secondary)]">
                         ({work.title})
@@ -212,7 +182,9 @@ export const SoloGameClient = ({
               })
             : currentSong && (
                 <p className="text-[0.7rem] sm:text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide">
-                  {currentSong.artist} {" — "} <span className="text-[#B45309]">{currentSong.title}</span>
+                  {currentSong.artist}
+                  {" \u2014 "}
+                  <span className="text-[#B45309]">{currentSong.title}</span>
                 </p>
               )}
         </div>
@@ -391,6 +363,86 @@ export const SoloGameClient = ({
     [effectiveDuration, effectiveCurrentTime]
   );
 
+  const centerContent = (
+    <div className="w-full flex justify-center">
+      {loading ? null : isDoubleMode && currentRoundSongs.length >= 1 ? (
+        <DoubleWorkSelector
+          mode="solo"
+          works={works}
+          roundSongs={currentRoundSongs}
+          selectedWorkSlot1={doubleSelectedWorkSlot1}
+          selectedWorkSlot2={doubleSelectedWorkSlot2}
+          showAnswer={showAnswer}
+          canValidate={
+            !!doubleSelectedWorkSlot1 &&
+            !!doubleSelectedWorkSlot2 &&
+            !showAnswer &&
+            gameState === "playing"
+          }
+          isCurrentSongAnswered={isCurrentSongAnswered}
+          onSelectSlotWork={handleDoubleWorkSelection}
+          onValidateAnswer={handleValidateAnswer}
+          onClearWorkSelection={handleClearWorkSelection}
+          footer={answerFooter}
+        />
+      ) : (
+        <WorkSelector
+          mode="solo"
+          works={works}
+          currentSongWorkId={currentSong?.workId}
+          selectedWork={selectedWork}
+          showAnswer={showAnswer}
+          canValidate={!!selectedWork && !showAnswer && gameState === "playing"}
+          isCurrentSongAnswered={isCurrentSongAnswered}
+          onWorkSelection={handleWorkSelection}
+          onValidateAnswer={handleValidateAnswer}
+          footer={answerFooter}
+        />
+      )}
+    </div>
+  );
+
+  const topButtons = (
+    <ConfirmActionButton
+      buttonLabel="Accueil"
+      title="Retour a l'accueil ?"
+      message="Vous allez quitter la partie et retourner a l'accueil."
+      confirmText="Oui, retour"
+      cancelText="Annuler"
+      onConfirm={handleGoHome}
+      variant="warning"
+      className={cn("magic-button flex items-center", chromeStyles.homeButton)}
+    >
+      <HomeIcon className="text-base sm:text-lg" />
+      <span className={chromeStyles.homeButtonLabel}>Accueil</span>
+    </ConfirmActionButton>
+  );
+
+  const playerDome = (
+    <PlayerDome
+      currentTimeLabel={formatTime(effectiveCurrentTime)}
+      durationLabel={formatTime(effectiveDuration)}
+      isPlaying={effectiveIsPlaying}
+      playbackUnavailable={playbackUnavailable}
+      onTogglePlay={handlePlayToggle}
+      canGoPrev={canGoPrev}
+      onPrev={handlePrevSong}
+      canGoNext={canGoNext}
+      onNext={handleNextSong}
+      isReverseMode={isReverseMode}
+      isDoubleMode={isDoubleMode}
+      progress={progress}
+      onTimelineClick={handleTimelineClick}
+      roundLabel={`Manche ${displayedRoundIndex} / ${displayedRoundCount}`}
+      correctCount={score.correct}
+      incorrectCount={score.incorrect}
+      isMuted={effectiveIsMuted}
+      onToggleMute={isDoubleRound ? doubleToggleMute : audioToggleMute}
+      volume={effectiveVolume}
+      onVolumeBarClick={handleVolumeBarClick}
+    />
+  );
+
   if (error) {
     return (
       <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center p-6">
@@ -444,280 +496,19 @@ export const SoloGameClient = ({
     );
   }
 
+
   return (
-    <div className="min-h-screen bg-[var(--color-surface-base)] relative overflow-hidden">
+    <GameStage>
       <PointsCelebration points={lastGain?.points ?? null} triggerKey={lastGain?.key} />
 
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {PARTICLE_POSITIONS.map((position) => (
-          <div
-            key={`${position.top}-${position.left}`}
-            className="particle"
-            style={{
-              top: `${position.top}%`,
-              left: `${position.left}%`,
-            }}
-          />
-        ))}
-      </div>
+      <GameLayout
+        mode="solo"
+        cardCount={works.length}
+        topButtons={topButtons}
+        center={centerContent}
+      />
 
-      <div className="absolute inset-0 bg-gradient-to-r from-yellow-200/40 via-transparent to-blue-200/40 pointer-events-none" />
-
-      <div className="fixed home-button-anchor z-50">
-        <ConfirmActionButton
-          buttonLabel="Accueil"
-          title="Retour a l'accueil ?"
-          message="Vous allez quitter la partie et retourner a l'accueil."
-          confirmText="Oui, retour"
-          cancelText="Annuler"
-          onConfirm={handleGoHome}
-          variant="warning"
-          className="magic-button home-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
-        >
-          <HomeIcon className="text-base sm:text-lg" />
-          <span className="home-button-label">Accueil</span>
-        </ConfirmActionButton>
-      </div>
-
-      <div className="container mx-auto px-4 py-6 sm:py-8 home-safe-area player-safe-area relative z-10">
-        <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 min-h-[calc(100svh-180px)] sm:min-h-[calc(100svh-240px)] md:min-h-[calc(100svh-280px)]">
-          <div className="w-full flex justify-center">
-            {loading ? null : isDoubleMode && currentRoundSongs.length >= 1 ? (
-              <DoubleWorkSelector
-                works={works}
-                roundSongs={currentRoundSongs}
-                selectedWorkSlot1={doubleSelectedWorkSlot1}
-                selectedWorkSlot2={doubleSelectedWorkSlot2}
-                showAnswer={showAnswer}
-                canValidate={
-                  !!doubleSelectedWorkSlot1 &&
-                  !!doubleSelectedWorkSlot2 &&
-                  !showAnswer &&
-                  gameState === "playing"
-                }
-                isCurrentSongAnswered={isCurrentSongAnswered}
-                onSelectSlotWork={handleDoubleWorkSelection}
-                onValidateAnswer={handleValidateAnswer}
-                onClearWorkSelection={handleClearWorkSelection}
-                footer={answerFooter}
-              />
-            ) : (
-              <WorkSelector
-                works={works}
-                currentSongWorkId={currentSong?.workId}
-                selectedWork={selectedWork}
-                showAnswer={showAnswer}
-                canValidate={!!selectedWork && !showAnswer && gameState === "playing"}
-                isCurrentSongAnswered={isCurrentSongAnswered}
-                onWorkSelection={handleWorkSelection}
-                onValidateAnswer={handleValidateAnswer}
-                footer={answerFooter}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="fixed top-0 left-0 w-full h-full pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#FDE68A]/40 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#BFDBFE]/40 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#FBCFE8]/40 rounded-full blur-3xl" />
-      </div>
-
-      {!loading && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
-          <div className="player-dome mx-auto w-[calc(100%-1.5rem)] sm:w-[calc(100%-3rem)] max-w-6xl bg-white border-[3px] border-b-0 border-[#1B1B1B] shadow-[0_-6px_0_#1B1B1B] pointer-events-auto overflow-hidden">
-            <div className="px-3 py-2 sm:px-6 sm:py-4">
-              <div className="flex flex-col items-center gap-1.5 sm:gap-3">
-                {/* MOBILE: Ligne fusionnée durées + boutons */}
-                <div className="player-controls-compact w-full max-w-4xl">
-                  <div className="flex items-center justify-between w-full text-[var(--color-text-primary)] text-[0.7rem] font-semibold mb-1.5">
-                    <span className="min-w-[2rem]">{formatTime(effectiveCurrentTime)}</span>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handlePrevSong}
-                        disabled={!canGoPrev}
-                        className={cn(
-                          "magic-button player-compact-button p-1 rounded-full bg-white hover:bg-[var(--color-surface-overlay)]",
-                          !canGoPrev && "opacity-60"
-                        )}
-                      >
-                        <SkipBack className="w-3 h-3" />
-                      </button>
-
-                      <button
-                        onClick={handlePlayToggle}
-                        disabled={playbackUnavailable}
-                        className={cn(
-                          "magic-button player-compact-button rounded-full p-2",
-                          playbackUnavailable && "opacity-60 cursor-not-allowed"
-                        )}
-                      >
-                        {effectiveIsPlaying ? (
-                          <Pause className="w-3.5 h-3.5 text-[#1B1B1B]" />
-                        ) : (
-                          <PlayIcon className="w-3.5 h-3.5 text-[#1B1B1B]" />
-                        )}
-                      </button>
-
-                      <button
-                        onClick={handleNextSong}
-                        disabled={!canGoNext}
-                        className={cn(
-                          "magic-button player-compact-button p-1 rounded-full bg-white hover:bg-[var(--color-surface-overlay)]",
-                          !canGoNext && "opacity-60"
-                        )}
-                      >
-                        <SkipForward className="w-3 h-3" />
-                      </button>
-
-                    </div>
-
-                    <span className="min-w-[2rem] text-right">{formatTime(effectiveDuration)}</span>
-                  </div>
-                </div>
-
-                {/* STANDARD: Layout original avec boutons séparés */}
-                <div className="player-controls-standard items-center justify-center gap-4">
-                  <button
-                    onClick={handlePrevSong}
-                    disabled={!canGoPrev}
-                    className={cn(
-                      "magic-button p-2 rounded-full bg-white hover:bg-[var(--color-surface-overlay)]",
-                      !canGoPrev && "opacity-60"
-                    )}
-                  >
-                    <SkipBack className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    onClick={handlePlayToggle}
-                    disabled={playbackUnavailable}
-                    className={cn(
-                      "magic-button rounded-full p-4",
-                      playbackUnavailable && "opacity-60 cursor-not-allowed"
-                    )}
-                  >
-                    {effectiveIsPlaying ? (
-                      <Pause className="w-5 h-5 text-[#1B1B1B]" />
-                    ) : (
-                      <PlayIcon className="w-5 h-5 text-[#1B1B1B]" />
-                    )}
-                  </button>
-
-                  <button
-                    onClick={handleNextSong}
-                    disabled={!canGoNext}
-                    className={cn(
-                      "magic-button p-2 rounded-full bg-white hover:bg-[var(--color-surface-overlay)]",
-                      !canGoNext && "opacity-60"
-                    )}
-                  >
-                    <SkipForward className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="w-full max-w-4xl flex flex-col items-center gap-1.5 sm:gap-3">
-                  {/* Durées (standard uniquement) */}
-                  <div className="player-durations-standard items-center justify-between w-full text-[var(--color-text-primary)] text-xs font-semibold">
-                    <span>{formatTime(effectiveCurrentTime)}</span>
-                    <div className="flex items-center gap-2">
-                      {isReverseMode && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[#f97316] px-3 py-1 text-[0.65rem] font-extrabold uppercase tracking-wide leading-none text-[#1B1B1B] border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] whitespace-nowrap">
-                          <span className="inline-block rotate-180">
-                            <PlayIcon className="w-3 h-3" />
-                          </span>
-                          <span>Reverse</span>
-                        </span>
-                      )}
-                      {isDoubleMode && !isReverseMode && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-3 py-1 text-[0.65rem] font-extrabold uppercase tracking-wide leading-none text-[#1B1B1B] border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] whitespace-nowrap">
-                          <span>x2</span>
-                          <span>Double</span>
-                        </span>
-                      )}
-                    </div>
-                    <span>{formatTime(effectiveDuration)}</span>
-                  </div>
-
-                  <div
-                    className="w-full magic-progress-bar h-2 sm:h-3 cursor-pointer"
-                    onClick={handleTimelineClick}
-                  >
-                    <div className="magic-progress-fill h-full" style={{ width: `${progress}%` }} />
-                  </div>
-
-                  <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center text-xs sm:text-sm gap-2 sm:gap-3 pt-0.5 sm:pt-1">
-                      <span className="text-[#B45309] font-semibold">
-                        Manche {displayedRoundIndex} / {displayedRoundCount}
-                      </span>
-
-                    <div className="flex items-center justify-center gap-2 sm:gap-3 text-xs">
-                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#86efac] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">
-                        <Check className="w-3 h-3" />
-                        {score.correct}
-                      </span>
-                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#fca5a5] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">
-                        <X className="w-3 h-3" />
-                        {score.incorrect}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2 text-[var(--color-text-primary)] text-xs">
-                      <div className="player-extra-compact items-center gap-2">
-                        {isReverseMode && (
-                          <span className="player-reverse-compact px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#f97316] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1 text-xs whitespace-nowrap">
-                            <span className="inline-block rotate-180">
-                              <PlayIcon className="w-3 h-3" />
-                            </span>
-                            <span>Reverse</span>
-                          </span>
-                        )}
-                        {isDoubleMode && !isReverseMode && (
-                          <span className="player-x2-compact px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#22c55e] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1 text-xs whitespace-nowrap">
-                            <span>x2</span>
-                            <span>Double</span>
-                          </span>
-                        )}
-                      </div>
-                      <div className="player-extra-desktop items-center justify-end gap-3 text-[var(--color-text-primary)] text-xs">
-                        <button
-                          onClick={isDoubleRound ? doubleToggleMute : audioToggleMute}
-                          className={cn(
-                            "p-2 rounded-full bg-white hover:bg-[var(--color-surface-overlay)]",
-                            pressable
-                          )}
-                        >
-                          {effectiveIsMuted ? (
-                            <VolumeX className="w-4 h-4" />
-                          ) : (
-                            <Volume2 className="w-4 h-4" />
-                          )}
-                        </button>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-28 magic-progress-bar h-2 cursor-pointer"
-                            onClick={handleVolumeBarClick}
-                          >
-                            <div
-                              className="magic-progress-fill h-full"
-                              style={{ width: `${effectiveVolume}%` }}
-                            />
-                          </div>
-                          <span className="text-[var(--color-text-primary)] text-xs w-10 text-center">
-                            {Math.round(effectiveVolume)}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {!loading && playerDome}
 
       {!loading && effectiveError && (
         <div className="mt-4 text-center text-sm text-red-600">{effectiveError}</div>
@@ -728,6 +519,7 @@ export const SoloGameClient = ({
           Aucun extrait audio n&apos;est disponible pour ce morceau.
         </div>
       )}
-    </div>
+    </GameStage>
   );
 };
+

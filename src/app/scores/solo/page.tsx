@@ -6,6 +6,8 @@ import { Home as HomeIcon } from "lucide-react";
 import { SoloScoreDisplay } from "@/features/scores/components/SoloScoreDisplay";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { cn } from "@/lib/utils";
+import chromeStyles from "@/styles/gameChrome.module.css";
 
 function SoloScoresContent() {
   const router = useRouter();
@@ -46,17 +48,22 @@ function SoloScoresContent() {
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#BFDBFE]/40 rounded-full blur-3xl" />
       </div>
 
-      <div className="fixed home-button-anchor z-50">
+      <div className={cn("fixed z-50", chromeStyles.homeButtonAnchor)}>
         <button
           onClick={handleGoHome}
-          className="magic-button home-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
+          className={cn("magic-button flex items-center", chromeStyles.homeButton)}
         >
           <HomeIcon className="text-base sm:text-lg" />
-          <span className="home-button-label">Accueil</span>
+          <span className={chromeStyles.homeButtonLabel}>Accueil</span>
         </button>
       </div>
 
-      <div className="container mx-auto px-4 py-8 pb-24 home-safe-area relative z-10">
+      <div
+        className={cn(
+          "container mx-auto px-4 py-8 pb-24 relative z-10",
+          chromeStyles.homeSafeArea
+        )}
+      >
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-extrabold text-[var(--color-text-primary)] mb-2">

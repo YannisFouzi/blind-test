@@ -1,4 +1,5 @@
 import { memo, type CSSProperties, type ReactNode } from "react";
+import styles from "./GameUi.module.css";
 
 interface WorkCardShellProps {
   title: string;
@@ -24,23 +25,24 @@ export const WorkCardShell = memo(
   }: WorkCardShellProps) => {
     const isStacked = layout === "stacked";
     const cardClassName = [
-      "relative work-card h-full flex flex-col justify-center items-center",
-      isStacked ? "work-card--stacked" : "work-card--default",
-      isInteractive ? "work-card--interactive" : "",
-      isInteractive && isActive ? "work-card--active" : "",
+      "relative h-full flex flex-col justify-center items-center",
+      styles.workCard,
+      isStacked ? styles.workCardStacked : styles.workCardDefault,
+      isInteractive ? styles.workCardInteractive : "",
+      isInteractive && isActive ? styles.workCardActive : "",
     ]
       .filter(Boolean)
       .join(" ");
 
     const contentClassName = [
-      "work-card-content relative z-10 text-center w-full h-full",
-      isStacked ? "work-card-content--stacked" : "work-card-content--default",
+      styles.workCardContent,
+      isStacked ? styles.workCardContentStacked : styles.workCardContentDefault,
     ]
       .filter(Boolean)
       .join(" ");
 
     return (
-      <div className="relative uniform-card">
+      <div className={`relative ${styles.uniformCard}`}>
         <div
           className={cardClassName}
           style={backgroundStyle}
@@ -48,22 +50,22 @@ export const WorkCardShell = memo(
           <div className={contentClassName}>
             {isStacked ? (
               <>
-                <div className="work-card-header">{header}</div>
+                <div className={styles.workCardHeader}>{header}</div>
                 <h3
-                  className={`uniform-card-title font-bold text-base transition-all duration-300 px-2 ${
+                  className={`${styles.uniformCardTitle} font-bold text-base transition-all duration-300 px-2 ${
                     titleClassName ?? "text-[var(--color-text-primary)]"
                   }`}
                   title={title}
                 >
                   {title}
                 </h3>
-                <div className="work-card-footer">{footer}</div>
+                <div className={styles.workCardFooter}>{footer}</div>
               </>
             ) : (
               <>
                 {header}
                 <h3
-                  className={`uniform-card-title font-bold text-base transition-all duration-300 px-2 ${
+                  className={`${styles.uniformCardTitle} font-bold text-base transition-all duration-300 px-2 ${
                     titleClassName ?? "text-[var(--color-text-primary)]"
                   }`}
                   title={title}

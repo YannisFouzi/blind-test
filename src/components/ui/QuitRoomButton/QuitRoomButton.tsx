@@ -2,6 +2,8 @@
 
 import { LogOut } from "lucide-react";
 import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
+import { cn } from "@/lib/utils";
+import chromeStyles from "@/styles/gameChrome.module.css";
 
 export interface QuitRoomButtonProps {
   onConfirm: () => void;
@@ -14,7 +16,7 @@ export interface QuitRoomButtonProps {
 const DEFAULT_TITLE = "Quitter la salle ?";
 const DEFAULT_MESSAGE = "Vous allez quitter la room et retourner a l'accueil.";
 const BUTTON_CLASS =
-  "magic-button home-button px-3 py-2 sm:px-6 sm:py-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base bg-[#fca5a5] hover:bg-[#f87171]";
+  "magic-button flex items-center bg-[#fca5a5] hover:bg-[#f87171]";
 
 export const QuitRoomButton = ({
   onConfirm,
@@ -31,7 +33,7 @@ export const QuitRoomButton = ({
       confirmText="Quitter"
       cancelText="Annuler"
       onConfirm={onConfirm}
-      className={BUTTON_CLASS}
+      className={cn(BUTTON_CLASS, chromeStyles.homeButton)}
     >
       <LogOut className="text-base sm:text-lg" />
       <span className={showLabelOnMobile ? "inline" : "hidden sm:inline"}>Quitter</span>
