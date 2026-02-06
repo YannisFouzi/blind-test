@@ -30,7 +30,7 @@ type GameStageProps = {
 
 const GameStageComponent = ({ children }: GameStageProps) => {
   return (
-    <div className="min-h-screen bg-[var(--color-surface-base)] relative overflow-hidden">
+    <div className="h-screen bg-[var(--color-surface-base)] relative overflow-hidden overscroll-none">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {PARTICLE_POSITIONS.map((position) => (
           <div

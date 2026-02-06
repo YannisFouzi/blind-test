@@ -1,4 +1,4 @@
-import { Router, type Response } from "express";
+﻿import { Router, type Response } from "express";
 import { z } from "zod";
 import { addImportJob, getJobById, getQueueStatus } from "../services/queue.js";
 
@@ -22,32 +22,31 @@ const sendServerError = (res: Response, context: string, error: unknown) => {
 
 /**
  * POST /api/import-playlist
- * Ajoute une playlist à la queue d'import
- * Retourne immédiatement avec le jobId
+ * Ajoute une playlist Ã  la queue d'import
+ * Retourne immÃ©diatement avec le jobId
  */
 router.post("/", async (req, res) => {
-  console.log("[Import] Requête POST reçue");
-  console.log("[Import] Body:", req.body);
+  console.log("[Import] RequÃªte POST reÃ§ue");
 
   const parsed = requestSchema.safeParse(req.body);
 
   if (!parsed.success) {
-    console.error("[Import] Validation échouée:", parsed.error);
+    console.error("[Import] Validation Ã©chouÃ©e:", parsed.error);
     return res.status(400).json({
       success: false,
-      error: "Requête invalide.",
+      error: "RequÃªte invalide.",
     });
   }
 
   try {
     const job = await addImportJob(parsed.data);
     
-    console.log(`[Import] Job ajouté à la queue: ${job.id}`);
+    console.log(`[Import] Job ajoutÃ© Ã  la queue: ${job.id}`);
 
     return res.status(202).json({
       success: true,
       jobId: job.id,
-      message: "Import ajouté à la queue",
+      message: "Import ajoutÃ© Ã  la queue",
     });
   } catch (error: unknown) {
     return sendServerError(res, "Erreur ajout queue", error);
@@ -56,7 +55,7 @@ router.post("/", async (req, res) => {
 
 /**
  * GET /api/import-playlist/status/:jobId
- * Récupère le statut d'un job spécifique
+ * RÃ©cupÃ¨re le statut d'un job spÃ©cifique
  */
 router.get("/status/:jobId", async (req, res) => {
   const { jobId } = req.params;
@@ -82,7 +81,7 @@ router.get("/status/:jobId", async (req, res) => {
 
 /**
  * GET /api/import-playlist/queue
- * Récupère l'état complet de la queue
+ * RÃ©cupÃ¨re l'Ã©tat complet de la queue
  */
 router.get("/queue", async (_req, res) => {
   try {
@@ -96,4 +95,5 @@ router.get("/queue", async (_req, res) => {
     return sendServerError(res, "Erreur recuperation queue", error);
   }
 });
+
 

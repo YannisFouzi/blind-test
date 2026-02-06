@@ -297,6 +297,11 @@ NEXT_PUBLIC_INGESTION_TIMEOUT_MINUTES=5
 
 # PartyKit (multiplayer)
 NEXT_PUBLIC_PARTYKIT_HOST=blind-test-party.votre-user.partykit.dev
+PARTYKIT_LOBBY_TOKEN=token-interne-fort
+PARTYKIT_ALLOWED_ORIGINS=https://votre-domaine.fr,https://www.votre-domaine.fr
+PARTYKIT_LOBBY_REQUIRE_AUTH=true
+# Laisser a false sauf operation interne exceptionnelle
+PARTYKIT_LOBBY_ENABLE_DELETE=false
 ```
 
 ### Variables d'environnement Backend Ingestion (TrueNAS)
@@ -338,8 +343,11 @@ YT_DLP_PO_TOKEN=
 ```
 
 Notes:
-- `INGESTION_SERVICE_TOKEN` est transmis par le web. Si tu veux le verifier, ajoute un middleware cote ingestion.
+- `INGESTION_SERVICE_TOKEN` est transmis par le web et verifie par l'ingestion-service.
+- `INGESTION_REQUIRE_AUTH=false` peut desactiver l'auth en local uniquement (dev).
 - `NEXT_PUBLIC_PARTYKIT_HOST` est optionnel en local (par defaut 127.0.0.1:1999).
+- `PARTYKIT_LOBBY_TOKEN` protege les ecritures lobby (POST/DELETE).
+- `PARTYKIT_ALLOWED_ORIGINS` restreint CORS pour le lobby.
 
 ### Configuration Cloudflare R2
 

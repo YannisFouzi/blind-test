@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { auth } from "@/lib/firebase";
 import { pressable } from "@/styles/ui";
 
 type CookieStatusData = {
@@ -16,6 +17,7 @@ const UPLOAD_IN_PROGRESS_LABEL = "Upload...";
 const FILE_TYPE_ERROR = "Seuls les fichiers .txt sont acceptes";
 const GENERIC_UPLOAD_ERROR = "Erreur upload";
 const GENERIC_CHECK_ERROR = "Erreur de verification";
+const AUTH_REQUIRED_ERROR = "Connexion admin requise";
 const INITIAL_STATUS = "Verification...";
 const DROPZONE_IDLE_TEXT = "Glissez-deposez cookies.txt ici";
 const DROPZONE_ACTIVE_TEXT = "Deposez le fichier ici";
@@ -35,16 +37,35 @@ export const CookieStatus = () => {
     []
   );
 
+  const getAuthorizationHeader = useCallback(async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error(AUTH_REQUIRED_ERROR);
+    }
+    const token = await user.getIdToken();
+    return { Authorization: `Bearer ${token}` };
+  }, []);
+
   const checkStatus = useCallback(async () => {
     setChecking(true);
     try {
-      const response = await fetch("/api/admin/cookie-check");
-      setStatus(await response.json());
-    } catch {
-      setStatus({ valid: false, message: GENERIC_CHECK_ERROR });
+      const headers = await getAuthorizationHeader();
+      const response = await fetch("/api/admin/cookie-check", { headers });
+      const data = await response.json();
+      setStatus(
+        response.ok
+          ? data
+          : { valid: false, message: data.error || GENERIC_CHECK_ERROR }
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message === AUTH_REQUIRED_ERROR
+          ? AUTH_REQUIRED_ERROR
+          : GENERIC_CHECK_ERROR;
+      setStatus({ valid: false, message });
     }
     setChecking(false);
-  }, []);
+  }, [getAuthorizationHeader]);
 
   const uploadFile = useCallback(
     async (file: File) => {
@@ -57,10 +78,12 @@ export const CookieStatus = () => {
       try {
         const formData = new FormData();
         formData.append("cookies", file);
+        const headers = await getAuthorizationHeader();
 
         const response = await fetch("/api/admin/upload-cookies", {
           method: "POST",
           body: formData,
+          headers,
         });
 
         const result = await response.json();
@@ -69,12 +92,16 @@ export const CookieStatus = () => {
         } else {
           setStatus({ valid: false, message: result.error || GENERIC_UPLOAD_ERROR });
         }
-      } catch {
-        setStatus({ valid: false, message: GENERIC_UPLOAD_ERROR });
+      } catch (error) {
+        const message =
+          error instanceof Error && error.message === AUTH_REQUIRED_ERROR
+            ? AUTH_REQUIRED_ERROR
+            : GENERIC_UPLOAD_ERROR;
+        setStatus({ valid: false, message });
       }
       setUploading(false);
     },
-    [checkStatus]
+    [checkStatus, getAuthorizationHeader]
   );
 
   const handleUpload = useCallback(
@@ -205,4 +232,3 @@ export const CookieStatus = () => {
     </div>
   );
 };
-

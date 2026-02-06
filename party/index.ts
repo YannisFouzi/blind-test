@@ -479,7 +479,7 @@ export default class BlindTestRoom implements Party.Server {
       const lobbyUrl = `${this.room.env.PARTYKIT_HOST}/parties/lobby/main`;
       await fetch(lobbyUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...this.getLobbyAuthHeaders() },
         body: JSON.stringify({
           type: "room_deleted",
           roomId,
@@ -850,18 +850,15 @@ export default class BlindTestRoom implements Party.Server {
    * Handler: START - DÃ©marrage de la partie
    */
   private handleStart(msg: Extract<Message, { type: "start" }>, sender: Party.Connection) {
-    const { hostId } = msg;
-    const senderPlayer = this.getPlayerByConnectionId(sender.id);
-
-    // Validation: est-ce bien le host ?
-    if (hostId !== this.state.hostId) {
-      sender.send(
-        JSON.stringify({
-          type: "error",
-          message: "Only the host can start the game",
-        })
-      );
+    const senderPlayer = this.requireHostSender(sender, "start the game");
+    if (!senderPlayer) {
       return;
+    }
+
+    if (msg.hostId !== senderPlayer.id) {
+      console.warn(
+        `[${this.room.id}] START spoof attempt: claimedHostId=${msg.hostId}, senderPlayerId=${senderPlayer.id}, expectedHostId=${this.state.hostId}, conn=${sender.id}`
+      );
     }
 
     // Validation: Ã©tat de la room (doit Ãªtre "idle" ou "configured")
@@ -1000,7 +997,21 @@ export default class BlindTestRoom implements Party.Server {
    * Handler: ANSWER - Soumission d'une rÃ©ponse
    */
   private handleAnswer(msg: Extract<Message, { type: "answer" }>, sender: Party.Connection) {
-    const { playerId } = msg;
+    const senderPlayer = this.requireConnectedSender(sender, "submit answers");
+    if (!senderPlayer) {
+      return;
+    }
+
+    if (msg.playerId !== senderPlayer.id) {
+      console.warn(
+        `[${this.room.id}] ANSWER rejected: claimedPlayerId=${msg.playerId}, senderPlayerId=${senderPlayer.id}, conn=${sender.id}`
+      );
+      sender.send(JSON.stringify({ type: "error", message: "Player ID mismatch" }));
+      return;
+    }
+
+    const playerId = senderPlayer.id;
+    const player = senderPlayer;
 
     // Validation: le jeu doit être en mode "playing"
     if (this.state.state !== "playing") {
@@ -1012,30 +1023,6 @@ export default class BlindTestRoom implements Party.Server {
       );
       return;
     }
-
-    // VÃ©rifier que le joueur existe
-    const player = this.state.players.get(playerId);
-    if (!player) {
-      sender.send(
-        JSON.stringify({
-          type: "error",
-          message: "Player not found",
-        })
-      );
-      return;
-    }
-
-    // VÃ©rifier que le joueur est connectÃ©
-    if (!player.connected) {
-      sender.send(
-        JSON.stringify({
-          type: "error",
-          message: "Player not connected",
-        })
-      );
-      return;
-    }
-
     // ? NOUVEAU : Détecter le mode double
     const currentRound = this.getCurrentRound();
     if (currentRound?.type === "double") {
@@ -1172,7 +1159,7 @@ export default class BlindTestRoom implements Party.Server {
     player: Player,
     currentRound: GameRound
   ) {
-    const { playerId } = msg;
+    const playerId = player.id;
 
     // Vérifier que le message contient 2 réponses
     if (!msg.answers || msg.answers.length !== 2) {
@@ -1325,18 +1312,15 @@ export default class BlindTestRoom implements Party.Server {
    * Handler: NEXT - Passer au morceau suivant
    */
   private handleNext(msg: Extract<Message, { type: "next" }>, sender: Party.Connection) {
-    const { hostId } = msg;
-    const senderPlayer = this.getPlayerByConnectionId(sender.id);
-
-    // Validation: est-ce bien le host ?
-    if (hostId !== this.state.hostId) {
-      sender.send(
-        JSON.stringify({
-          type: "error",
-          message: "Only the host can go to next song",
-        })
-      );
+    const senderPlayer = this.requireHostSender(sender, "go to next song");
+    if (!senderPlayer) {
       return;
+    }
+
+    if (msg.hostId !== senderPlayer.id) {
+      console.warn(
+        `[${this.room.id}] NEXT spoof attempt: claimedHostId=${msg.hostId}, senderPlayerId=${senderPlayer.id}, expectedHostId=${this.state.hostId}, conn=${sender.id}`
+      );
     }
 
     // Validation: on est en mode playing
@@ -1450,18 +1434,15 @@ export default class BlindTestRoom implements Party.Server {
    * Handler: SHOW_SCORES - Rediriger tous les joueurs vers la page scores
    */
   private handleShowScores(msg: Extract<Message, { type: "show_scores" }>, sender: Party.Connection) {
-    const { hostId } = msg;
-    const senderPlayer = this.getPlayerByConnectionId(sender.id);
-
-    // Validation: est-ce bien le host ?
-    if (hostId !== this.state.hostId) {
-      sender.send(
-        JSON.stringify({
-          type: "error",
-          message: "Only the host can show scores",
-        })
-      );
+    const senderPlayer = this.requireHostSender(sender, "show scores");
+    if (!senderPlayer) {
       return;
+    }
+
+    if (msg.hostId !== senderPlayer.id) {
+      console.warn(
+        `[${this.room.id}] SHOW_SCORES spoof attempt: claimedHostId=${msg.hostId}, senderPlayerId=${senderPlayer.id}, expectedHostId=${this.state.hostId}, conn=${sender.id}`
+      );
     }
 
     // Validation: on doit être en mode playing ou results
@@ -1699,6 +1680,58 @@ export default class BlindTestRoom implements Party.Server {
     if (!senderPlayer || senderPlayer.id !== this.state.hostId) return;
     this.broadcast({ type: "host_preview_clear" });
   }
+  private requireConnectedSender(sender: Party.Connection, action: string): Player | null {
+    const senderPlayer = this.getPlayerByConnectionId(sender.id);
+    if (!senderPlayer) {
+      console.warn(
+        `[${this.room.id}] ${action.toUpperCase()} rejected: no player for connection ${sender.id}`
+      );
+      sender.send(
+        JSON.stringify({
+          type: "error",
+          message: "Player not found for this connection",
+        })
+      );
+      return null;
+    }
+
+    if (!senderPlayer.connected) {
+      console.warn(
+        `[${this.room.id}] ${action.toUpperCase()} rejected: disconnected playerId=${senderPlayer.id}, conn=${sender.id}`
+      );
+      sender.send(
+        JSON.stringify({
+          type: "error",
+          message: "Player not connected",
+        })
+      );
+      return null;
+    }
+
+    return senderPlayer;
+  }
+
+  private requireHostSender(sender: Party.Connection, action: string): Player | null {
+    const senderPlayer = this.requireConnectedSender(sender, action);
+    if (!senderPlayer) {
+      return null;
+    }
+
+    if (senderPlayer.id !== this.state.hostId) {
+      console.warn(
+        `[${this.room.id}] ${action.toUpperCase()} rejected: expectedHostId=${this.state.hostId}, senderPlayerId=${senderPlayer.id}, conn=${sender.id}`
+      );
+      sender.send(
+        JSON.stringify({
+          type: "error",
+          message: `Only the host can ${action}`,
+        })
+      );
+      return null;
+    }
+
+    return senderPlayer;
+  }
 
   private broadcast(message: any, excludeConnectionIds: string[] = []) {
     const payload = JSON.stringify(message);
@@ -1837,7 +1870,7 @@ export default class BlindTestRoom implements Party.Server {
 
       await fetch(lobbyUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...this.getLobbyAuthHeaders() },
         body: JSON.stringify({
           type,
           roomId: this.room.id,
@@ -1850,5 +1883,18 @@ export default class BlindTestRoom implements Party.Server {
       console.error(`[${this.room.id}] Failed to notify lobby:`, error);
       // Do not throw; game continues if lobby is unavailable.
     }
+  }
+
+  private getLobbyAuthHeaders(): Record<string, string> {
+    const lobbyToken = this.readEnvString("PARTYKIT_LOBBY_TOKEN");
+    if (!lobbyToken) {
+      return {};
+    }
+    return { Authorization: `Bearer ${lobbyToken}` };
+  }
+
+  private readEnvString(key: string) {
+    const value = (this.room.env as Record<string, unknown>)[key];
+    return typeof value === "string" ? value.trim() : "";
   }
 }

@@ -1,10 +1,22 @@
 import { NextResponse } from "next/server";
+import { requireAdminFromRequest } from "@/lib/auth/adminRouteAuth";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authResult = await requireAdminFromRequest(request);
+  if (!authResult.ok) {
+    return authResult.response;
+  }
+
   try {
+    const ingestionToken = process.env.INGESTION_SERVICE_TOKEN;
     const response = await fetch(
       `${process.env.INGESTION_SERVICE_URL}/api/cookie-check`,
-      { cache: "no-store" }
+      {
+        cache: "no-store",
+        headers: {
+          ...(ingestionToken ? { Authorization: `Bearer ${ingestionToken}` } : {}),
+        },
+      }
     );
 
     if (!response.ok) {
