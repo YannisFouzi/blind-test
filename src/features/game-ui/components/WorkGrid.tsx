@@ -28,7 +28,7 @@ const getGridVariant = (count: number): GridVariant => {
   return VARIANT_BY_COUNT[count] ?? null;
 };
 
-const getWorkGridClassName = (count: number, mode: GridMode) => {
+const getWorkGridClassName = (count: number) => {
   let className = `${styles.uniformCardGrid} ${styles.workSelectorGrid}`;
   const variant = getGridVariant(count);
 
@@ -45,7 +45,7 @@ const getWorkGridClassName = (count: number, mode: GridMode) => {
 const WorkGridComponent = ({ count, mode = "solo", children, className }: WorkGridProps) => {
   return (
     <div
-      className={cn(getWorkGridClassName(count, mode), className)}
+      className={cn(getWorkGridClassName(count), className)}
       data-count={count}
       data-mode={mode}
       data-testid="work-grid"

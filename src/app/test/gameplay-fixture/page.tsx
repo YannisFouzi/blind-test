@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { Suspense, useMemo, type ReactNode } from "react";
 import { Home as HomeIcon, LogOut } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { DoubleWorkSelector, PlayerDome, WorkSelector } from "@/features/game-ui
 import { GameActionButton } from "@/features/game-ui/components/GameActionButton";
 import { GameLayout, GameStage, getLayoutPolicy } from "@/features/game-ui/layout";
 import { PlayersScoreboard } from "@/features/multiplayer-game/components/PlayersScoreboard";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import chromeStyles from "@/styles/gameChrome.module.css";
 import {
   buildGameplayFixtureModel,
@@ -16,7 +17,7 @@ import {
 
 const NOOP = () => {};
 
-const FixturePage = () => {
+const FixturePageContent = () => {
   const searchParams = useSearchParams();
 
   const model = useMemo(() => {
@@ -216,4 +217,16 @@ const FixturePage = () => {
   );
 };
 
-export default FixturePage;
+const FixtureFallback = () => (
+  <div className="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center">
+    <LoadingSpinner />
+  </div>
+);
+
+export default function FixturePage() {
+  return (
+    <Suspense fallback={<FixtureFallback />}>
+      <FixturePageContent />
+    </Suspense>
+  );
+}
