@@ -609,6 +609,7 @@ export const MultiGameClient = ({
   const isDenseActionLayout = works.length >= 7;
   const useInlineTopButtonsMobile = works.length >= 2 && works.length <= 6;
   const useFloatingScoreboardMobile = useInlineTopButtonsMobile;
+  const needsFloatingScoreboardGap = useFloatingScoreboardMobile && works.length >= 3;
 
   const answerFooter = useMemo(() => {
     const primaryAction = shouldShowScoresButton ? (
@@ -644,7 +645,9 @@ export const MultiGameClient = ({
                   key={song.id}
                   className="text-[0.65rem] sm:text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide leading-tight"
                 >
-                  {song.artist} {" — "} <span className="text-[#B45309]">{song.title}</span>
+                  {song.artist}
+                  {" \u2014 "}
+                  <span className="text-[#B45309]">{song.title}</span>
                   {work && (
                     <span className="ml-2 text-[0.65rem] sm:text-xs text-[var(--color-text-secondary)]">
                       ({work.title})
@@ -665,7 +668,7 @@ export const MultiGameClient = ({
           <div className="px-3 py-2 sm:px-5 sm:py-3 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B]">
             <p className="text-[0.7rem] sm:text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide">
               {currentSong?.artist}{" "}
-              {currentSong?.artist && currentSong?.title ? " — " : ""}
+              {currentSong?.artist && currentSong?.title ? " \u2014 " : ""}
               <span className="text-[#B45309]">{currentSong?.title ?? ""}</span>
             </p>
           </div>
@@ -685,6 +688,55 @@ export const MultiGameClient = ({
     handleShowScores,
     handleNextSong,
   ]);
+
+  const gameCenterContent = (
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center gap-3 sm:gap-4 min-h-[calc(100svh-180px)] sm:min-h-[calc(100svh-240px)] md:min-h-[calc(100svh-280px)]",
+        needsFloatingScoreboardGap && "multi-game-center--floating-gap"
+      )}
+    >
+      <div className="w-full flex justify-center">
+        {isDoubleMode && currentRoundSongs.length >= 1 ? (
+          <DoubleWorkSelector
+            works={works}
+            roundSongs={currentRoundSongs}
+            selectedWorkSlot1={doubleSelectedWorkSlot1}
+            selectedWorkSlot2={doubleSelectedWorkSlot2}
+            showAnswer={showAnswer}
+            canValidate={
+              !!doubleSelectedWorkSlot1 &&
+              !!doubleSelectedWorkSlot2 &&
+              !showAnswer &&
+              state === "playing"
+            }
+            isCurrentSongAnswered={isCurrentSongAnswered}
+            onSelectSlotWork={handleDoubleSelection}
+            onValidateAnswer={handleValidateAnswer}
+            onClearWorkSelection={clearDoubleSelectionForWork}
+            footer={answerFooter}
+          />
+        ) : (
+          <WorkSelector
+            works={works}
+            currentSongWorkId={currentSong?.workId}
+            selectedWork={selectedWork}
+            showAnswer={showAnswer}
+            canValidate={!!selectedWork && !showAnswer && state === "playing"}
+            isCurrentSongAnswered={isCurrentSongAnswered}
+            onWorkSelection={handleWorkSelection}
+            onValidateAnswer={handleValidateAnswer}
+            footer={answerFooter}
+          />
+        )}
+      </div>
+      {submitError && (
+        <div className="px-4 py-2 rounded-xl bg-[#FFE5E5] border-2 border-[#1B1B1B] text-center text-xs text-red-700 shadow-[2px_2px_0_#1B1B1B]">
+          {submitError}
+        </div>
+      )}
+    </div>
+  );
 
   if (!isConnected) {
     return (
@@ -808,10 +860,6 @@ export const MultiGameClient = ({
         />
       </div>
 
-      <div className="fixed top-6 right-6 z-40 hidden lg:block">
-        <PlayersScoreboard players={players} currentPlayerId={playerId} />
-      </div>
-
       {useFloatingScoreboardMobile && (
         <div
           className="fixed left-1/2 -translate-x-1/2 z-40 lg:hidden pointer-events-none"
@@ -825,8 +873,10 @@ export const MultiGameClient = ({
 
       <div
         className={cn(
-          "container mx-auto px-4 py-6 sm:py-8 home-safe-area home-safe-area--stacked player-safe-area relative z-10",
-          useInlineTopButtonsMobile && "home-safe-area--inline-mobile"
+          "container mx-auto px-4 py-6 sm:py-8 home-safe-area player-safe-area relative z-10",
+          useInlineTopButtonsMobile
+            ? "home-safe-area--inline-mobile"
+            : "home-safe-area--stacked-mobile"
         )}
       >
         {!useFloatingScoreboardMobile && (
@@ -835,46 +885,16 @@ export const MultiGameClient = ({
           </div>
         )}
 
-        <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 min-h-[calc(100svh-180px)] sm:min-h-[calc(100svh-240px)] md:min-h-[calc(100svh-280px)]">
-          <div className="w-full flex justify-center">
-            {isDoubleMode && currentRoundSongs.length >= 1 ? (
-              <DoubleWorkSelector
-                works={works}
-                roundSongs={currentRoundSongs}
-                selectedWorkSlot1={doubleSelectedWorkSlot1}
-                selectedWorkSlot2={doubleSelectedWorkSlot2}
-                showAnswer={showAnswer}
-                canValidate={
-                  !!doubleSelectedWorkSlot1 &&
-                  !!doubleSelectedWorkSlot2 &&
-                  !showAnswer &&
-                  state === "playing"
-                }
-                isCurrentSongAnswered={isCurrentSongAnswered}
-                onSelectSlotWork={handleDoubleSelection}
-                onValidateAnswer={handleValidateAnswer}
-                onClearWorkSelection={clearDoubleSelectionForWork}
-                footer={answerFooter}
-              />
-            ) : (
-              <WorkSelector
-                works={works}
-                currentSongWorkId={currentSong?.workId}
-                selectedWork={selectedWork}
-                showAnswer={showAnswer}
-                canValidate={!!selectedWork && !showAnswer && state === "playing"}
-                isCurrentSongAnswered={isCurrentSongAnswered}
-                onWorkSelection={handleWorkSelection}
-                onValidateAnswer={handleValidateAnswer}
-                footer={answerFooter}
-              />
-            )}
+        <div className="hidden lg:grid lg:grid-cols-[clamp(13rem,18vw,20rem)_minmax(0,1fr)_clamp(13rem,18vw,20rem)] lg:items-start lg:gap-6">
+          <div aria-hidden />
+          <div>{gameCenterContent}</div>
+          <div className="sticky top-6 self-start justify-self-end">
+            <PlayersScoreboard players={players} currentPlayerId={playerId} />
           </div>
-          {submitError && (
-            <div className="px-4 py-2 rounded-xl bg-[#FFE5E5] border-2 border-[#1B1B1B] text-center text-xs text-red-700 shadow-[2px_2px_0_#1B1B1B]">
-              {submitError}
-            </div>
-          )}
+        </div>
+
+        <div className="lg:hidden">
+          {gameCenterContent}
         </div>
       </div>
 
