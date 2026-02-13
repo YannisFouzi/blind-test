@@ -61,15 +61,15 @@ const PlayerDomeComponent = ({
   const hasNavigation = Boolean(onPrev && onNext);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none" data-testid="player-dome">
+    <div className="w-full pointer-events-none" data-testid="player-dome">
       <div
         className={cn(
           styles.playerDome,
           "mx-auto w-[calc(100%-1.5rem)] sm:w-[calc(100%-3rem)] max-w-6xl bg-white border-[3px] border-b-0 border-[#1B1B1B] shadow-[0_-6px_0_#1B1B1B] pointer-events-auto overflow-hidden"
         )}
       >
-        <div className="px-3 py-2 sm:px-6 sm:py-4">
-          <div className="flex flex-col items-center gap-1.5 sm:gap-3">
+        <div className="px-3 py-2 lg:px-6 lg:py-4">
+          <div className="flex flex-col items-center gap-1.5 lg:gap-3">
             <div className={cn(styles.playerControlsCompact, "w-full max-w-4xl")}>
               <div className="flex items-center justify-between w-full text-[var(--color-text-primary)] text-[0.7rem] font-semibold mb-1.5">
                 <span className="min-w-[2rem]">{currentTimeLabel}</span>
@@ -167,7 +167,7 @@ const PlayerDomeComponent = ({
               )}
             </div>
 
-            <div className="w-full max-w-4xl flex flex-col items-center gap-1.5 sm:gap-3">
+            <div className="w-full max-w-4xl flex flex-col items-center gap-1.5 lg:gap-3">
               <div
                 className={cn(
                   styles.playerDurationsStandard,
@@ -205,21 +205,21 @@ const PlayerDomeComponent = ({
               </div>
 
               <div
-                className={cn(styles.magicProgressBar, "w-full h-2 sm:h-3 cursor-pointer")}
+                className={cn(styles.magicProgressBar, "w-full h-2 lg:h-3 cursor-pointer")}
                 onClick={onTimelineClick}
               >
                 <div className={cn(styles.magicProgressFill, "h-full")} style={{ width: `${progress}%` }} />
               </div>
 
-              <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center text-xs sm:text-sm gap-2 sm:gap-3 pt-0.5 sm:pt-1">
+              <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center text-xs lg:text-sm gap-2 lg:gap-3 pt-0.5 lg:pt-1">
                 <span className="text-[#B45309] font-semibold">{roundLabel}</span>
 
-                <div className="flex items-center justify-center gap-2 sm:gap-3 text-xs">
-                  <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#86efac] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">
+                <div className="flex items-center justify-center gap-2 lg:gap-3 text-xs">
+                  <span className="px-2.5 py-0.5 lg:px-3 lg:py-1 rounded-full bg-[#86efac] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">
                     <Check className="w-3 h-3" />
                     {correctCount}
                   </span>
-                  <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#fca5a5] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">
+                  <span className="px-2.5 py-0.5 lg:px-3 lg:py-1 rounded-full bg-[#fca5a5] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1">
                     <X className="w-3 h-3" />
                     {incorrectCount}
                   </span>
@@ -231,7 +231,7 @@ const PlayerDomeComponent = ({
                       <span
                         className={cn(
                           styles.playerReverseCompact,
-                          "px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#f97316] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1 text-xs whitespace-nowrap"
+                          "px-2.5 py-0.5 lg:px-3 lg:py-1 rounded-full bg-[#f97316] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1 text-xs whitespace-nowrap"
                         )}
                       >
                         <span className="inline-block rotate-180">
@@ -244,7 +244,7 @@ const PlayerDomeComponent = ({
                       <span
                         className={cn(
                           styles.playerX2Compact,
-                          "px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#22c55e] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1 text-xs whitespace-nowrap"
+                          "px-2.5 py-0.5 lg:px-3 lg:py-1 rounded-full bg-[#22c55e] text-[#1B1B1B] font-bold border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B] inline-flex items-center gap-1 text-xs whitespace-nowrap"
                         )}
                       >
                         <span>x2</span>

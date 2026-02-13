@@ -23,6 +23,12 @@ const GameLayoutComponent = ({
 }: GameLayoutProps) => {
   const policy = getLayoutPolicy({ mode, cardCount });
   const hasScoreboard = mode === "multi" && Boolean(scoreboard);
+  const shouldDockScoreboardInTopChrome =
+    Boolean(topButtons) &&
+    hasScoreboard &&
+    policy.useFloatingScoreboardMobile &&
+    !policy.useInlineTopButtonsMobile &&
+    Boolean(scoreboardCompact);
 
   return (
     <>
@@ -30,17 +36,33 @@ const GameLayoutComponent = ({
         <div
           data-testid="game-layout-top-buttons"
           className={cn(
-            "fixed z-50 flex flex-col items-start",
+            "fixed z-50",
+            shouldDockScoreboardInTopChrome
+              ? "grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 lg:flex lg:flex-col lg:items-start"
+              : "flex flex-col items-start",
             chromeStyles.homeButtonAnchor,
-            chromeStyles.homeButtonAnchorStacked,
-            policy.useInlineTopButtonsMobile && chromeStyles.homeButtonAnchorInlineMobile
+            shouldDockScoreboardInTopChrome && chromeStyles.homeButtonAnchorRight
           )}
         >
-          {topButtons}
+          <div
+            className={cn(
+              "flex flex-col items-start",
+              chromeStyles.homeButtonAnchorStacked,
+              policy.useInlineTopButtonsMobile && chromeStyles.homeButtonAnchorInlineMobile
+            )}
+          >
+            {topButtons}
+          </div>
+
+          {shouldDockScoreboardInTopChrome ? (
+            <div className="lg:hidden justify-self-end self-start min-w-0">
+              <div className="pointer-events-auto">{scoreboardCompact}</div>
+            </div>
+          ) : null}
         </div>
       )}
 
-      {hasScoreboard && policy.useFloatingScoreboardMobile && scoreboardCompact && (
+      {hasScoreboard && policy.useFloatingScoreboardMobile && scoreboardCompact && !shouldDockScoreboardInTopChrome && (
         <div
           data-testid="game-layout-floating-scoreboard"
           className={cn(
@@ -54,8 +76,7 @@ const GameLayoutComponent = ({
 
       <div
         className={cn(
-          "container mx-auto px-4 py-6 sm:py-8 relative z-10",
-          styles.playerSafeArea,
+          "container mx-auto px-4 py-5 lg:py-8 relative z-10 h-full flex flex-col",
           chromeStyles.homeSafeArea,
           policy.useInlineTopButtonsMobile
             ? chromeStyles.homeSafeAreaInlineMobile
@@ -68,19 +89,19 @@ const GameLayoutComponent = ({
         data-testid="game-layout-container"
       >
         {hasScoreboard && !policy.useFloatingScoreboardMobile && scoreboardCompact && (
-          <div className="lg:hidden flex justify-center mb-4 sm:mb-6" data-testid="game-layout-scoreboard-compact">
+          <div className="lg:hidden flex justify-center mb-4 lg:mb-6" data-testid="game-layout-scoreboard-compact">
             {scoreboardCompact}
           </div>
         )}
 
         {hasScoreboard ? (
           <>
-            <div className="hidden lg:grid lg:grid-cols-[clamp(13rem,18vw,20rem)_minmax(0,1fr)_clamp(13rem,18vw,20rem)] lg:items-start lg:gap-6">
+            <div className="hidden lg:grid lg:grid-cols-[clamp(13rem,18vw,20rem)_minmax(0,1fr)_clamp(13rem,18vw,20rem)] lg:items-start lg:gap-6 flex-1 min-h-0">
               <div aria-hidden />
               <div
                 data-testid="game-layout-center"
                 className={cn(
-                  "flex flex-col items-center justify-center gap-3 sm:gap-4 min-h-[calc(100svh-180px)] sm:min-h-[calc(100svh-240px)] md:min-h-[calc(100svh-280px)]",
+                  "flex flex-col items-center justify-start lg:justify-center gap-3 lg:gap-4 min-h-0",
                   policy.needsFloatingScoreboardGap && styles.multiGameCenterFloatingGap
                 )}
               >
@@ -91,11 +112,11 @@ const GameLayoutComponent = ({
               </div>
             </div>
 
-            <div className="lg:hidden">
+            <div className="lg:hidden flex-1 min-h-0">
               <div
                 data-testid="game-layout-center"
                 className={cn(
-                  "flex flex-col items-center justify-center gap-3 sm:gap-4 min-h-[calc(100svh-180px)] sm:min-h-[calc(100svh-240px)] md:min-h-[calc(100svh-280px)]",
+                  "flex flex-col items-center justify-start gap-3 min-h-0",
                   policy.needsFloatingScoreboardGap && styles.multiGameCenterFloatingGap
                 )}
               >
@@ -106,7 +127,7 @@ const GameLayoutComponent = ({
         ) : (
           <div
             data-testid="game-layout-center"
-            className="flex flex-col items-center justify-center gap-3 sm:gap-4 min-h-[calc(100svh-180px)] sm:min-h-[calc(100svh-240px)] md:min-h-[calc(100svh-280px)]"
+            className="flex flex-col items-center justify-start lg:justify-center gap-3 lg:gap-4 flex-1 min-h-0"
           >
             {center}
           </div>

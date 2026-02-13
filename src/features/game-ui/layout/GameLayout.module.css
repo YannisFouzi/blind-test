@@ -1,13 +1,3 @@
-.playerSafeArea {
-  padding-bottom: 8rem;
-}
-
-@media (min-height: 701px) {
-  .playerSafeArea {
-    padding-bottom: 14rem;
-  }
-}
-
 @media (max-width: 1023px) {
   .multiGameCenterFloatingGap {
     justify-content: flex-start;
@@ -16,7 +6,7 @@
   }
 
   .multiGameCenterFloatingGap :global(.work-selector-actions) {
-    --work-selector-actions-height: clamp(96px, 14vh, 128px);
+    --work-selector-actions-height: clamp(96px, 12vh, 112px);
     align-items: start;
     padding-top: clamp(0.2rem, 0.8vh, 0.55rem);
   }

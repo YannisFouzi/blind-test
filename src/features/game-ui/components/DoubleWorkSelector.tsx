@@ -387,8 +387,13 @@ const DoubleWorkSelectorComponent = ({
   );
 
   return (
-    <div className={cn("relative w-full", styles.workSelector)} data-testid="double-work-selector">
-      <div className="space-y-3 sm:space-y-4 md:space-y-6">
+    <div
+      className={cn("relative w-full", styles.workSelector)}
+      data-testid="double-work-selector"
+      data-density={isDenseActionLayout ? "dense" : "normal"}
+      data-card-count={works.length}
+    >
+      <div className="space-y-3 lg:space-y-6">
         <WorkGrid count={works.length} mode={mode}>
           {workCardStates.map((state, index) => (
             <div

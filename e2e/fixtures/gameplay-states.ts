@@ -1,4 +1,5 @@
 export const GAMEPLAY_VIEWPORTS = [
+  { name: "desktop-large-1660x900", width: 1660, height: 900 },
   { name: "desktop-1280x900", width: 1280, height: 900 },
   { name: "tablet-1023x911", width: 1023, height: 911 },
   { name: "mobile-standard-768x800", width: 768, height: 800 },

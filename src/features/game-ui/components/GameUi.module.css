@@ -8,7 +8,8 @@
 
 @container work-selector (width < 1024px) {
   .workSelector {
-    --work-selector-actions-height: clamp(96px, 14vh, 128px);
+    /* Keep revealed footer + CTA visible on tablet/mobile without scrolling. */
+    --work-selector-actions-height: clamp(80px, 12vh, 104px);
   }
 }
 
@@ -66,9 +67,9 @@
 
 @container work-selector (width < 1024px) {
   .uniformCard {
-    height: 88px;
-    min-height: 88px;
-    max-height: 88px;
+    height: clamp(68px, 10.5vh, 84px);
+    min-height: clamp(68px, 10.5vh, 84px);
+    max-height: clamp(68px, 10.5vh, 84px);
   }
 }
 
@@ -79,6 +80,30 @@
   hyphens: auto;
   text-align: center;
   overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  /* Dense (7/8 cards): shrink the action + cards so everything fits above the player. */
+  .workSelector[data-density="dense"] {
+    --work-selector-actions-height: clamp(88px, 12vh, 124px);
+  }
+
+  .workSelector[data-density="dense"] .workSelectorActions {
+    /* Remove the extra top/bottom padding created by centering inside a fixed-height action slot. */
+    place-items: start center;
+  }
+
+  .workSelector[data-density="dense"] :global(.game-action-button--dense) {
+    padding: 0.55rem 1.4rem !important;
+    font-size: 0.9rem !important;
+    line-height: 1.1;
+  }
+
+  .workSelector[data-density="dense"] .uniformCard {
+    height: clamp(84px, 10vh, 110px);
+    min-height: clamp(84px, 10vh, 110px);
+    max-height: clamp(84px, 10vh, 110px);
+  }
 }
 
 .workCard {
@@ -197,7 +222,9 @@
 @container work-selector (width < 1024px) {
   .uniformCardGrid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.625rem;
+    /* Keep gap + width calculations (centered last card) consistent. */
+    --work-grid-gap: 0.5rem;
+    gap: var(--work-grid-gap);
   }
 
   .uniformCardTitle {
@@ -225,19 +252,19 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .gridSeven > :nth-child(7) {
-    grid-column: 1 / -1;
-    justify-self: center;
-    width: calc((100% - var(--work-grid-gap)) / 2);
-  }
+  /* Centrage 7ème card géré par workGridPolicy via inline styles */
 }
 
 @media (max-width: 1023px) and (max-height: 700px) {
+  .workSelector {
+    --work-selector-actions-height: clamp(72px, 11vh, 92px);
+  }
+
   .gridSeven .uniformCard,
   .gridEight .uniformCard {
-    height: 80px;
-    min-height: 80px;
-    max-height: 80px;
+    height: clamp(62px, 9.8vh, 66px);
+    min-height: clamp(62px, 9.8vh, 66px);
+    max-height: clamp(62px, 9.8vh, 66px);
   }
 
   .gridSeven .uniformCardTitle,
@@ -260,13 +287,6 @@
 }
 
 @media (max-width: 1023px) and (min-height: 701px) {
-  .gridSeven .uniformCard,
-  .gridEight .uniformCard {
-    height: 96px;
-    min-height: 96px;
-    max-height: 96px;
-  }
-
   .gridSeven .workCardStacked,
   .gridEight .workCardStacked {
     --work-card-band-height: 1.5rem;
@@ -286,61 +306,17 @@
 }
 
 .gridFive {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-@media (max-height: 700px) {
-  .gridFive {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .gridFive > :nth-child(5) {
-    grid-column: 1 / -1;
-    justify-self: center;
-    width: calc((100% - var(--work-grid-gap)) / 2);
-  }
-}
+/* Centrage 5ème card géré par workGridPolicy via inline styles */
 
 @container work-selector (width >= 1024px) {
   .gridFour {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .gridFive {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .gridFive > :nth-child(5) {
-    grid-column: 1 / -1;
-    justify-self: center;
-    width: calc((100% - var(--work-grid-gap)) / 2);
-  }
-
-  .gridSeven > :nth-child(7) {
-    grid-column: 1 / -1;
-    justify-self: center;
-    width: calc((100% - (var(--work-grid-gap) * 2)) / 3);
-  }
-
-  .gridEight {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-
-  .gridEight > * {
-    grid-column: span 2;
-    justify-self: stretch;
-    width: auto;
-  }
-
-  .gridEight > :nth-child(7) {
-    grid-row: 3;
-    grid-column: 2 / span 2;
-  }
-
-  .gridEight > :nth-child(8) {
-    grid-row: 3;
-    grid-column: 4 / span 2;
-  }
+  /* Centrage cards 7 et 8 géré par workGridPolicy via inline styles */
 }
 
 .magicProgressBar {
@@ -407,7 +383,7 @@
   box-shadow: 4px 4px 0 #0A0B0E;
 }
 
-@media (max-width: 1023px) and (max-height: 700px) {
+@media (max-width: 1023px) {
   .playerControlsCompact {
     display: block;
   }
@@ -418,16 +394,6 @@
 
   .playerReverseCompact {
     display: inline-flex;
-  }
-}
-
-@media (max-width: 1023px) and (min-height: 701px) {
-  .playerControlsStandard {
-    display: flex;
-  }
-
-  .playerDurationsStandard {
-    display: flex;
   }
 }
 

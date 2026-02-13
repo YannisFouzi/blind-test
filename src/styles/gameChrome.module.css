@@ -26,6 +26,10 @@
 }
 
 @media (max-width: 1023px) {
+  .homeButtonAnchorRight {
+    right: clamp(0.35rem, 0.8vw, 0.9rem);
+  }
+
   .homeButtonAnchorInlineMobile {
     flex-direction: row !important;
     align-items: center !important;
@@ -46,13 +50,35 @@
 }
 
 .homeSafeAreaStackedMobile {
-  padding-top: max(1rem, calc(var(--anchor-offset) + (var(--button-height) * 2) + (var(--button-gap) * 2) + var(--shadow-offset))) !important;
+  /* scoped to mobile via media query below */
 }
 
-.homeSafeAreaInlineMobile {
-  padding-top: max(1rem, calc(var(--anchor-offset) + var(--button-height) + var(--button-gap) + var(--shadow-offset))) !important;
+@media (max-width: 1023px) {
+  .homeSafeAreaStackedMobile {
+    padding-top: max(
+      1rem,
+      calc(
+        var(--anchor-offset) + (var(--button-height) * 2) + (var(--button-gap) * 2) +
+          var(--shadow-offset)
+      )
+    ) !important;
+  }
+
+  .homeSafeAreaInlineMobile {
+    padding-top: max(
+      1rem,
+      calc(var(--anchor-offset) + var(--button-height) + var(--button-gap) + var(--shadow-offset))
+    ) !important;
+  }
 }
 
 .floatingScoreboard {
-  top: calc(clamp(0.35rem, 0.8vw, 0.9rem) + clamp(2.1rem, 3vw + 1.5rem, 2.95rem) + 0.6rem);
+  /* Keep the floating scoreboard tucked under the top buttons shadow (prevents overlap on tiny screens). */
+  top: calc(
+    clamp(0.35rem, 0.8vw, 0.9rem) +
+      clamp(2.1rem, 3vw + 1.5rem, 2.95rem) +
+      /* Match the content safe-area spacing under the top buttons. */
+      clamp(0.5rem, 0.8vw + 0.3rem, 0.75rem) +
+      clamp(3px, 0.6vw + 2px, 5px)
+  );
 }

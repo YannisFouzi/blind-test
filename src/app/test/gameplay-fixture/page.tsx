@@ -30,20 +30,25 @@ const FixturePageContent = () => {
       return null;
     }
 
+    const isDense = model.works.length >= 7;
+
     const metadata = model.config.variant === "double" ? (
-      <div className="space-y-1">
+      <div className={cn("space-y-0.5", !isDense && "lg:space-y-1")}>
         {model.roundSongs.map((song) => {
           const relatedWork = model.works.find((work) => work.id === song.workId);
           return (
             <p
               key={song.id}
-              className="text-[0.65rem] sm:text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide leading-tight"
+              className={cn(
+                "text-[0.65rem] lg:text-sm text-[var(--color-text-primary)] font-semibold tracking-wide leading-tight",
+                !isDense && "xl:text-base"
+              )}
             >
               {song.artist}
               {" \u2014 "}
               <span className="text-[#B45309]">{song.title}</span>
               {relatedWork && (
-                <span className="ml-2 text-[0.65rem] sm:text-xs text-[var(--color-text-secondary)]">
+                <span className="ml-2 text-[0.65rem] lg:text-xs text-[var(--color-text-secondary)]">
                   ({relatedWork.title})
                 </span>
               )}
@@ -52,7 +57,12 @@ const FixturePageContent = () => {
         })}
       </div>
     ) : (
-      <p className="text-[0.7rem] sm:text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide">
+      <p
+        className={cn(
+          "text-[0.7rem] lg:text-sm text-[var(--color-text-primary)] font-semibold tracking-wide",
+          !isDense && "xl:text-base"
+        )}
+      >
         {model.currentSong.artist}
         {" \u2014 "}
         <span className="text-[#B45309]">{model.currentSong.title}</span>
@@ -62,14 +72,22 @@ const FixturePageContent = () => {
     return (
       <div
         data-testid="fixture-answer-footer"
-        className="flex flex-col items-center justify-center gap-2 sm:gap-3"
+        className={cn(
+          "flex flex-col items-center justify-center",
+          isDense ? "gap-1.5" : "gap-2 lg:gap-3"
+        )}
       >
-        <div className="px-3 py-1.5 sm:px-5 sm:py-3 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B]">
+        <div
+          className={cn(
+            "px-3 py-1.5 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B]",
+            isDense ? "lg:px-4 lg:py-2" : "lg:px-5 lg:py-3"
+          )}
+        >
           {metadata}
         </div>
         {model.footerActionLabel ? (
           <div data-testid="fixture-primary-action">
-            <GameActionButton label={model.footerActionLabel} onClick={NOOP} compact={model.works.length >= 7} />
+            <GameActionButton label={model.footerActionLabel} onClick={NOOP} compact={isDense} />
           </div>
         ) : null}
       </div>
@@ -166,8 +184,33 @@ const FixturePageContent = () => {
     </div>
   );
 
+  const player = (
+    <PlayerDome
+      currentTimeLabel="1:10"
+      durationLabel="3:40"
+      isPlaying={false}
+      playbackUnavailable={false}
+      onTogglePlay={NOOP}
+      canGoPrev={model.config.mode === "solo"}
+      onPrev={model.config.mode === "solo" ? NOOP : undefined}
+      canGoNext={model.config.mode === "solo"}
+      onNext={model.config.mode === "solo" ? NOOP : undefined}
+      isReverseMode={false}
+      isDoubleMode={model.config.variant === "double"}
+      progress={42}
+      onTimelineClick={NOOP}
+      roundLabel={`Manche 4 / ${model.config.cards + 50}`}
+      correctCount={model.score.correct}
+      incorrectCount={model.score.incorrect}
+      isMuted={false}
+      onToggleMute={NOOP}
+      volume={70}
+      onVolumeBarClick={NOOP}
+    />
+  );
+
   return (
-    <GameStage>
+    <GameStage player={player}>
       <div data-testid="fixture-root">
         <GameLayout
           mode={model.config.mode}
@@ -188,29 +231,6 @@ const FixturePageContent = () => {
             ) : undefined
           }
           center={centerNode}
-        />
-
-        <PlayerDome
-          currentTimeLabel="1:10"
-          durationLabel="3:40"
-          isPlaying={false}
-          playbackUnavailable={false}
-          onTogglePlay={NOOP}
-          canGoPrev={model.config.mode === "solo"}
-          onPrev={model.config.mode === "solo" ? NOOP : undefined}
-          canGoNext={model.config.mode === "solo"}
-          onNext={model.config.mode === "solo" ? NOOP : undefined}
-          isReverseMode={false}
-          isDoubleMode={model.config.variant === "double"}
-          progress={42}
-          onTimelineClick={NOOP}
-          roundLabel={`Manche 4 / ${model.config.cards + 50}`}
-          correctCount={model.score.correct}
-          incorrectCount={model.score.incorrect}
-          isMuted={false}
-          onToggleMute={NOOP}
-          volume={70}
-          onVolumeBarClick={NOOP}
         />
       </div>
     </GameStage>

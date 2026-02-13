@@ -593,65 +593,93 @@ export const MultiGameClient = ({
   const answerFooter = useMemo(() => {
     const primaryAction = shouldShowScoresButton ? (
       <button
-        onClick={handleShowScores}
-        className={cn(
-          "magic-button game-action-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold",
-          isDenseActionLayout && "game-action-button--dense"
-        )}
-      >
+          onClick={handleShowScores}
+          className={cn(
+            "magic-button game-action-button px-6 py-3 lg:px-8 lg:py-4 text-sm lg:text-base font-bold",
+            isDenseActionLayout && "game-action-button--dense"
+          )}
+        >
         <span className="relative z-10 flex items-center gap-2">Voir les scores</span>
       </button>
     ) : canGoNext && isHost ? (
       <button
-        onClick={handleNextSong}
-        className={cn(
-          "magic-button game-action-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold",
-          isDenseActionLayout && "game-action-button--dense"
-        )}
-      >
-        <span className="relative z-10 flex items-center gap-2">Manche suivante</span>
-      </button>
-    ) : null;
+          onClick={handleNextSong}
+          className={cn(
+            "magic-button game-action-button px-6 py-3 lg:px-8 lg:py-4 text-sm lg:text-base font-bold",
+            isDenseActionLayout && "game-action-button--dense"
+          )}
+        >
+          <span className="relative z-10 flex items-center gap-2">Manche suivante</span>
+        </button>
+      ) : null;
 
-    if (isDoubleMode && currentRoundSongs.length > 0) {
-      return (
-        <div className="flex flex-col items-center justify-center gap-2 sm:gap-3">
-          <div className="px-3 py-1.5 sm:px-5 sm:py-3 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B] space-y-0.5 sm:space-y-1.5">
-            {currentRoundSongs.map((song) => {
-              const work = works.find((candidate) => candidate.id === song.workId);
-              return (
-                <p
-                  key={song.id}
-                  className="text-[0.65rem] sm:text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide leading-tight"
-                >
-                  {song.artist}
-                  {" \u2014 "}
-                  <span className="text-[#B45309]">{song.title}</span>
-                  {work && (
-                    <span className="ml-2 text-[0.65rem] sm:text-xs text-[var(--color-text-secondary)]">
-                      ({work.title})
-                    </span>
-                  )}
-                </p>
+      if (isDoubleMode && currentRoundSongs.length > 0) {
+        return (
+          <div
+            className={cn(
+              "flex flex-col items-center justify-center",
+              isDenseActionLayout ? "gap-1.5" : "gap-2 lg:gap-3"
+            )}
+          >
+            <div
+              className={cn(
+                "px-3 py-1.5 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B] space-y-0.5",
+                isDenseActionLayout ? "lg:px-4 lg:py-2 lg:space-y-1" : "lg:px-5 lg:py-3 lg:space-y-1.5"
+              )}
+            >
+              {currentRoundSongs.map((song) => {
+                const work = works.find((candidate) => candidate.id === song.workId);
+                return (
+                  <p
+                    key={song.id}
+                    className={cn(
+                      "text-[0.65rem] lg:text-sm text-[var(--color-text-primary)] font-semibold tracking-wide leading-tight",
+                      !isDenseActionLayout && "xl:text-base"
+                    )}
+                  >
+                    {song.artist}
+                    {" \u2014 "}
+                    <span className="text-[#B45309]">{song.title}</span>
+                    {work && (
+                      <span className="ml-2 text-[0.65rem] lg:text-xs text-[var(--color-text-secondary)]">
+                        ({work.title})
+                      </span>
+                    )}
+                  </p>
               );
             })}
           </div>
           {primaryAction}
         </div>
       );
-    }
+      }
 
-    return (
-      <div className="flex flex-col items-center justify-center gap-2 sm:gap-3">
-        {(currentSong?.artist ?? currentSong?.title) && (
-          <div className="px-3 py-2 sm:px-5 sm:py-3 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B]">
-            <p className="text-[0.7rem] sm:text-sm md:text-base text-[var(--color-text-primary)] font-semibold tracking-wide">
-              {currentSong?.artist}{" "}
-              {currentSong?.artist && currentSong?.title ? " \u2014 " : ""}
-              <span className="text-[#B45309]">{currentSong?.title ?? ""}</span>
-            </p>
-          </div>
-        )}
+      return (
+        <div
+          className={cn(
+            "flex flex-col items-center justify-center",
+            isDenseActionLayout ? "gap-1.5" : "gap-2 lg:gap-3"
+          )}
+        >
+          {(currentSong?.artist ?? currentSong?.title) && (
+            <div
+              className={cn(
+                "px-3 py-2 rounded-2xl bg-white border-[3px] border-[#1B1B1B] text-center shadow-[4px_4px_0_#1B1B1B]",
+                isDenseActionLayout ? "lg:px-4 lg:py-2" : "lg:px-5 lg:py-3"
+              )}
+            >
+              <p
+                className={cn(
+                  "text-[0.7rem] lg:text-sm text-[var(--color-text-primary)] font-semibold tracking-wide",
+                  !isDenseActionLayout && "xl:text-base"
+                )}
+              >
+                {currentSong?.artist}{" "}
+                {currentSong?.artist && currentSong?.title ? " \u2014 " : ""}
+                <span className="text-[#B45309]">{currentSong?.title ?? ""}</span>
+              </p>
+            </div>
+          )}
         {primaryAction}
       </div>
     );
@@ -837,7 +865,7 @@ export const MultiGameClient = ({
 
 
   return (
-    <GameStage>
+    <GameStage player={playerDome}>
       <PointsCelebration points={lastGain?.points ?? null} triggerKey={lastGain?.key} />
 
       <GameLayout
@@ -848,8 +876,6 @@ export const MultiGameClient = ({
         scoreboardCompact={<PlayersScoreboard players={players} currentPlayerId={playerId} compact />}
         center={centerContent}
       />
-
-      {playerDome}
 
       {effectiveError && (
         <div className="mt-4 text-center text-sm text-red-600">{effectiveError}</div>

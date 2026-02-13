@@ -10,7 +10,7 @@ export const GameActionButton = memo(({ label, onClick, compact = false }: GameA
   <button
     type="button"
     onClick={onClick}
-    className={`magic-button game-action-button px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold${
+    className={`magic-button game-action-button px-6 py-3 lg:px-8 lg:py-4 text-sm lg:text-base font-bold${
       compact ? " game-action-button--dense" : ""
     }`}
   >

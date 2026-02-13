@@ -139,8 +139,13 @@ const WorkSelectorComponent = ({
 
   return (
     <>
-      <div className={cn("relative w-full", styles.workSelector)} data-testid="work-selector">
-        <div className="space-y-3 sm:space-y-4 md:space-y-6">
+      <div
+        className={cn("relative w-full", styles.workSelector)}
+        data-testid="work-selector"
+        data-density={isDenseActionLayout ? "dense" : "normal"}
+        data-card-count={works.length}
+      >
+        <div className="space-y-3 lg:space-y-6">
           {/* Grille de cartes responsive avec tailles uniformes */}
           <WorkGrid count={works.length} mode={mode}>
             {workCards}

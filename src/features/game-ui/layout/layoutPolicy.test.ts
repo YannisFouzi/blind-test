@@ -31,16 +31,24 @@ describe("getLayoutPolicy", () => {
     expect(sixCards.needsFloatingScoreboardGap).toBe(true);
   });
 
-  it("disables inline/floating behavior for multi at 7 and 8 cards", () => {
-    for (const count of [7, 8]) {
-      const policy = getLayoutPolicy({ mode: "multi", cardCount: count });
+  it("keeps stacked top buttons but re-enables floating scoreboard for multi at 7 cards", () => {
+    const policy = getLayoutPolicy({ mode: "multi", cardCount: 7 });
 
-      expect(policy).toEqual({
-        useInlineTopButtonsMobile: false,
-        useFloatingScoreboardMobile: false,
-        needsFloatingScoreboardGap: false,
-      });
-    }
+    expect(policy).toEqual({
+      useInlineTopButtonsMobile: false,
+      useFloatingScoreboardMobile: true,
+      needsFloatingScoreboardGap: false,
+    });
+  });
+
+  it("disables inline/floating behavior for multi at 8 cards", () => {
+    const policy = getLayoutPolicy({ mode: "multi", cardCount: 8 });
+
+    expect(policy).toEqual({
+      useInlineTopButtonsMobile: false,
+      useFloatingScoreboardMobile: false,
+      needsFloatingScoreboardGap: false,
+    });
   });
 
   it("keeps default policy for multi card counts outside 0..8 table", () => {

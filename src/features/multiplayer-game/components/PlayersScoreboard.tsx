@@ -41,7 +41,7 @@ const PlayerRow = memo(({
       transition={{ duration: 0.2 }}
       className={cn(
         "relative flex items-center gap-3 px-3 py-2.5 rounded-2xl border-2 border-[#1B1B1B] shadow-[2px_2px_0_#1B1B1B]",
-        compact && "px-2.5 py-2 gap-1.5 rounded-xl w-fit",
+        compact && "px-2 py-1 gap-1 rounded-xl w-fit",
         isCurrentPlayer ? "bg-[var(--color-brand-primary-light)]" : "bg-white",
         !player.connected && "opacity-60"
       )}
@@ -107,7 +107,7 @@ const PlayerRow = memo(({
           initial={{ scale: 1.3, color: "#166534" }}
           animate={{ scale: 1, color: "#1B1B1B" }}
           transition={{ duration: 0.3 }}
-          className={cn("text-lg font-black", compact && "text-base leading-none")}
+          className={cn("text-lg font-black", compact && "text-sm leading-none")}
         >
           {player.score}
         </motion.span>
@@ -326,18 +326,20 @@ const PlayersScoreboardComponent = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      // Avoid layout collisions when the compact scoreboard is "floating" (fixed) on small screens.
+      initial={{ opacity: 0, y: compact ? 0 : 20 }}
       animate={{ opacity: 1, y: 0 }}
       data-testid="players-scoreboard"
       className={cn(
-        "w-full max-w-xs bg-white rounded-2xl border-[3px] border-[#1B1B1B] overflow-hidden shadow-[4px_4px_0_#1B1B1B]",
-        compact && "max-w-[min(92vw,34rem)]"
+        compact
+          ? "w-fit max-w-[min(92vw,34rem)] bg-white rounded-2xl border-2 border-[#1B1B1B] overflow-hidden shadow-[3px_3px_0_#1B1B1B]"
+          : "w-fit max-w-xs bg-white rounded-2xl border-[3px] border-[#1B1B1B] overflow-hidden shadow-[4px_4px_0_#1B1B1B]"
       )}
     >
       {compact ? (
         <div
           ref={viewportRef}
-          className="p-2.5 overflow-x-auto overflow-y-hidden scrollbar-hide cursor-grab active:cursor-grabbing select-none"
+          className="px-2 py-1 overflow-x-auto overflow-y-hidden scrollbar-hide cursor-grab active:cursor-grabbing select-none"
           style={{ touchAction: "pan-x" }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -350,7 +352,7 @@ const PlayersScoreboardComponent = ({
             scheduleAutoScrollResume(450);
           }}
         >
-          <div className="flex items-stretch gap-2 min-w-max">
+          <div className="flex items-stretch gap-1.5 min-w-max">
             {sortedPlayers.map((player, index) => (
               <PlayerRow
                 key={player.id}
